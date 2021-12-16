@@ -3,7 +3,6 @@ from multipledispatch import dispatch
 
 class Memory:
 
-
     def __init__(self, pages=1):
 
         self.pages = pages
@@ -46,7 +45,7 @@ class Memory:
 
         page = self.page_cursor
 
-        for a in range(addrb, addrn, 16):
+        for a in range(addrb, addrn, 15):
             ascvisual = ""
             print(f"{'%04X' % self.page_cursor}:{'%04X' % a} ", end="", flush=True)
 
@@ -59,3 +58,9 @@ class Memory:
             print(" " + ascvisual)
 
         print("")
+
+    @dispatch(int, int, str)
+    def load_into(self, page, start, text):
+        for idx in range(0, len(text) - 1):
+            self.poke(page, start + idx, ord(text[idx]))
+

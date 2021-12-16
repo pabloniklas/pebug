@@ -23,9 +23,9 @@ def pebug_main():
     print(f"Main memory size: {memory.pages} pages.")
     print(f"Stack size: {stack.pages} page/s.")
 
-    # https: // montcs.bloomu.edu / Information / LowLevel / DOS - Debug.html
+    """https://montcs.bloomu.edu/Information/LowLevel/DOS-Debug.html"""
     cmd = input(f"{prompt}").lower()
-    while cmd != "q":
+    while cmd != "q" and cmd != "quit":
 
         if cmd == "s":
             cpu.print_registers()
@@ -38,14 +38,8 @@ def pebug_main():
             arg = cmd.split(" ")
             memory.page_cursor = int(arg[1], 16)
         elif cmd == "demo":
-            memory.poke(0, 0, ord("D"))
-            memory.poke(0, 1, ord("E"))
-            memory.poke(0, 2, ord("M"))
-            memory.poke(0, 3, ord("O"))
-            memory.poke(0, 4, ord(" "))
-            memory.poke(0, 5, ord("D"))
-            memory.poke(0, 6, ord("A"))
-            memory.poke(0, 7, ord("Y"))
+            memory.load_into(0,0,"This is a demo. Welcome.") # TODO: Random text.
+            print("The demo text was load into 0000:0000, type 'd 0 30' to read it.")
         else:
             print("Input Not recognized.")
 
