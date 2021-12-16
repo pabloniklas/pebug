@@ -1,13 +1,4 @@
 #!/usr/bin/env python3
-"""
-
-pebug - Python Assembler
-
-x86 old-Debug-like program
-
-By Pablo Niklas
-
-"""
 
 import re
 import sys

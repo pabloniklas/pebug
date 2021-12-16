@@ -1,17 +1,14 @@
-# Memory
-
 from multipledispatch import dispatch
 
 
 class Memory:
 
+
     def __init__(self, pages=1):
+
         self.pages = pages
-
         self.page_cursor = 0
-
-        self.__offsets = 65536
-
+        self.__offsets = 65536  # 64K for page.
         self.memory = [[0b00000000] * self.__offsets] * self.pages
 
     def __str__(self):
