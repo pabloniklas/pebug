@@ -23,7 +23,7 @@ This modes are available at this time;
 ### Command mode
 
 * **d** xx yy: display memory from _xx_ to _yy_
-* **demo**: load a predefined string into the first bytes of its memoru.
+* **demo**: load a predefined string into the first bytes of its memory.
 * **sp** xx: set default memory page to _sp_.
 * **q** or **quit**: to quit this program.
 
