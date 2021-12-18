@@ -79,7 +79,13 @@ def display(memory, cmd):
 
 
 def help():
-    print("Help is not available yet =)")
+    print("List of Available Commands:")
+    print()
+    print("Dump => D [range]: Displays the contents of a block of memory.")
+    print("Fill => F range list: This command can also be used to clear "
+          "large areas of Memory as well as filling smaller areas with a "
+          "continuously repeating phrase or single byte.")
+    print("Quit => Q: Exit the program.")
 
 
 def demo(memory):
