@@ -18,11 +18,12 @@ The memory model es similar to the DOS (pages of 64Kb)
 This modes are available at this time;
 
 * command mode
-* arithmetic mode
+* _in the future_ arithmetic mode
 
 ### Command mode
 
 * **d** xx yy: display memory from _xx_ to _yy_
+* **f** xx yy pp: fill memory from _xx_ to _yy_ with pattern _pp_. Without the _pp_ arguments, just blank the memory in the provided range.
 * **demo**: load a predefined string into the first bytes of its memory.
 * **sp** xx: set default memory page to _sp_.
 * **q** or **quit**: to quit this program.
