@@ -48,7 +48,7 @@ class Memory:
         pointer = 0
         ascvisual = ""
 
-        if addrn - addrb < bytes_per_row: # One single row
+        if addrn - addrb < bytes_per_row:  # One single row
             print(f"{'%04X' % self.page_cursor}:{'%04X' % (pointer + addrb)} ", end="", flush=True)
             for address in range(addrb, addrn):
                 byte = self.peek(page, pointer + addrb)
@@ -57,7 +57,7 @@ class Memory:
                 print(f"{peek} ", end="", flush=True)
 
             print(" " * ((bytes_per_row - pointer) * 3) + ascvisual)
-        else: # two or more rows
+        else:  # two or more rows
             while (pointer + addrb < addrn):
                 if pointer % bytes_per_row == 0:
                     print(" " * ((bytes_per_row - pointer) * 3) + ascvisual)
@@ -71,6 +71,15 @@ class Memory:
                 pointer += 1
 
         print("")
+
+    @dispatch(int, int, str)
+    def fill(self, start, end, pattern):
+        cursor = 0
+        for idx in range(start, end):
+            self.poke(self.page_cursor, idx, ord(pattern[cursor]))
+            cursor += 1
+            if cursor > len(pattern) - 1:
+                cursor = 0
 
     @dispatch(int, int, str)
     def load_into(self, page, start, text):

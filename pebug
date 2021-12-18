@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 
-import re
 import os
-import sys
+import re
 import readline
+import sys
 
 from classes.Cpu import Cpu
 from classes.Memory import Memory
@@ -32,22 +32,59 @@ def pebug_main():
         if cmd == "s":
             cpu.print_registers()
         elif cmd == "h":
-            print("Help is not available yet =)")
+            help()
+        elif re.match("^f [0-9a-f]{,4} [0-9a-f]{,4}$", cmd):
+            reset_memory_range(memory, cmd)
+        elif re.match("^f [0-9a-f]{,4} [0-9a-f]{,4} .*$", cmd):
+            fill_memory_range(memory, cmd)
         elif re.match("^d [0-9a-f]{,4} [0-9a-f]{,4}$", cmd):
-            args = cmd.split(" ")
-            a = int(args[1], 16)
-            b = int(args[2], 16)
-            memory.display(a,b)
+            display(memory, cmd)
         elif re.match("^sp [0-9a-f]{,4}$", cmd):
-            arg = cmd.split(" ")
-            memory.page_cursor = int(arg[1], 16)
+            setting_memory_page(memory, cmd)
         elif cmd == "demo":
-            memory.load_into(0, 0, "This is a demo. Welcome.")  # TODO: Random text (like fortune)
-            print("The demo text was load into 0000:0000, type 'd 0 30' to read it.")
+            demo(memory)
         else:
             print("Input not recognized. Enter h for a quick help.")
 
         cmd = input(f"{prompt}").lower()
+
+
+def reset_memory_range(memory, cmd):
+    args = cmd.split(" ")
+    start = int(args[1], 16)
+    end = int(args[2], 16)
+
+    memory.fill(start, end, chr(0))
+
+
+def fill_memory_range(memory, cmd):
+    args = cmd.split(" ")
+    start = int(args[1], 16)
+    end = int(args[2], 16)
+    pattern = args[3]
+
+    memory.fill(start, end, pattern)
+
+
+def setting_memory_page(memory, cmd):
+    arg = cmd.split(" ")
+    memory.page_cursor = int(arg[1], 16)
+
+
+def display(memory, cmd):
+    args = cmd.split(" ")
+    a = int(args[1], 16)
+    b = int(args[2], 16)
+    memory.display(a, b)
+
+
+def help():
+    print("Help is not available yet =)")
+
+
+def demo(memory):
+    memory.load_into(0, 0, "This is a demo. Welcome.")  # TODO: Random text (like fortune)
+    print("The demo text was load into 0000:0000, type 'd 0 30' to read it.")
 
 
 # Python's entry point
