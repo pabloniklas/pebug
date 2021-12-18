@@ -7,17 +7,17 @@ class Memory:
 
         self.pages = pages
         self.page_cursor = 0
-        self.__offsets = 65536  # 64K for page.
-        self.memory = [[0b00000000] * self.__offsets] * self.pages
+        self._offsets = 65536  # 64K for page.
+        self.memory = [[0b00000000] * self._offsets] * self.pages
 
     def __str__(self):
-        return str(self.pages) + " * " + str(self.__offsets)
+        return str(self.pages) + " * " + str(self._offsets)
 
     @dispatch(int, int)
     def peek(self, page, address):
 
         if int(page) < 0 or int(page) >= len(self.memory) or \
-                int(address) < 0 or int(page) >= self.__offsets:
+                int(address) < 0 or int(page) >= self._offsets:
             print("Memory.peek(): Value error.")
             return -1
         else:
@@ -33,7 +33,7 @@ class Memory:
 
         if value < 0 or value > 255 or \
                 page < 0 or page >= len(self.memory) or \
-                address > self.__offsets or address < 0:
+                address > self._offsets or address < 0:
             print("Memory.poke(): Value error.")
             return -1
         else:
@@ -44,18 +44,31 @@ class Memory:
     def display(self, addrb, addrn):
 
         page = self.page_cursor
+        bytes_per_row = int("F", 16)
+        pointer = 0
+        ascvisual = ""
 
-        for a in range(addrb, addrn, 15):
-            ascvisual = ""
-            print(f"{'%04X' % self.page_cursor}:{'%04X' % a} ", end="", flush=True)
-
-            for b in range(0, 15):
-                byte = self.peek(page, a + b)
+        if addrn - addrb < bytes_per_row: # One single row
+            print(f"{'%04X' % self.page_cursor}:{'%04X' % (pointer + addrb)} ", end="", flush=True)
+            for address in range(addrb, addrn):
+                byte = self.peek(page, pointer + addrb)
                 peek = "%02X" % byte
                 ascvisual += chr(byte) if chr(byte).isprintable() else "."
                 print(f"{peek} ", end="", flush=True)
 
-            print(" " + ascvisual)
+            print(" " * ((bytes_per_row - pointer) * 3) + ascvisual)
+        else: # two or more rows
+            while (pointer + addrb < addrn):
+                if pointer % bytes_per_row == 0:
+                    print(" " * ((bytes_per_row - pointer) * 3) + ascvisual)
+                    ascvisual = ""
+                    print(f"{'%04X' % self.page_cursor}:{'%04X' % (pointer + addrb)} ", end="", flush=True)
+
+                byte = self.peek(page, pointer + addrb)
+                peek = "%02X" % byte
+                ascvisual += chr(byte) if chr(byte).isprintable() else "."
+                print(f"{peek} ", end="", flush=True)
+                pointer += 1
 
         print("")
 
@@ -63,4 +76,3 @@ class Memory:
     def load_into(self, page, start, text):
         for idx in range(0, len(text) - 1):
             self.poke(page, start + idx, ord(text[idx]))
-

@@ -1,9 +1,10 @@
 from .asm8086Listener import *
+from . import Memory
 
 
 class Cpu(asm8086Listener):
 
-    def __init__(self):
+    def __init__(self, ram:Memory):
         self.__bits = 16
 
         # 16 bit X86 registers
@@ -34,3 +35,4 @@ class Cpu(asm8086Listener):
         print(
             f"AX={get_bin(self.AX)} BX={get_bin(self.BX)}  CX={get_bin(self.CX)}  DX={get_bin(self.DX)}")
         print(f"SP={get_bin(self.SP)} BP={get_bin(self.BP)}  SI={get_bin(self.SI)}  DI={get_bin(self.DI)}")
+
