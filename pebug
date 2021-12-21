@@ -26,27 +26,36 @@ def pebug_main():
     print(f"Stack size: {stack.pages} page/s.")
 
     """https://montcs.bloomu.edu/Information/LowLevel/DOS-Debug.html"""
-    cmd = input(f"{prompt}").lower()
-    while cmd != "q" and cmd != "quit":
+    cmd = input(f"{prompt}")
+    while not re.match("^[qQ]", cmd):
 
-        if cmd == "s":
-            cpu.print_registers()
+        if re.match("^[sS] [0-9a-f]{,4} .*$", cmd):
+            search(memory, cmd)
         elif cmd == "h":
             help()
-        elif re.match("^f [0-9a-f]{,4} [0-9a-f]{,4}$", cmd):
+        elif re.match("^[fF] [0-9a-f]{,4} [0-9a-f]{,4}$", cmd):
             reset_memory_range(memory, cmd)
-        elif re.match("^f [0-9a-f]{,4} [0-9a-f]{,4} .*$", cmd):
+        elif re.match("^[fF] [0-9a-f]{,4} [0-9a-f]{,4} .*$", cmd):
             fill_memory_range(memory, cmd)
-        elif re.match("^d [0-9a-f]{,4} [0-9a-f]{,4}$", cmd):
+        elif re.match("^[dD] [0-9a-f]{,4} [0-9a-f]{,4}$", cmd):
             display(memory, cmd)
         elif re.match("^sp [0-9a-f]{,4}$", cmd):
             setting_memory_page(memory, cmd)
-        elif cmd == "demo":
+        elif  re.match("[dD][eE][mM][oO]", cmd):
             demo(memory)
         else:
             print("Input not recognized. Enter h for a quick help.")
 
-        cmd = input(f"{prompt}").lower()
+        cmd = input(f"{prompt}")
+
+
+def search(memory, cmd):
+    args = cmd.split(" ")
+    start = int(args[1], 16)
+    pattern = args[2]
+    list = memory.search(start, pattern)
+    for aa in list:
+        print(aa)
 
 
 def reset_memory_range(memory, cmd):
@@ -68,7 +77,7 @@ def fill_memory_range(memory, cmd):
 
 def setting_memory_page(memory, cmd):
     arg = cmd.split(" ")
-    memory.page_cursor = int(arg[1], 16)
+    memory.active_page = int(arg[1], 16)
 
 
 def display(memory, cmd):
@@ -89,8 +98,8 @@ def help():
 
 
 def demo(memory):
-    memory.load_into(0, 0, "This is a demo. Welcome.")  # TODO: Random text (like fortune)
-    print("The demo text was load into 0000:0000, type 'd 0 30' to read it.")
+    memory.load_into(49152, 0, "This is a demo. Welcome.")  # TODO: Random text (like fortune)
+    print("The demo text was load into C000:0000, type 'd 0 30' to read it.")
 
 
 # Python's entry point
