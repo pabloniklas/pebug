@@ -18,16 +18,22 @@ class Cpu(asm8086Listener):
         self.SI = 0b0000000000000000
         self.DI = 0b0000000000000000
 
-        # Flags
-        self.sf = 0b0
-        self.zf = 0b0
-        self.acf = 0b0
-        self.of = 0b0
+        # Register Flags
+        """https://www.tutorialspoint.com/flag-register-of-8086-microprocessor"""
+        self.sf = 0b0   # Sign (D7)
+        self.zf = 0b0   # Zero (D6)
+        self.cy = 0b0   # Carry bit (D0)
+        self.op = 0b0   # Parity (D2)
+        self.of = 0b0   # Overflow (D11)
+        self.ac = 0b0   # Auxiliary carry (for BCD Arithmetic) (D4)
 
         # Control flags not implemented
 
     def not_yet(self):
         print("This part of the CPU hasn't been implemented yet.")
+
+    def print_status(self):
+        print(f"SF={self.sf} ZF={self.zf} CY={self.cy} OP={self.op} OF={self.of} AC={self.ac}")
 
     def print_registers(self):
         def get_bin(x, n=self.__bits):
