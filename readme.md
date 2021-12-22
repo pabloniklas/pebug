@@ -26,13 +26,15 @@ These modes are available at this time;
 #### General purpose
 
 * **d** xx yy: display memory from _xx_ to _yy_
+* **h** xx yy: xx and yy are two Hex values (no more than four digits each) and then it shows first the SUM, then the DIFFERENCE of those values. 
 * **s** xx pp: Searches within a page, from the address _xx_ for a pattern _pp_
 * **f** xx yy pp: fill memory from _xx_ to _yy_ with pattern _pp_. Without the _pp_ arguments, just blank the memory in
   the provided range.
 * **demo**: load a predefined string into the first bytes of its memory.
 * **r**: print cpu registers, including the state bits.
 * **sp** xx: set default memory page to _sp_.
-* **q** or **quit**: to quit this program.
+* **q**: to quit this program.
+* **?** Quick help.
 
 #### Only for the flag register
 

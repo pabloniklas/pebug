@@ -31,6 +31,8 @@ def pebug_main():
 
         if re.match("^[sS] [0-9a-f]{,4} .*$", cmd):
             search(memory, cmd)
+        elif re.match("^[hH] [0-9a-f]{,4} [0-9a-f]{,4}$", cmd):
+            hex_cmd(cmd)
         elif re.match("^[rR]$", cmd):
             cpu.print_registers()
             cpu.print_status()
@@ -58,7 +60,7 @@ def pebug_main():
             cpu.cy = 0b1
         elif re.match("^[nN][cC]$", cmd):
             cpu.vy = 0b0
-        elif re.match("^[hH]$", cmd):
+        elif cmd=="?":
             help()
         elif re.match("^[fF] [0-9a-f]{,4} [0-9a-f]{,4}$", cmd):
             reset_memory_range(memory, cmd)
@@ -71,9 +73,18 @@ def pebug_main():
         elif re.match("[dD][eE][mM][oO]", cmd):
             demo(memory)
         else:
-            print("Input not recognized. Enter h for a quick help.")
+            print("Input not recognized. Enter <?> for a quick help.")
 
         cmd = input(f"{prompt}")
+
+
+def hex_cmd(cmd):
+    args = cmd.split(" ")
+    oper1 = int(args[1], 16)
+    oper2 = int(args[2], 16)
+    res_add = oper1 + oper2
+    res_sub = oper1 - oper2
+    print('%04X' % res_add, '%04X'% res_sub)
 
 
 def search(memory, cmd):
@@ -124,6 +135,7 @@ def help():
     Fill => F range list: This command can also be used to clear 
             large areas of Memory as well as filling smaller areas with a
             continuously repeating phrase or single byte.
+    Hex calc => H: A simple hex calculator.
     Search => S start text: Search for the text in the current page,
             starting from start.
     Quit => Q: Exit the program.
