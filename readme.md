@@ -1,6 +1,10 @@
 # PEBUG
 
-<alt="Python" img src=https://img.shields.io/github/languages/top/pabloniklas/pebug>
+<img src=https://img.shields.io/github/license/pabloniklas/pebug>
+<img src=https://img.shields.io/github/v/release/pabloniklas/pebug> 
+<img src=https://img.shields.io/github/languages/top/pabloniklas/pebug>
+<img src=https://img.shields.io/github/downloads/pabloniklas/pebug/total>
+
 
 An x86 old-debug-like program.
 
