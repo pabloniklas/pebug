@@ -31,7 +31,34 @@ def pebug_main():
 
         if re.match("^[sS] [0-9a-f]{,4} .*$", cmd):
             search(memory, cmd)
-        elif cmd == "h":
+        elif re.match("^[rR]$", cmd):
+            cpu.print_registers()
+            cpu.print_status()
+        elif re.match("^[oO][vV]$", cmd):
+            cpu.of = 0b1
+        elif re.match("^[nN][vV]$", cmd):
+            cpu.of = 0b0
+        elif re.match("^[nN][gG]$", cmd):
+            cpu.sf = 0b1
+        elif re.match("^[pP][lL]$", cmd):
+            cpu.sh = 0b0
+        elif re.match("^[zZ][rR]$", cmd):
+            cpu.zf = 0b1
+        elif re.match("^[nN][zZ]$", cmd):
+            cpu.zf = 0b0
+        elif re.match("^[aA][cC]$", cmd):
+            cpu.ac = 0b1
+        elif re.match("^[nN][aA]$", cmd):
+            cpu.ac = 0b0
+        elif re.match("^[pP][eE]$", cmd):
+            cpu.op = 0b1
+        elif re.match("^[pP][oO]$", cmd):
+            cpu.op = 0b0
+        elif re.match("^[cC][yY]$", cmd):
+            cpu.cy = 0b1
+        elif re.match("^[nN][cC]$", cmd):
+            cpu.vy = 0b0
+        elif re.match("^[hH]$", cmd):
             help()
         elif re.match("^[fF] [0-9a-f]{,4} [0-9a-f]{,4}$", cmd):
             reset_memory_range(memory, cmd)
@@ -41,7 +68,7 @@ def pebug_main():
             display(memory, cmd)
         elif re.match("^sp [0-9a-f]{,4}$", cmd):
             setting_memory_page(memory, cmd)
-        elif  re.match("[dD][eE][mM][oO]", cmd):
+        elif re.match("[dD][eE][mM][oO]", cmd):
             demo(memory)
         else:
             print("Input not recognized. Enter h for a quick help.")
@@ -88,13 +115,31 @@ def display(memory, cmd):
 
 
 def help():
-    print("List of Available Commands:")
-    print()
-    print("Dump => D [range]: Displays the contents of a block of memory.")
-    print("Fill => F range list: This command can also be used to clear "
-          "large areas of Memory as well as filling smaller areas with a "
-          "continuously repeating phrase or single byte.")
-    print("Quit => Q: Exit the program.")
+    print(
+"""List of Available Commands:
+
+    General purpose:
+
+    Dump => D [range]: Displays the contents of a block of memory
+    Fill => F range list: This command can also be used to clear 
+            large areas of Memory as well as filling smaller areas with a
+            continuously repeating phrase or single byte.
+    Search => S start text: Search for the text in the current page,
+            starting from start.
+    Quit => Q: Exit the program.
+    
+    +-------------------------+-----+-------+
+    | Flag Name               | Set | Clear |
+    +-------------------------+-----+-------+
+    | Overflow(yes/no)        | ov  | nv    |
+    | Sign(negative/positive) | ng  | pl    |
+    | Zero(yes/no)            | zr  | nz    |
+    | Auxiliary carry(yes/no) | ac  | na    |
+    | Parity(even/odd)        | pe  | po    |
+    | Carry(yes/no)           | cy  | nc    |
+    +-------------------------+-----+-------+
+    
+""")
 
 
 def demo(memory):
