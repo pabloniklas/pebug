@@ -51,12 +51,8 @@ These modes are available at this time;
 
 ### display command "d"
 
-![display](https://raw.githubusercontent.com/pabloniklas/pebug/main/screenshots/h.gif "hex")
-
-
-
-
+![display](https://raw.githubusercontent.com/pabloniklas/pebug/main/screenshots/d.gif "display")
 
 ### hex command "h"
 
-![hex](https://raw.githubusercontent.com/pabloniklas/pebug/main/screenshots/d.gif "display")
+![hex](https://raw.githubusercontent.com/pabloniklas/pebug/main/screenshots/h.gif "hex")
