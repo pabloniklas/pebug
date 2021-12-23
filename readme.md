@@ -49,6 +49,12 @@ These modes are available at this time;
 
 ## Screeshots
 
-### d command
+### display command "d"
 
-![display](https://raw.githubusercontent.com/pabloniklas/pebug/main/screenshots/d.gif "display")
+![display](https://raw.githubusercontent.com/pabloniklas/pebug/main/screenshots/h.gif "hex")
+
+
+
+### hex command "h"
+
+![hex](https://raw.githubusercontent.com/pabloniklas/pebug/main/screenshots/d.gif "display")
