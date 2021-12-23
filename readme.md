@@ -47,3 +47,8 @@ These modes are available at this time;
 | Parity(even/odd)        | pe  | po    |
 | Carry(yes/no)           | cy  | nc    |
 
+## Screeshots
+
+### d command
+
+![display](https://raw.githubusercontent.com/pabloniklas/pebug/main/screenshots/d.gif "display")
