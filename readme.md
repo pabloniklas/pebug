@@ -57,7 +57,7 @@ These modes are available at this time;
 
 ![hex](https://raw.githubusercontent.com/pabloniklas/pebug/main/screenshots/h.gif "hex")
 
-### fill and search commands
+### fill and search commands "f" & "s"
 
 ![fas](https://raw.githubusercontent.com/pabloniklas/pebug/main/screenshots/fillAndSearch.gif "fas")
 
