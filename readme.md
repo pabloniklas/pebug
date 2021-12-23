@@ -56,3 +56,8 @@ These modes are available at this time;
 ### hex command "h"
 
 ![hex](https://raw.githubusercontent.com/pabloniklas/pebug/main/screenshots/h.gif "hex")
+
+### fill and search commands
+
+![fas](https://raw.githubusercontent.com/pabloniklas/pebug/main/screenshots/fillAndSearch.gif "fas")
+
