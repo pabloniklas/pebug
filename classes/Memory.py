@@ -17,7 +17,7 @@ class Memory:
     def peek(self, page, address):
         if int(page) < 0 or int(page) >= len(self.memory) or \
                 int(address) < 0 or int(page) >= self._offsets:
-            print("Memory.peek(): Value error.")
+            print("Memory.peek(): Invalid address.")
             return -1
         else:
             self.active_page = page
@@ -28,11 +28,27 @@ class Memory:
         return self.peek(int(page, 16), int(address, 16))
 
     @dispatch(int, int, int)
+    def compare(self, cfrom, cend, cto):
+        diffs = []
+
+        for a in range(cfrom, cend):
+            org = self.peek(self.active_page, a)
+            dist_pointer = cfrom if cto + a == cfrom else cto + a - cfrom - 1
+
+            dist = self.peek(self.active_page, dist_pointer)
+            if org != dist:
+                diffs.append('%04X' % self.active_page + ":" + '%04X' % a + " " +
+                             '%02X' % org + " " + '%02X' % dist + " " +
+                             '%04X' % self.active_page + ":" + '%04X' % dist_pointer)
+
+        return diffs
+
+    @dispatch(int, int, int)
     def poke(self, page, address, value):
         if value < 0 or value > 255 or \
                 page < 0 or page >= len(self.memory) or \
                 address > self._offsets or address < 0:
-            print("Memory.poke(): Value error.")
+            print("Memory.poke(): Invalid address.")
             return -1
         else:
             self.active_page = page
