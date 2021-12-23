@@ -18,9 +18,7 @@ def pebug_main():
 
     prompt = "[C]=> "
 
-    print("pebug - Python 8086 Assembler.")
-    print("An x86 old-debug-like program.")
-    print("Enter <h> for help.")
+    print("pebug - An x86 old-debug-like program written in Python")
     print("By Pablo Niklas <pablo.niklas@gmail.com>.")
     print(f"Main memory size: {memory.pages} pages.")
     print(f"Stack size: {stack.pages} page/s.")
@@ -36,6 +34,8 @@ def pebug_main():
         elif re.match("^[rR]$", cmd):
             cpu.print_registers()
             cpu.print_status()
+        elif re.match("^[cC] [0-9a-f]{,4} [0-9a-f]{,4} [0-9a-f]{,4}$", cmd):
+            compare(memory, cmd)
         elif re.match("^[oO][vV]$", cmd):
             cpu.of = 0b1
         elif re.match("^[nN][vV]$", cmd):
@@ -78,6 +78,16 @@ def pebug_main():
         cmd = input(f"{prompt}")
 
 
+def compare(memory, cmd):
+    args = cmd.split(" ")
+    oper1 = int(args[1], 16)
+    oper2 = int(args[2], 16)
+    oper3 = int(args[3], 16)
+    list = memory.compare(oper1, oper2, oper3)
+    for aa in list:
+        print(aa)
+
+
 def hex_cmd(cmd):
     args = cmd.split(" ")
     oper1 = int(args[1], 16)
@@ -100,7 +110,6 @@ def reset_memory_range(memory, cmd):
     args = cmd.split(" ")
     start = int(args[1], 16)
     end = int(args[2], 16)
-
     memory.fill(start, end, chr(0))
 
 
@@ -109,7 +118,6 @@ def fill_memory_range(memory, cmd):
     start = int(args[1], 16)
     end = int(args[2], 16)
     pattern = args[3]
-
     memory.fill(start, end, pattern)
 
 
@@ -156,7 +164,7 @@ def help():
 
 def demo(memory):
     memory.load_into(49152, 0, "This is a demo. Welcome.")  # TODO: Random text (like fortune)
-    print("The demo text was load into C000:0000, type 'd 0 30' to read it.")
+    print("The demo text was loaded into C000:0000, type 'd 0 30' to read it.")
 
 
 # Python's entry point
