@@ -5,8 +5,6 @@
 
 An x86 old-debug-like program.
 
-_still an ongoing project_
-
 The main goal of this project is to provide an educational and introductory interface to assembler, x86 flavor in
 particular.
 
@@ -14,29 +12,42 @@ The user can interact directly with the memory the program presents.
 
 The memory model es similar to the DOS (pages of 64Kb)
 
+## Status
+
+| Stage        | Kanban Status |
+|--------------|---------------|
+ | Commands     | Doing         |
+ | Arithmetic   | To Do         | 
+ | Assembly     | To Do         | 
+ | Dissassembly | To Do         | 
+
+
 ## Commands
 
-These modes are available at this time;
+### General purpose
 
-* command mode
-* _in the future_ arithmetic mode
+| Command Name | Parameters  | Description                                                                                                                        |
+|--------------|-------------|------------------------------------------------------------------------------------------------------------------------------------|
+| d            | xx yy       | Display memory from _xx_ to _yy_.                                                                                                  |
+| e            | xx yy       | Write de byte _yy_ in the address _xx_.                                                                                            | 
+| e            | xx 'string' | Load _string_ in memory, starting from _xx_                                                                                        |
+| f            | xx yy pp    | fill memory from _xx_ to _yy_ with pattern _pp_. Without the _pp_ arguments, just blank the memory in the provided range           |
+| h            | xx yy       | xx and yy are two Hex values (no more than four digits each) and then it shows first the SUM, then the DIFFERENCE of those values. |                                                                                                   |
+| r            |             | print cpu registers, including the state bits.                                                                                     |      
+| s            | xx pp       | Searches within the current memory pege, from the address _xx_ for a pattern _pp_                                                  | 
+| q            |             | Quit the programm.                                                                                                                 |
 
-### Command mode
 
-#### General purpose
+### Extra commands
 
-* **d** xx yy: display memory from _xx_ to _yy_
-* **h** xx yy: xx and yy are two Hex values (no more than four digits each) and then it shows first the SUM, then the DIFFERENCE of those values. 
-* **s** xx pp: Searches within a page, from the address _xx_ for a pattern _pp_
-* **f** xx yy pp: fill memory from _xx_ to _yy_ with pattern _pp_. Without the _pp_ arguments, just blank the memory in
-  the provided range.
-* **demo**: load a predefined string into the first bytes of its memory.
-* **r**: print cpu registers, including the state bits.
-* **sp** xx: set default memory page to _sp_.
-* **q**: to quit this program.
-* **?** Quick help.
+| Command Name | Parameters | Description                                                  |
+|--------------|------------|--------------------------------------------------------------|
+| demo         |            | load a predefined string into the first bytes of its memory. | 
+ | sp           | xx         | Set default memory page to _sp_.                             |
+ | ?            |            | Quick help.                                                  |
 
-#### Only for the flag register
+
+### Only for the flag register
 
 | Flag Name               | Set | Clear |
 |-------------------------|-----|-------|
