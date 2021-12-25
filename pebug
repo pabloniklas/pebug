@@ -18,8 +18,8 @@ def pebug_main():
 
     prompt = "[C]=> "
 
-    print("pebug - An x86 old-debug-like program written in Python")
-    print("By Pablo Niklas <pablo.niklas@gmail.com>.")
+    print("pebug - An x86 old-debug-like program written in Python.")
+    print("By Pablo Niklas <pablo.niklas@gmail.com>")
     print(f"Main memory size: {memory.pages} pages.")
     print(f"Stack size: {stack.pages} page/s.")
 
@@ -68,14 +68,33 @@ def pebug_main():
             fill_memory_range(memory, cmd)
         elif re.match("^[dD] [0-9a-f]{,4} [0-9a-f]{,4}$", cmd):
             display(memory, cmd)
-        elif re.match("^sp [0-9a-f]{,4}$", cmd):
+        elif re.match("^[sS][pP] [0-9a-f]{,4}$", cmd):
             setting_memory_page(memory, cmd)
+        elif re.match("^[eE] [0-9a-f]{,4} [0-9a-f]{,2}$", cmd):
+            byte_poke(memory, cmd)
+        elif re.match("^[eE] [0-9a-f]{,4} ['].*[']$", cmd):
+            string_poke(memory, cmd)
         elif re.match("[dD][eE][mM][oO]", cmd):
             demo(memory)
         else:
             print("Input not recognized. Enter <?> for a quick help.")
 
         cmd = input(f"{prompt}")
+
+
+def string_poke(memory, cmd):
+    args = cmd.split(" ")
+    address = int(args[1], 16)
+    args[2]=args[2][1:]     # To strip the initial '
+    value = " ".join(args[2:])
+    memory.load_into(memory.active_page, address, value)
+
+
+def byte_poke(memory, cmd):
+    args = cmd.split(" ")
+    address = int(args[1], 16)
+    value = int(args[2], 16)
+    memory.poke(memory.active_page, address, value)
 
 
 def compare(memory, cmd):

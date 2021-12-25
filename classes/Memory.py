@@ -48,7 +48,7 @@ class Memory:
         if value < 0 or value > 255 or \
                 page < 0 or page >= len(self.memory) or \
                 address > self._offsets or address < 0:
-            print("Memory.poke(): Invalid address.")
+            print("Memory.poke(): Invalid address or value.")
             return -1
         else:
             self.active_page = page
