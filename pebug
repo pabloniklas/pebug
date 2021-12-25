@@ -36,7 +36,7 @@ def pebug_main():
             cpu.print_status()
         elif re.match("^[cC] [0-9a-f]{,4} [0-9a-f]{,4} [0-9a-f]{,4}$", cmd):
             compare(memory, cmd)
-        elif re. match("^[mM] [0-9a-f]{,4} [0-9a-f]{,4} [0-9a-f]{,4}$", cmd):
+        elif re.match("^[mM] [0-9a-f]{,4} [0-9a-f]{,4} [0-9a-f]{,4}$", cmd):
             move(memory, cmd)
         elif re.match("^[oO][vV]$", cmd):
             cpu.of = 0b1
