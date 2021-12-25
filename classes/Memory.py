@@ -44,6 +44,17 @@ class Memory:
         return diffs
 
     @dispatch(int, int, int)
+    def move(self, from_begin, from_end, destination):
+        if destination > from_end:
+            for source in range(from_begin, from_end):
+                dist_pointer = from_begin \
+                    if destination + source == from_begin else destination + source - from_begin - 1
+                self.poke(self.active_page, dist_pointer, self.peek(self.active_page, source))
+                print(f"{from_end - from_begin} byte/s copied.")
+        else:
+            print("Invalid value.")
+
+    @dispatch(int, int, int)
     def poke(self, page, address, value):
         if value < 0 or value > 255 or \
                 page < 0 or page >= len(self.memory) or \

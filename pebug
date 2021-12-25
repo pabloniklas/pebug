@@ -36,6 +36,8 @@ def pebug_main():
             cpu.print_status()
         elif re.match("^[cC] [0-9a-f]{,4} [0-9a-f]{,4} [0-9a-f]{,4}$", cmd):
             compare(memory, cmd)
+        elif re. match("^[mM] [0-9a-f]{,4} [0-9a-f]{,4} [0-9a-f]{,4}$", cmd):
+            move(memory, cmd)
         elif re.match("^[oO][vV]$", cmd):
             cpu.of = 0b1
         elif re.match("^[nN][vV]$", cmd):
@@ -80,6 +82,14 @@ def pebug_main():
             print("Input not recognized. Enter <?> for a quick help.")
 
         cmd = input(f"{prompt}")
+
+
+def move(memory, cmd):
+    args = cmd.split(" ")
+    oper1 = int(args[1], 16)
+    oper2 = int(args[2], 16)
+    oper3 = int(args[3], 16)
+    memory.move(oper1, oper2, oper3)
 
 
 def string_poke(memory, cmd):

@@ -26,23 +26,24 @@ The memory model es similar to the DOS (pages of 64Kb)
 
 ### General purpose
 
-| Command Name | Parameters  | Description                                                                                                                        |
-|--------------|-------------|------------------------------------------------------------------------------------------------------------------------------------|
-| d            | xx yy       | Display memory from _xx_ to _yy_.                                                                                                  |
-| e            | xx yy       | Write de byte _yy_ in the address _xx_.                                                                                            | 
-| e            | xx 'string' | Load _string_ in memory, starting from _xx_                                                                                        |
-| f            | xx yy pp    | fill memory from _xx_ to _yy_ with pattern _pp_. Without the _pp_ arguments, just blank the memory in the provided range           |
-| h            | xx yy       | xx and yy are two Hex values (no more than four digits each) and then it shows first the SUM, then the DIFFERENCE of those values. |                                                                                                   |
-| r            |             | print cpu registers, including the state bits.                                                                                     |      
-| s            | xx pp       | Searches within the current memory pege, from the address _xx_ for a pattern _pp_                                                  | 
-| q            |             | Quit the programm.                                                                                                                 |
+| Command Name | Parameters  | Description                                                                                                                                              |
+|--------------|-------------|----------------------------------------------------------------------------------------------------------------------------------------------------------|
+| d            | xx yy       | Display memory from _xx_ to _yy_.                                                                                                                        |
+| e            | xx yy       | Write de byte _yy_ in the address _xx_.                                                                                                                  | 
+| e            | xx 'string' | Load _string_ in memory, starting from _xx_                                                                                                              |
+| f            | xx yy pp    | Fill memory from _xx_ to _yy_ with pattern _pp_. Without the _pp_ arguments, just blank the memory in the provided range                                 |
+| h            | xx yy       | xx and yy are two Hex values (no more than four digits each) and then it shows first the SUM, then the DIFFERENCE of those values.                       |                                                                                                   |
+| m            | xx yy zz    | This command should really be called: COPY (not Move) as it actually copies all the bytes from within the specified range _xx-yy_ to a new address _zz_. |
+| r            |             | Print cpu registers, including the state bits.                                                                                                           |      
+| s            | xx pp       | Searches within the current memory pege, from the address _xx_ for a pattern _pp_                                                                        | 
+| q            |             | Quit the programm.                                                                                                                                       |
 
 
 ### Extra commands
 
 | Command Name | Parameters | Description                                                  |
 |--------------|------------|--------------------------------------------------------------|
-| demo         |            | load a predefined string into the first bytes of its memory. | 
+| demo         |            | Load a predefined string into the first bytes of its memory. | 
  | sp           | xx         | Set default memory page to _sp_.                             |
  | ?            |            | Quick help.                                                  |
 
