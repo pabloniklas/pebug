@@ -12,7 +12,7 @@ The user can interact directly with the memory the program presents.
 
 The memory model es similar to the DOS (pages of 64Kb)
 
-## Status
+# Status
 
 | Stage        | Kanban Status |
 |--------------|---------------|
@@ -22,9 +22,9 @@ The memory model es similar to the DOS (pages of 64Kb)
  | Dissassembly | To Do         | 
 
 
-## Commands
+# Commands
 
-### General purpose
+## General purpose
 
 | Command Name | Parameters  | Description                                                                                                                                              |
 |--------------|-------------|----------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -39,7 +39,7 @@ The memory model es similar to the DOS (pages of 64Kb)
 | q            |             | Quit the programm.                                                                                                                                       |
 
 
-### Extra commands
+## Extra commands
 
 | Command Name | Parameters | Description                                                  |
 |--------------|------------|--------------------------------------------------------------|
@@ -48,7 +48,7 @@ The memory model es similar to the DOS (pages of 64Kb)
  | ?            |            | Quick help.                                                  |
 
 
-### Only for the flag register
+## Only for the flag register
 
 | Flag Name               | Set | Clear |
 |-------------------------|-----|-------|
@@ -59,17 +59,28 @@ The memory model es similar to the DOS (pages of 64Kb)
 | Parity(even/odd)        | pe  | po    |
 | Carry(yes/no)           | cy  | nc    |
 
-## Screeshots
+# Screeshots
 
-### display command "d"
+## display command "d"
 
 ![display](https://raw.githubusercontent.com/pabloniklas/pebug/main/screenshots/d.gif "display")
 
-### hex command "h"
+## hex command "h"
 
 ![hex](https://raw.githubusercontent.com/pabloniklas/pebug/main/screenshots/h.gif "hex")
 
-### fill and search commands "f" & "s"
+## fill and search commands "f" & "s"
 
 ![fas](https://raw.githubusercontent.com/pabloniklas/pebug/main/screenshots/fillAndSearch.gif "fas")
 
+# Requirements
+
+* antlr4-python3-runtime
+
+# Author
+
+Pablo Niklas <pablo_dot_niklas_at_gmail_dot_com>
+
+# License
+
+MIT
