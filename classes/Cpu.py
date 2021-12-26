@@ -1,4 +1,5 @@
 from . import Memory
+from multipledispatch import dispatch
 from .asm8086Listener import *
 from .asm8086Parser import *
 
@@ -20,12 +21,12 @@ class Cpu(asm8086Listener):
 
         # Register Flags
         """https://www.tutorialspoint.com/flag-register-of-8086-microprocessor"""
-        self.sf = 0b0   # Sign (D7)
-        self.zf = 0b0   # Zero (D6)
-        self.cy = 0b0   # Carry bit (D0)
-        self.op = 0b0   # Parity (D2)
-        self.of = 0b0   # Overflow (D11)
-        self.ac = 0b0   # Auxiliary carry (for BCD Arithmetic) (D4)
+        self.sf = 0b0  # Sign (D7)
+        self.zf = 0b0  # Zero (D6)
+        self.cy = 0b0  # Carry bit (D0)
+        self.op = 0b0  # Parity (D2)
+        self.of = 0b0  # Overflow (D11)
+        self.ac = 0b0  # Auxiliary carry (for BCD Arithmetic) (D4)
 
         # Control flags not implemented
 
@@ -45,6 +46,100 @@ class Cpu(asm8086Listener):
         print(
             f"AX={get_bin(self.AX)} BX={get_bin(self.BX)}  CX={get_bin(self.CX)}  DX={get_bin(self.DX)}")
         print(f"SP={get_bin(self.SP)} BP={get_bin(self.BP)}  SI={get_bin(self.SI)}  DI={get_bin(self.DI)}")
+
+    @dispatch(object, int, int, int)
+    def move(self, memory, from_begin, from_end, destination):
+        if destination > from_end:
+            for source in range(from_begin, from_end):
+                dist_pointer = from_begin \
+                    if destination + source == from_begin else destination + source - from_begin
+                memory.poke(memory.active_page, dist_pointer, memory.peek(memory.active_page, source))
+            print(f"{from_end - from_begin} byte/s copied.")
+        else:
+            print("Invalid value.")
+
+    @dispatch(object, int, int, str)
+    def fill(self, memory, start, end, pattern):
+        cursor = 0
+        for idx in range(start, end):
+            memory.poke(memory.active_page, idx, ord(pattern[cursor]))
+            cursor += 1
+            if cursor > len(pattern) - 1:
+                cursor = 0
+
+    @dispatch(object, int, str)
+    def search(self, memory, start, pattern):
+        found_list = []
+        pointer = start
+        while pointer < memory._offsets:
+            idx = 0
+
+            # Did I find the first char of the pattern? If so, let's search for the rest
+            if memory.peek(memory.active_page, pointer) == ord(pattern[idx]):
+                pointer_aux = pointer
+                while idx < len(pattern) and pointer_aux < memory._offsets and \
+                        memory.peek(memory.active_page, pointer_aux) == ord(pattern[idx]):
+                    idx += 1
+                    pointer_aux += 1
+
+                if pointer_aux - pointer == len(pattern):
+                    found_list.append(f"{'%04X' % memory.active_page}:{'%04X' % pointer}")
+
+            pointer += 1
+
+        return found_list
+
+    @dispatch(object, int, str)
+    def load_into(self, memory, start, text):
+        for idx in range(0, len(text) - 1):
+            memory.poke(memory.active_page, start + idx, ord(text[idx]))
+
+    @dispatch(object, int, int, int)
+    def compare(self, memory, cfrom, cend, cto):
+        diffs = []
+
+        for a in range(cfrom, cend):
+            org = memory.peek(memory.active_page, a)
+            dist_pointer = cfrom if cto + a == cfrom else cto + a - cfrom - 1
+
+            dist = memory.peek(memory.active_page, dist_pointer)
+            if org != dist:
+                diffs.append('%04X' % memory.active_page + ":" + '%04X' % a + " " +
+                             '%02X' % org + " " + '%02X' % dist + " " +
+                             '%04X' % memory.active_page + ":" + '%04X' % dist_pointer)
+
+        return diffs
+
+    @dispatch(object, int, int)
+    def display(self, memory, addrb, addrn):
+        page = memory.active_page
+        bytes_per_row = int("F", 16)
+        pointer = 0
+        ascvisual = ""
+
+        if addrn - addrb < bytes_per_row:  # One single row
+            print(f"{'%04X' % memory.active_page}:{'%04X' % (pointer + addrb)} ", end="", flush=True)
+            for address in range(addrb, addrn):
+                byte = memory.peek(page, pointer + addrb)
+                peek = "%02X" % byte
+                ascvisual += chr(byte) if chr(byte).isprintable() else "."
+                print(f"{peek} ", end="", flush=True)
+
+            print(" " * ((bytes_per_row - pointer) * 3) + ascvisual)
+        else:  # two or more rows
+            while pointer + addrb < addrn:
+                if pointer % bytes_per_row == 0:
+                    print(" " * ((bytes_per_row - pointer) * 3) + ascvisual)
+                    ascvisual = ""
+                    print(f"{'%04X' % memory.active_page}:{'%04X' % (pointer + addrb)} ", end="", flush=True)
+
+                byte = memory.peek(page, pointer + addrb)
+                peek = "%02X" % byte
+                ascvisual += chr(byte) if chr(byte).isprintable() else "."
+                print(f"{peek} ", end="", flush=True)
+                pointer += 1
+
+        print("")
 
     def enterProg(self, ctx: asm8086Parser.ProgContext):
         super().enterProg(ctx)

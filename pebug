@@ -28,16 +28,16 @@ def pebug_main():
     while not re.match("^[qQ]", cmd):
 
         if re.match("^[sS] [0-9a-f]{,4} .*$", cmd):
-            search(memory, cmd)
+            search(cpu, memory, cmd)
         elif re.match("^[hH] [0-9a-f]{,4} [0-9a-f]{,4}$", cmd):
             hex_cmd(cmd)
         elif re.match("^[rR]$", cmd):
             cpu.print_registers()
             cpu.print_status()
         elif re.match("^[cC] [0-9a-f]{,4} [0-9a-f]{,4} [0-9a-f]{,4}$", cmd):
-            compare(memory, cmd)
+            compare(cpu, memory, cmd)
         elif re.match("^[mM] [0-9a-f]{,4} [0-9a-f]{,4} [0-9a-f]{,4}$", cmd):
-            move(memory, cmd)
+            move(cpu, memory, cmd)
         elif re.match("^[oO][vV]$", cmd):
             cpu.of = 0b1
         elif re.match("^[nN][vV]$", cmd):
@@ -62,42 +62,42 @@ def pebug_main():
             cpu.cy = 0b1
         elif re.match("^[nN][cC]$", cmd):
             cpu.vy = 0b0
-        elif cmd=="?":
-            help()
+        elif cmd == "?":
+            pebug_help()
         elif re.match("^[fF] [0-9a-f]{,4} [0-9a-f]{,4}$", cmd):
-            reset_memory_range(memory, cmd)
+            reset_memory_range(cpu, memory, cmd)
         elif re.match("^[fF] [0-9a-f]{,4} [0-9a-f]{,4} .*$", cmd):
-            fill_memory_range(memory, cmd)
+            fill_memory_range(cpu, memory, cmd)
         elif re.match("^[dD] [0-9a-f]{,4} [0-9a-f]{,4}$", cmd):
-            display(memory, cmd)
+            display(cpu, memory, cmd)
         elif re.match("^[sS][pP] [0-9a-f]{,4}$", cmd):
             setting_memory_page(memory, cmd)
         elif re.match("^[eE] [0-9a-f]{,4} [0-9a-f]{,2}$", cmd):
             byte_poke(memory, cmd)
         elif re.match("^[eE] [0-9a-f]{,4} ['].*[']$", cmd):
-            string_poke(memory, cmd)
+            string_poke(cpu, memory, cmd)
         elif re.match("[dD][eE][mM][oO]", cmd):
-            demo(memory)
+            demo(cpu, memory)
         else:
             print("Input not recognized. Enter <?> for a quick help.")
 
         cmd = input(f"{prompt}")
 
 
-def move(memory, cmd):
+def move(cpu, memory, cmd):
     args = cmd.split(" ")
     oper1 = int(args[1], 16)
     oper2 = int(args[2], 16)
     oper3 = int(args[3], 16)
-    memory.move(oper1, oper2, oper3)
+    cpu.move(memory, oper1, oper2, oper3)
 
 
-def string_poke(memory, cmd):
+def string_poke(cpu, memory, cmd):
     args = cmd.split(" ")
     address = int(args[1], 16)
-    args[2]=args[2][1:]     # To strip the initial '
+    args[2] = args[2][1:]  # To strip the initial '
     value = " ".join(args[2:])
-    memory.load_into(memory.active_page, address, value)
+    cpu.load_into(memory, address, value)
 
 
 def byte_poke(memory, cmd):
@@ -107,13 +107,13 @@ def byte_poke(memory, cmd):
     memory.poke(memory.active_page, address, value)
 
 
-def compare(memory, cmd):
+def compare(cpu, memory, cmd):
     args = cmd.split(" ")
     oper1 = int(args[1], 16)
     oper2 = int(args[2], 16)
     oper3 = int(args[3], 16)
-    list = memory.compare(oper1, oper2, oper3)
-    for aa in list:
+    diff_list = cpu.compare(memory, oper1, oper2, oper3)
+    for aa in diff_list:
         print(aa)
 
 
@@ -123,31 +123,31 @@ def hex_cmd(cmd):
     oper2 = int(args[2], 16)
     res_add = oper1 + oper2
     res_sub = oper1 - oper2
-    print('%04X' % res_add, '%04X'% res_sub)
+    print('%04X' % res_add, '%04X' % res_sub)
 
 
-def search(memory, cmd):
+def search(cpu, memory, cmd):
     args = cmd.split(" ")
     start = int(args[1], 16)
     pattern = args[2]
-    list = memory.search(start, pattern)
-    for aa in list:
+    found_list = cpu.search(memory, start, pattern)
+    for aa in found_list:
         print(aa)
 
 
-def reset_memory_range(memory, cmd):
+def reset_memory_range(cpu, memory, cmd):
     args = cmd.split(" ")
     start = int(args[1], 16)
     end = int(args[2], 16)
-    memory.fill(start, end, chr(0))
+    cpu.fill(memory, start, end, chr(0))
 
 
-def fill_memory_range(memory, cmd):
+def fill_memory_range(cpu, memory, cmd):
     args = cmd.split(" ")
     start = int(args[1], 16)
     end = int(args[2], 16)
     pattern = args[3]
-    memory.fill(start, end, pattern)
+    cpu.fill(memory, start, end, pattern)
 
 
 def setting_memory_page(memory, cmd):
@@ -155,46 +155,48 @@ def setting_memory_page(memory, cmd):
     memory.active_page = int(arg[1], 16)
 
 
-def display(memory, cmd):
+def display(cpu, memory, cmd):
     args = cmd.split(" ")
     a = int(args[1], 16)
     b = int(args[2], 16)
-    memory.display(a, b)
+    cpu.display(memory, a, b)
 
 
-def help():
+def pebug_help():
     print(
-"""List of Available Commands:
+        """List of Available Commands:
+        
+            General purpose:
+        
+            Dump => D [range]: Displays the contents of a block of memory
+            Fill => F range list: This command can also be used to clear 
+                    large areas of Memory as well as filling smaller areas with a
+                    continuously repeating phrase or single byte.
+            Hex calc => H: A simple hex calculator.
+            Search => S start text: Search for the text in the current page,
+                    starting from start.
+            Quit => Q: Exit the program.
+            
+            +-------------------------+-----+-------+
+            | Flag Name               | Set | Clear |
+            +-------------------------+-----+-------+
+            | Overflow(yes/no)        | ov  | nv    |
+            | Sign(negative/positive) | ng  | pl    |
+            | Zero(yes/no)            | zr  | nz    |
+            | Auxiliary carry(yes/no) | ac  | na    |
+            | Parity(even/odd)        | pe  | po    |
+            | Carry(yes/no)           | cy  | nc    |
+            +-------------------------+-----+-------+
+            
+        """)
 
-    General purpose:
 
-    Dump => D [range]: Displays the contents of a block of memory
-    Fill => F range list: This command can also be used to clear 
-            large areas of Memory as well as filling smaller areas with a
-            continuously repeating phrase or single byte.
-    Hex calc => H: A simple hex calculator.
-    Search => S start text: Search for the text in the current page,
-            starting from start.
-    Quit => Q: Exit the program.
-    
-    +-------------------------+-----+-------+
-    | Flag Name               | Set | Clear |
-    +-------------------------+-----+-------+
-    | Overflow(yes/no)        | ov  | nv    |
-    | Sign(negative/positive) | ng  | pl    |
-    | Zero(yes/no)            | zr  | nz    |
-    | Auxiliary carry(yes/no) | ac  | na    |
-    | Parity(even/odd)        | pe  | po    |
-    | Carry(yes/no)           | cy  | nc    |
-    +-------------------------+-----+-------+
-    
-""")
-
-
-def demo(memory):
-    memory.load_into(49152, 0, "This is a demo. Welcome.")  # TODO: Random text (like fortune)
+def demo(cpu, memory):
+    oldap = memory.active_page
+    memory.active_page = 49152
+    cpu.load_into(memory, 0, "This is a demo. Welcome.")  # TODO: Random text (like fortune)
     print("The demo text was loaded into C000:0000, type 'd 0 30' to read it.")
-
+    memory.active_page = oldap
 
 # Python's entry point
 if __name__ == '__main__':
