@@ -6,14 +6,16 @@ import readline
 import sys
 
 from classes.Cpu import Cpu
+from classes.Disk import Disk
 from classes.Memory import Memory
 
 
-def pebug_main():
+def pebug_main(filename="pebug_disk.bin"):
     print("")
 
     memory = Memory(65536)
     stack = Memory(1)
+    disk = Disk(65536, filename)
     cpu = Cpu(memory)
 
     prompt = "[C]=> "
@@ -78,10 +80,30 @@ def pebug_main():
             string_poke(cpu, memory, cmd)
         elif re.match("[dD][eE][mM][oO]", cmd):
             demo(cpu, memory)
+        elif re.match("[wW] [0-9a-f]{,4} [0-9a-f]{,4} [0-9a-f]{,4}", cmd):
+            write(disk, memory, cpu, cmd)
+        elif re.match("[lL] [0-9a-f]{,4} [0-9a-f]{,4} [0-9a-f]{,4}", cmd):
+            read(disk, memory, cpu, cmd)
         else:
             print("Input not recognized. Enter <?> for a quick help.")
 
         cmd = input(f"{prompt}")
+
+
+def write(disk, memory, cpu, cmd):
+    args = cmd.split(" ")
+    address = int(args[1], 16)
+    firstsector = int(args[2], 16)
+    number = int(args[3], 16)
+    cpu.write(memory, disk, address, firstsector, number)
+
+
+def read(disk, memory, cpu, cmd):
+    args = cmd.split(" ")
+    address = int(args[1], 16)
+    firstsector = int(args[2], 16)
+    number = int(args[3], 16)
+    cpu.read(memory, disk, address, firstsector, number)
 
 
 def move(cpu, memory, cmd):
@@ -197,6 +219,7 @@ def demo(cpu, memory):
     cpu.load_into(memory, 0, "This is a demo. Welcome.")  # TODO: Random text (like fortune)
     print("The demo text was loaded into C000:0000, type 'd 0 30' to read it.")
     memory.active_page = oldap
+
 
 # Python's entry point
 if __name__ == '__main__':

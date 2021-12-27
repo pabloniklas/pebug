@@ -1,5 +1,6 @@
-from . import Memory
 from multipledispatch import dispatch
+
+from . import Memory
 from .asm8086Listener import *
 from .asm8086Parser import *
 
@@ -7,17 +8,19 @@ from .asm8086Parser import *
 class Cpu(asm8086Listener):
 
     def __init__(self, ram: Memory):
-        self.__bits = 16
+        self._bits = 16
 
         # 16 bit X86 registers
-        self.AX = 0b0000000000000000
-        self.BX = 0b0000000000000000
-        self.CX = 0b0000000000000000
-        self.DX = 0b0000000000000000
-        self.SP = 0b0000000000000000
-        self.BP = 0b0000000000000000
-        self.SI = 0b0000000000000000
-        self.DI = 0b0000000000000000
+        self.AX = 0b0 * self._bits
+        self.BX = 0b0 * self._bits
+        self.CX = 0b0 * self._bits
+        self.DX = 0b0 * self._bits
+        self.SP = 0b0 * self._bits
+        self.BP = 0b0 * self._bits
+        self.SI = 0b0 * self._bits
+        self.DI = 0b0 * self._bits
+
+        self.IP = 0b0 * self._bits
 
         # Register Flags
         """https://www.tutorialspoint.com/flag-register-of-8086-microprocessor"""
@@ -30,6 +33,10 @@ class Cpu(asm8086Listener):
 
         # Control flags not implemented
 
+    @property
+    def bits(self):
+        return self._bits
+
     def not_yet(self):
         print("This part of the CPU hasn't been implemented yet.")
 
@@ -37,7 +44,7 @@ class Cpu(asm8086Listener):
         print(f"SF={self.sf} ZF={self.zf} CY={self.cy} OP={self.op} OF={self.of} AC={self.ac}")
 
     def print_registers(self):
-        def get_bin(x, n=self.__bits):
+        def get_bin(x, n=self._bits):
             return format(x, 'b').zfill(n)
 
         def get_hex(x):
@@ -140,6 +147,16 @@ class Cpu(asm8086Listener):
                 pointer += 1
 
         print("")
+
+    @dispatch(object, object, int, int, int)
+    def write(self, memory, disk, address, firstsector, number):
+        for i in range(0, number - 1):
+            disk.write(firstsector, memory.peek(address + i))
+
+    @dispatch(object, object, int, int, int)
+    def read(self, memory, disk, address, firstsector, number):
+        for i in range(0, number - 1):
+            disk.write(firstsector, memory.peek(address + i))
 
     def enterProg(self, ctx: asm8086Parser.ProgContext):
         super().enterProg(ctx)
