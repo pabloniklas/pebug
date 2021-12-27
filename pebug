@@ -21,9 +21,10 @@ def pebug_main(filename="pebug_disk.bin"):
     prompt = "[C]=> "
 
     print("pebug - An x86 old-debug-like program written in Python.")
-    print("By Pablo Niklas <pablo.niklas@gmail.com>")
+    print("By Pablo Niklas <pablo.niklas@gmail.com>.")
     print(f"Main memory size: {memory.pages} pages.")
     print(f"Stack size: {stack.pages} page/s.")
+    print(f"Virtual disk size: {disk.size} bytes.")
 
     """https://montcs.bloomu.edu/Information/LowLevel/DOS-Debug.html"""
     cmd = input(f"{prompt}")
@@ -38,6 +39,8 @@ def pebug_main(filename="pebug_disk.bin"):
             cpu.print_status()
         elif re.match("^[cC] [0-9a-f]{,4} [0-9a-f]{,4} [0-9a-f]{,4}$", cmd):
             compare(cpu, memory, cmd)
+        elif re.match("^[cC][aA][tT] [0-9a-f]{,4} [0-9a-f]{,4}$", cmd):
+            cat(cpu, disk, cmd)
         elif re.match("^[mM] [0-9a-f]{,4} [0-9a-f]{,4} [0-9a-f]{,4}$", cmd):
             move(cpu, memory, cmd)
         elif re.match("^[oO][vV]$", cmd):
@@ -84,6 +87,11 @@ def pebug_main(filename="pebug_disk.bin"):
             write(disk, memory, cpu, cmd)
         elif re.match("[lL] [0-9a-f]{,4} [0-9a-f]{,4} [0-9a-f]{,4}", cmd):
             read(disk, memory, cpu, cmd)
+        elif re.match("^[nN] ['].*[']$", cmd):
+            args = cmd.split(" ")
+            args[1] = args[1][1:]  # To strip the initial '
+            filename = " ".join(args[1:])
+            disk.filename(filename)
         else:
             print("Input not recognized. Enter <?> for a quick help.")
 
@@ -182,6 +190,13 @@ def display(cpu, memory, cmd):
     a = int(args[1], 16)
     b = int(args[2], 16)
     cpu.display(memory, a, b)
+
+
+def cat(cpu, disk, cmd):
+    args = cmd.split(" ")
+    a = int(args[1], 16)
+    b = int(args[2], 16)
+    cpu.cat(disk, a, b)
 
 
 def pebug_help():

@@ -9,6 +9,9 @@ class Disk:
         self._size = size
         self._disk = 0b0 * self._size
 
+    def __str__(self):
+        return f"Filename: {self._filename} // Size: {self._size} bytes."
+
     @property
     def size(self):
         return self._size

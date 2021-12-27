@@ -118,6 +118,37 @@ class Cpu(asm8086Listener):
         return diffs
 
     @dispatch(object, int, int)
+    def cat(self, disk, addrb, addrn):
+        bytes_per_row = int("F", 16)
+        pointer = 0
+        ascvisual = ""
+
+        if addrn - addrb < bytes_per_row:  # One single row
+            print(f"{'%06X' % (pointer + addrb)} ", end="", flush=True)
+            for address in range(addrb, addrn):
+                byte = disk.read(pointer + addrb)
+                peek = "%02X" % byte
+                ascvisual += chr(byte) if chr(byte).isprintable() else "."
+                print(f"{peek} ", end="", flush=True)
+
+            print(" " * ((bytes_per_row - pointer) * 3) + ascvisual)
+        else:  # two or more rows
+            while pointer + addrb < addrn:
+                if pointer % bytes_per_row == 0:
+                    print(" " * ((bytes_per_row - pointer) * 3) + ascvisual)
+                    ascvisual = ""
+                    print(f"{'%06X' % (pointer + addrb)} ", end="", flush=True)
+
+                byte = disk.read(pointer + addrb)
+                peek = "%02X" % byte
+                ascvisual += chr(byte) if chr(byte).isprintable() else "."
+                print(f"{peek} ", end="", flush=True)
+                pointer += 1
+
+        print("")
+
+
+    @dispatch(object, int, int)
     def display(self, memory, addrb, addrn):
         page = memory.active_page
         bytes_per_row = int("F", 16)

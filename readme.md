@@ -16,8 +16,8 @@ The memory model es similar to the DOS (pages of 64Kb)
 
 | Stage        | Kanban Status |
 |--------------|---------------|
- | Commands     | Doing         |
- | Arithmetic   | To Do         | 
+ | Commands     | Done          |
+ | Arithmetic   | Doing         | 
  | Assembly     | To Do         | 
  | Dissassembly | To Do         | 
 
@@ -28,6 +28,7 @@ The memory model es similar to the DOS (pages of 64Kb)
 
 | Command Name | Parameters  | Description                                                                                                                                              |
 |--------------|-------------|----------------------------------------------------------------------------------------------------------------------------------------------------------|
+| c            | aa bb cc    | Compare two blocks of memory. From range _aa-bb_ against _cc_.                                                                                           |
 | d            | xx yy       | Display memory from _xx_ to _yy_.                                                                                                                        |
 | e            | xx yy       | Write de byte _yy_ in the address _xx_.                                                                                                                  | 
 | e            | xx 'string' | Load _string_ in memory, starting from _xx_                                                                                                              |
@@ -35,6 +36,7 @@ The memory model es similar to the DOS (pages of 64Kb)
 | h            | xx yy       | xx and yy are two Hex values (no more than four digits each) and then it shows first the SUM, then the DIFFERENCE of those values.                       |                                                                                                   |
 | l            | aa ff nn    | Load to memory, starting from address _aa_ from a virtual disk starting from firstsector _ff_, sizing _nn_ bytes.                                        |
 | m            | xx yy zz    | This command should really be called: COPY (not Move) as it actually copies all the bytes from within the specified range _xx-yy_ to a new address _zz_. |
+| n            | aa          | aa goes for the filename to be save on disk.                                                                                                             |
 | r            |             | Print cpu registers, including the state bits.                                                                                                           |      
 | s            | xx pp       | Searches within the current memory pege, from the address _xx_ for a pattern _pp_                                                                        | 
 | q            |             | Quit the program.                                                                                                                                        |
@@ -46,6 +48,7 @@ The memory model es similar to the DOS (pages of 64Kb)
 | Command Name | Parameters | Description                                                  |
 |--------------|------------|--------------------------------------------------------------|
 | demo         |            | Load a predefined string into the first bytes of its memory. | 
+ | cat          | aa bb      | Visualize virtual disk content from _aa_, _bb_ bytes.        |
  | sp           | xx         | Set default memory page to _sp_.                             |
  | ?            |            | Quick help.                                                  |
 
@@ -78,6 +81,7 @@ The memory model es similar to the DOS (pages of 64Kb)
 # Requirements
 
 * antlr4-python3-runtime
+* multipledispatch
 
 # Author
 
@@ -85,4 +89,4 @@ Pablo Niklas <pablo_dot_niklas_at_gmail_dot_com>
 
 # License
 
-MIT
+[MIT](https://github.com/git/git-scm.com/blob/main/MIT-LICENSE.txt)
