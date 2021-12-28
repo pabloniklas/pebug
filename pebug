@@ -18,8 +18,6 @@ def pebug_main(filename="pebug_disk.bin"):
     disk = Disk(65536, filename)
     cpu = Cpu(memory)
 
-    prompt = "[C]=> "
-
     print("pebug - An x86 old-debug-like program written in Python.")
     print("By Pablo Niklas <pablo.niklas@gmail.com>.")
     print(f"Main memory size: {memory.pages} pages.")
@@ -27,7 +25,8 @@ def pebug_main(filename="pebug_disk.bin"):
     print(f"Virtual disk size: {disk.size} bytes.")
 
     """https://montcs.bloomu.edu/Information/LowLevel/DOS-Debug.html"""
-    cmd = input(f"{prompt}")
+    mode = "C"
+    cmd = prompt(mode)
     while not re.match("^[qQ]", cmd):
 
         if re.match("^[sS] [0-9a-f]{,4} .*$", cmd):
@@ -88,14 +87,41 @@ def pebug_main(filename="pebug_disk.bin"):
         elif re.match("[lL] [0-9a-f]{,4} [0-9a-f]{,4} [0-9a-f]{,4}", cmd):
             read(disk, memory, cpu, cmd)
         elif re.match("^[nN] ['].*[']$", cmd):
-            args = cmd.split(" ")
-            args[1] = args[1][1:]  # To strip the initial '
-            filename = " ".join(args[1:])
-            disk.filename(filename)
+            setname(disk, cmd)
+
+        elif re.match("^[aA][lL][uU]$", cmd):
+            print("Welcome to the ALU mode. Enter q to quit this mode.")
+            mode = "M"
+            cmd = prompt(mode)
+            while not re.match("^[qQ]$", cmd):
+
+                # XOR
+                if re.match("^[xX][oO][rR] [0-9a-f]{,2} [0-9a-f]{,2}$", cmd):
+                    xor(cpu, cmd)
+                else:
+                    print("Input not recognized.")
+
+                cmd = prompt(mode)
         else:
             print("Input not recognized. Enter <?> for a quick help.")
 
-        cmd = input(f"{prompt}")
+        mode = "C"
+        cmd = prompt(mode)
+
+
+def xor(cpu, cmd):
+    args = cmd.split(" ")
+    oper1 = int(args[1], 16)
+    oper2 = int(args[2], 16)
+    result = cpu.xor(oper1, oper2)
+    print(f"XOR {cpu.get_bin(oper1)} {cpu.get_bin(oper2)} => {cpu.get_bin(bin(result))}")
+
+
+def setname(disk, cmd):
+    args = cmd.split(" ")
+    args[1] = args[1][1:]  # To strip the initial '
+    filename = " ".join(args[1:])
+    disk.filename(filename)
 
 
 def write(disk, memory, cpu, cmd):
@@ -200,32 +226,7 @@ def cat(cpu, disk, cmd):
 
 
 def pebug_help():
-    print(
-        """List of Available Commands:
-        
-            General purpose:
-        
-            Dump => D [range]: Displays the contents of a block of memory
-            Fill => F range list: This command can also be used to clear 
-                    large areas of Memory as well as filling smaller areas with a
-                    continuously repeating phrase or single byte.
-            Hex calc => H: A simple hex calculator.
-            Search => S start text: Search for the text in the current page,
-                    starting from start.
-            Quit => Q: Exit the program.
-            
-            +-------------------------+-----+-------+
-            | Flag Name               | Set | Clear |
-            +-------------------------+-----+-------+
-            | Overflow(yes/no)        | ov  | nv    |
-            | Sign(negative/positive) | ng  | pl    |
-            | Zero(yes/no)            | zr  | nz    |
-            | Auxiliary carry(yes/no) | ac  | na    |
-            | Parity(even/odd)        | pe  | po    |
-            | Carry(yes/no)           | cy  | nc    |
-            +-------------------------+-----+-------+
-            
-        """)
+    print("See https://github.com/pabloniklas/pebug")
 
 
 def demo(cpu, memory):
@@ -234,6 +235,11 @@ def demo(cpu, memory):
     cpu.load_into(memory, 0, "This is a demo. Welcome.")  # TODO: Random text (like fortune)
     print("The demo text was loaded into C000:0000, type 'd 0 30' to read it.")
     memory.active_page = oldap
+
+
+def prompt(mode="-"):
+    cmd = input(f"[{mode}]=> ")
+    return cmd
 
 
 # Python's entry point

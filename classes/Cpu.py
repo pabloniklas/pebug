@@ -1,4 +1,5 @@
 from multipledispatch import dispatch
+from operator import xor
 
 from . import Memory
 from .asm8086Listener import *
@@ -37,22 +38,35 @@ class Cpu(asm8086Listener):
     def bits(self):
         return self._bits
 
+    @staticmethod
+    def xor(a, b):
+        return xor(a, b)
+
+    @staticmethod
     def not_yet(self):
         print("This part of the CPU hasn't been implemented yet.")
+
+    @dispatch(str)
+    def get_bin(x):
+        return format(int(x,2), 'b').zfill(8)
+
+    @dispatch(int, n=int)
+    def get_bin(x, n=bits):
+        return format(x, 'b').zfill(8)
+
+    @staticmethod
+    @dispatch(int)
+    def get_hex(x):
+        return format(x, 'h').zfill(4)
 
     def print_status(self):
         print(f"SF={self.sf} ZF={self.zf} CY={self.cy} OP={self.op} OF={self.of} AC={self.ac}")
 
     def print_registers(self):
-        def get_bin(x, n=self._bits):
-            return format(x, 'b').zfill(n)
-
-        def get_hex(x):
-            return format(x, 'h').zfill(4)
-
         print(
-            f"AX={get_bin(self.AX)} BX={get_bin(self.BX)}  CX={get_bin(self.CX)}  DX={get_bin(self.DX)}")
-        print(f"SP={get_bin(self.SP)} BP={get_bin(self.BP)}  SI={get_bin(self.SI)}  DI={get_bin(self.DI)}")
+            f"AX={self.get_bin(self.AX)} BX={self.get_bin(self.BX)}  CX={self.get_bin(self.CX)}  DX={self.get_bin(self.DX)}")
+        print(
+            f"SP={self.get_bin(self.SP)} BP={self.get_bin(self.BP)}  SI={self.get_bin(self.SI)}  DI={self.get_bin(self.DI)}")
 
     @dispatch(object, int, int, int)
     def move(self, memory, from_begin, from_end, destination):
@@ -146,7 +160,6 @@ class Cpu(asm8086Listener):
                 pointer += 1
 
         print("")
-
 
     @dispatch(object, int, int)
     def display(self, memory, addrb, addrn):
