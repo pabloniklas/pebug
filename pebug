@@ -5,6 +5,8 @@ import re
 import readline
 import sys
 
+from multipledispatch import dispatch
+
 from classes.Cpu import Cpu
 from classes.Disk import Disk
 from classes.Memory import Memory
@@ -35,7 +37,7 @@ def pebug_main(filename="pebug_disk.bin"):
             hex_cmd(cmd)
         elif re.match("^[rR]$", cmd):
             cpu.print_registers()
-            cpu.print_status()
+            cpu.print_status_flags()
         elif re.match("^[cC] [0-9a-f]{,4} [0-9a-f]{,4} [0-9a-f]{,4}$", cmd):
             compare(cpu, memory, cmd)
         elif re.match("^[cC][aA][tT] [0-9a-f]{,4} [0-9a-f]{,4}$", cmd):
@@ -43,27 +45,27 @@ def pebug_main(filename="pebug_disk.bin"):
         elif re.match("^[mM] [0-9a-f]{,4} [0-9a-f]{,4} [0-9a-f]{,4}$", cmd):
             move(cpu, memory, cmd)
         elif re.match("^[oO][vV]$", cmd):
-            cpu.of = 0b1
+            cpu.OF = 0b1
         elif re.match("^[nN][vV]$", cmd):
-            cpu.of = 0b0
+            cpu.OF = 0b0
         elif re.match("^[nN][gG]$", cmd):
-            cpu.sf = 0b1
+            cpu.SF = 0b1
         elif re.match("^[pP][lL]$", cmd):
             cpu.sh = 0b0
         elif re.match("^[zZ][rR]$", cmd):
-            cpu.zf = 0b1
+            cpu.ZF = 0b1
         elif re.match("^[nN][zZ]$", cmd):
-            cpu.zf = 0b0
+            cpu.ZF = 0b0
         elif re.match("^[aA][cC]$", cmd):
-            cpu.ac = 0b1
+            cpu.AC = 0b1
         elif re.match("^[nN][aA]$", cmd):
-            cpu.ac = 0b0
+            cpu.AC = 0b0
         elif re.match("^[pP][eE]$", cmd):
-            cpu.op = 0b1
+            cpu.OP = 0b1
         elif re.match("^[pP][oO]$", cmd):
-            cpu.op = 0b0
+            cpu.OP = 0b0
         elif re.match("^[cC][yY]$", cmd):
-            cpu.cy = 0b1
+            cpu.CY = 0b1
         elif re.match("^[nN][cC]$", cmd):
             cpu.vy = 0b0
         elif cmd == "?":
@@ -89,15 +91,24 @@ def pebug_main(filename="pebug_disk.bin"):
         elif re.match("^[nN] ['].*[']$", cmd):
             setname(disk, cmd)
 
+        # Arithmetic mode.
         elif re.match("^[aA][lL][uU]$", cmd):
             print("Welcome to the ALU mode. Enter q to quit this mode.")
             mode = "M"
             cmd = prompt(mode)
             while not re.match("^[qQ]$", cmd):
-
-                # XOR
                 if re.match("^[xX][oO][rR] [0-9a-f]{,2} [0-9a-f]{,2}$", cmd):
-                    xor(cpu, cmd)
+                    asm_xor(cpu, cmd)
+                elif re.match("^[oO][rR] [0-9a-f]{,2} [0-9a-f]{,2}$", cmd):
+                    asm_or(cpu, cmd)
+                elif re.match("^[aA][nN][dD] [0-9a-f]{,2} [0-9a-f]{,2}$", cmd):
+                    asm_and(cpu, cmd)
+                elif re.match("^[nN][oO][tT] [0-9a-f]{,2}$", cmd):
+                    asm_not(cpu, cmd)
+                elif re.match("^[sS][hH][rR] [0-9a-f]{,2}$", cmd):
+                    asm_shr(cpu, cmd)
+                elif re.match("^[sS][hH][lL] [0-9a-f]{,2}$", cmd):
+                    asm_shl(cpu, cmd)
                 else:
                     print("Input not recognized.")
 
@@ -109,22 +120,78 @@ def pebug_main(filename="pebug_disk.bin"):
         cmd = prompt(mode)
 
 
-def xor(cpu, cmd):
+@dispatch(object, str, int, int)
+def _show_result(cpu: Cpu, oper: str, a: int, r: int):
+    oper = oper.upper()
+    bin_a = cpu.get_bin(a)
+    bin_r = cpu.get_bin(r)
+    print(f"{oper} {bin_a}({'%02X' % a}) => {bin_r}({'%02X' % r})")
+    cpu.print_status_flags()
+
+
+@dispatch(object, str, int, int, int)
+def _show_result(cpu: Cpu, oper: str, a: int, b: int, r: int):
+    oper = oper.upper()
+    bin_a = cpu.get_bin(a)
+    bin_b = cpu.get_bin(b)
+    bin_r = cpu.get_bin(r)
+    print(f"{oper} {bin_a}({'%02X' % a}) {bin_b}({'%02X' % b}) => {bin_r}({'%02X' % r})")
+    cpu.print_status_flags()
+
+
+def asm_shl(cpu, cmd):
+    args = cmd.split(" ")
+    oper1 = int(args[1], 16)
+    result = cpu.asm_shl(oper1)
+    _show_result(cpu, "SHL", oper1, result)
+
+
+def asm_shr(cpu, cmd):
+    args = cmd.split(" ")
+    oper1 = int(args[1], 16)
+    result = cpu.asm_shr(oper1)
+    _show_result(cpu, "SHR", oper1, result)
+
+
+def asm_not(cpu: Cpu, cmd: str):
+    args = cmd.split(" ")
+    oper1 = int(args[1], 16)
+    result = cpu.asm_not(oper1)
+    _show_result(cpu, "NOT", oper1, result)
+
+
+def asm_or(cpu: Cpu, cmd: str):
     args = cmd.split(" ")
     oper1 = int(args[1], 16)
     oper2 = int(args[2], 16)
-    result = cpu.xor(oper1, oper2)
-    print(f"XOR {cpu.get_bin(oper1)} {cpu.get_bin(oper2)} => {cpu.get_bin(bin(result))}")
+    result = cpu.asm_or(oper1, oper2)
+    _show_result(cpu, "OR", oper1, oper2, result)
 
 
-def setname(disk, cmd):
+def asm_and(cpu: Cpu, cmd: str):
+    args = cmd.split(" ")
+    oper1 = int(args[1], 16)
+    oper2 = int(args[2], 16)
+    result = cpu.asm_and(oper1, oper2)
+    _show_result(cpu, "AND", oper1, oper2, result)
+
+
+def asm_xor(cpu: Cpu, cmd: str):
+    args = cmd.split(" ")
+    oper1 = int(args[1], 16)
+    oper2 = int(args[2], 16)
+    result = cpu.asm_xor(oper1, oper2)
+    _show_result(cpu, "XOR", oper1, oper2, result)
+
+
+def setname(disk: Disk, cmd: str):
     args = cmd.split(" ")
     args[1] = args[1][1:]  # To strip the initial '
     filename = " ".join(args[1:])
     disk.filename(filename)
 
 
-def write(disk, memory, cpu, cmd):
+def write(disk: Disk, memory: Memory, cpu: Cpu, cmd: str):
     args = cmd.split(" ")
     address = int(args[1], 16)
     firstsector = int(args[2], 16)
@@ -132,7 +199,7 @@ def write(disk, memory, cpu, cmd):
     cpu.write(memory, disk, address, firstsector, number)
 
 
-def read(disk, memory, cpu, cmd):
+def read(disk: Disk, memory: Memory, cpu: Cpu, cmd: str):
     args = cmd.split(" ")
     address = int(args[1], 16)
     firstsector = int(args[2], 16)
@@ -140,7 +207,7 @@ def read(disk, memory, cpu, cmd):
     cpu.read(memory, disk, address, firstsector, number)
 
 
-def move(cpu, memory, cmd):
+def move(cpu: Cpu, memory: Memory, cmd: str):
     args = cmd.split(" ")
     oper1 = int(args[1], 16)
     oper2 = int(args[2], 16)
@@ -148,7 +215,7 @@ def move(cpu, memory, cmd):
     cpu.move(memory, oper1, oper2, oper3)
 
 
-def string_poke(cpu, memory, cmd):
+def string_poke(cpu: Cpu, memory: Memory, cmd: str):
     args = cmd.split(" ")
     address = int(args[1], 16)
     args[2] = args[2][1:]  # To strip the initial '
@@ -156,14 +223,14 @@ def string_poke(cpu, memory, cmd):
     cpu.load_into(memory, address, value)
 
 
-def byte_poke(memory, cmd):
+def byte_poke(memory: Memory, cmd: str):
     args = cmd.split(" ")
     address = int(args[1], 16)
     value = int(args[2], 16)
     memory.poke(memory.active_page, address, value)
 
 
-def compare(cpu, memory, cmd):
+def compare(cpu: Cpu, memory: Memory, cmd: str):
     args = cmd.split(" ")
     oper1 = int(args[1], 16)
     oper2 = int(args[2], 16)
@@ -173,7 +240,7 @@ def compare(cpu, memory, cmd):
         print(aa)
 
 
-def hex_cmd(cmd):
+def hex_cmd(cmd: str):
     args = cmd.split(" ")
     oper1 = int(args[1], 16)
     oper2 = int(args[2], 16)
@@ -182,7 +249,7 @@ def hex_cmd(cmd):
     print('%04X' % res_add, '%04X' % res_sub)
 
 
-def search(cpu, memory, cmd):
+def search(cpu: Cpu, memory: Memory, cmd: str):
     args = cmd.split(" ")
     start = int(args[1], 16)
     pattern = args[2]
@@ -191,14 +258,14 @@ def search(cpu, memory, cmd):
         print(aa)
 
 
-def reset_memory_range(cpu, memory, cmd):
+def reset_memory_range(cpu: Cpu, memory: Memory, cmd: str):
     args = cmd.split(" ")
     start = int(args[1], 16)
     end = int(args[2], 16)
     cpu.fill(memory, start, end, chr(0))
 
 
-def fill_memory_range(cpu, memory, cmd):
+def fill_memory_range(cpu: Cpu, memory: Memory, cmd: str):
     args = cmd.split(" ")
     start = int(args[1], 16)
     end = int(args[2], 16)
@@ -206,19 +273,19 @@ def fill_memory_range(cpu, memory, cmd):
     cpu.fill(memory, start, end, pattern)
 
 
-def setting_memory_page(memory, cmd):
+def setting_memory_page(memory: Memory, cmd: str):
     arg = cmd.split(" ")
     memory.active_page = int(arg[1], 16)
 
 
-def display(cpu, memory, cmd):
+def display(cpu: Cpu, memory: Memory, cmd: str):
     args = cmd.split(" ")
     a = int(args[1], 16)
     b = int(args[2], 16)
     cpu.display(memory, a, b)
 
 
-def cat(cpu, disk, cmd):
+def cat(cpu: Cpu, disk: Disk, cmd: str):
     args = cmd.split(" ")
     a = int(args[1], 16)
     b = int(args[2], 16)
@@ -229,7 +296,7 @@ def pebug_help():
     print("See https://github.com/pabloniklas/pebug")
 
 
-def demo(cpu, memory):
+def demo(cpu: Cpu, memory: Memory):
     oldap = memory.active_page
     memory.active_page = 49152
     cpu.load_into(memory, 0, "This is a demo. Welcome.")  # TODO: Random text (like fortune)
@@ -237,7 +304,7 @@ def demo(cpu, memory):
     memory.active_page = oldap
 
 
-def prompt(mode="-"):
+def prompt(mode: str = "-"):
     cmd = input(f"[{mode}]=> ")
     return cmd
 

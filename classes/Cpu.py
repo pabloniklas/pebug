@@ -1,5 +1,4 @@
 from multipledispatch import dispatch
-from operator import xor
 
 from . import Memory
 from .asm8086Listener import *
@@ -25,12 +24,12 @@ class Cpu(asm8086Listener):
 
         # Register Flags
         """https://www.tutorialspoint.com/flag-register-of-8086-microprocessor"""
-        self.sf = 0b0  # Sign (D7)
-        self.zf = 0b0  # Zero (D6)
-        self.cy = 0b0  # Carry bit (D0)
-        self.op = 0b0  # Parity (D2)
-        self.of = 0b0  # Overflow (D11)
-        self.ac = 0b0  # Auxiliary carry (for BCD Arithmetic) (D4)
+        self.SF = 0b0  # Sign (D7)
+        self.ZF = 0b0  # Zero (D6)
+        self.CY = 0b0  # Carry bit (D0)
+        self.OP = 0b0  # Parity (D2)
+        self.OF = 0b0  # Overflow (D11)
+        self.AC = 0b0  # Auxiliary carry (for BCD Arithmetic) (D4)
 
         # Control flags not implemented
 
@@ -38,9 +37,25 @@ class Cpu(asm8086Listener):
     def bits(self):
         return self._bits
 
-    @staticmethod
-    def xor(a, b):
-        return xor(a, b)
+    def asm_shr(self, x: int):
+        rest, self.CY = x >> 1, x & 1
+        return rest
+
+    def asm_shl(self, x):
+        rest, self.CY = x << 1, x & 1
+        return rest
+
+    def asm_not(self, a):
+        return ~a
+
+    def asm_or(self, a, b):
+        return a | b
+
+    def asm_xor(self, a, b):
+        return a ^ b
+
+    def asm_and(self, a, b):
+        return a & b
 
     @staticmethod
     def not_yet(self):
@@ -48,7 +63,7 @@ class Cpu(asm8086Listener):
 
     @dispatch(str)
     def get_bin(x):
-        return format(int(x,2), 'b').zfill(8)
+        return format(int(x, 2), 'b').zfill(8)
 
     @dispatch(int, n=int)
     def get_bin(x, n=bits):
@@ -59,8 +74,8 @@ class Cpu(asm8086Listener):
     def get_hex(x):
         return format(x, 'h').zfill(4)
 
-    def print_status(self):
-        print(f"SF={self.sf} ZF={self.zf} CY={self.cy} OP={self.op} OF={self.of} AC={self.ac}")
+    def print_status_flags(self):
+        print(f"SF={self.SF} ZF={self.ZF} CY={self.CY} OP={self.OP} OF={self.OF} AC={self.AC}")
 
     def print_registers(self):
         print(

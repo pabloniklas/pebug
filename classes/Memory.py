@@ -13,6 +13,11 @@ class Memory:
     def __str__(self):
         return str(self.pages) + " * " + str(self._offsets)
 
+    @dispatch(int)
+    def peek(self, address):
+        page = self.active_page
+        return self.peek(page, address)
+
     @dispatch(int, int)
     def peek(self, page, address):
         if int(page) < 0 or int(page) >= len(self.memory) or \
