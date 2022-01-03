@@ -49,7 +49,7 @@ extensions = [
     'sphinx.ext.viewcode',
     'sphinx.ext.githubpages',
     'myst_parser',
-    'sphinx_design',
+#    'sphinx_design',
     'sphinx.ext.autosummary',
 ]
 
@@ -139,19 +139,19 @@ latex_elements = {
 # Grouping the document tree into LaTeX files. List of tuples
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
-latex_documents = [
-    (master_doc, 'my-sphinx-test.tex', 'my-sphinx-test Documentation',
-     'CMT', 'manual'),
-]
+# latex_documents = [
+#     (master_doc, 'my-sphinx-test.tex', 'my-sphinx-test Documentation',
+#      'CMT', 'manual'),
+# ]
 
 # -- Options for manual page output ---------------------------------------
 
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
-man_pages = [
-    (master_doc, 'my-sphinx-test', 'my-sphinx-test Documentation',
-     [author], 1)
-]
+# man_pages = [
+#     (master_doc, 'my-sphinx-test', 'my-sphinx-test Documentation',
+#      [author], 1)
+# ]
 
 
 def setup(app):
