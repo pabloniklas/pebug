@@ -7,9 +7,7 @@ import sys
 
 from multipledispatch import dispatch
 
-from classes.Cpu import Cpu
-from classes.Disk import Disk
-from classes.Memory import Memory
+from modules.asm8086Machine import Disk, Memory, Cpu
 
 
 def pebug_main(filename="pebug_disk.bin"):
@@ -17,8 +15,11 @@ def pebug_main(filename="pebug_disk.bin"):
 
     memory = Memory(65536)
     stack = Memory(1)
-    disk = Disk(65536, filename)
-    cpu = Cpu(memory)
+
+    disk = Disk(65536, filename)  # 64Kb
+    disk.load()
+
+    cpu = Cpu()
 
     print("pebug - An x86 old-debug-like program written in Python.")
     print("By Pablo Niklas <pablo.niklas@gmail.com>.")
@@ -119,6 +120,8 @@ def pebug_main(filename="pebug_disk.bin"):
         mode = "C"
         cmd = prompt(mode)
 
+    disk.save()  # Save vdisk to a _real_ disk.
+
 
 @dispatch(object, str, int, int)
 def _show_result(cpu: Cpu, oper: str, a: int, r: int):
@@ -196,7 +199,7 @@ def write(disk: Disk, memory: Memory, cpu: Cpu, cmd: str):
     address = int(args[1], 16)
     firstsector = int(args[2], 16)
     number = int(args[3], 16)
-    cpu.write(memory, disk, address, firstsector, number)
+    cpu.write_to_vdisk(memory, disk, address, firstsector, number)
 
 
 def read(disk: Disk, memory: Memory, cpu: Cpu, cmd: str):
@@ -204,7 +207,7 @@ def read(disk: Disk, memory: Memory, cpu: Cpu, cmd: str):
     address = int(args[1], 16)
     firstsector = int(args[2], 16)
     number = int(args[3], 16)
-    cpu.read(memory, disk, address, firstsector, number)
+    cpu.read_from_vdisk(memory, disk, address, firstsector, number)
 
 
 def move(cpu: Cpu, memory: Memory, cmd: str):
@@ -300,7 +303,7 @@ def demo(cpu: Cpu, memory: Memory):
     oldap = memory.active_page
     memory.active_page = 49152
     cpu.load_into(memory, 0, "This is a demo. Welcome.")  # TODO: Random text (like fortune)
-    print("The demo text was loaded into C000:0000, type 'd 0 30' to read it.")
+    print("The demo text was loaded into C000:0000, type 'd 0 30' to read_from_vdisk it.")
     memory.active_page = oldap
 
 
