@@ -1,4 +1,5 @@
 import os
+from typing import List
 
 from multipledispatch import dispatch
 
@@ -125,7 +126,9 @@ class Memory:
 
     @dispatch(int)
     def peek(self, address: int) -> int:
-        """Retrieve the content of a memory address.
+        """
+        peek(self, address: int) -> int
+        Retrieve the content of a memory address.
 
         Parameters:
             address (int): Adress where to peek.
@@ -138,7 +141,9 @@ class Memory:
 
     @dispatch(int, int)
     def peek(self, page: int, address: int) -> int:
-        """Retrieve the content of a memory address.
+        """
+        peek(self, page: int, address: int) -> int
+        Retrieve the content of a memory address.
 
         Parameters:
             page (int): Page memory.
@@ -157,7 +162,9 @@ class Memory:
 
     @dispatch(str, str)
     def peek(self, page: str, address: str) -> int:
-        """Retrieve the content of a memory address.
+        """
+        peek(self, page: str, address: str) -> int
+        Retrieve the content of a memory address.
 
         Parameters:
             page (str): Page memory in hexadecimal.
@@ -170,7 +177,9 @@ class Memory:
 
     @dispatch(int, int, int)
     def poke(self, page: int, address: int, value: int) -> bool:
-        """Write a value to a memory address.
+        """
+        poke(self, page: int, ºaddress: int, value: int) -> bool
+        Write a value to a memory address.
 
         Parameters:
             page (int): Page memory.
@@ -286,11 +295,11 @@ class Cpu(asm8086Listener):
 
         return format(x, 'h').zfill(4)
 
-    def print_status_flags(self):
+    def print_status_flags(self) -> None:
         """ Print the status of the flags. """
         print(f"SF={self.SF} ZF={self.ZF} CY={self.CY} OP={self.OP} OF={self.OF} AC={self.AC}")
 
-    def print_registers(self):
+    def print_registers(self) -> None:
         """ Print the CPU registers and it's value."""
         print(
             f"AX={self.get_bin(self.AX)} BX={self.get_bin(self.BX)}  CX={self.get_bin(self.CX)}  DX={self.get_bin(self.DX)}")
@@ -342,11 +351,11 @@ class Cpu(asm8086Listener):
 
         return True
 
-    def search(self, memory, start, pattern):
+    def search(self, memory: Memory, start: int, pattern: str) -> List[int]:
         """Search a pattern in the memory. Staring from <start> to the end of the page.
 
         Parameters:
-            memory (Memory): Memory class objecy.
+            memory (Memory): Memory class object.
             start (int): Starting point from the search.
             pattern (str): Pattern to search for.
 
@@ -373,11 +382,34 @@ class Cpu(asm8086Listener):
 
         return found_list
 
-    def load_into(self, memory, start, text):
+    def load_into(self, memory: Memory, start: int, text: str) -> None:
+        """
+        Load a text into memory, starting from an address.
+
+        Args:
+            memory (Memory): Memory object class.
+            start (int): Address memory where to begin.
+            text (str): Text to be load into.
+
+        Returns:
+            None
+        """
         for idx in range(0, len(text) - 1):
             memory.poke(memory.active_page, start + idx, ord(text[idx]))
 
-    def compare(self, memory, cfrom, cend, cto):
+    def compare(self, memory: Memory, cfrom: int, cend: int, cto: int) -> List[str]:
+        """
+        Compares two memory regions.
+
+        Args:
+            memory (Memory): Memory object class.
+            cfrom (int): Source address memory where to start.
+            cend (int): Source address memory where to end.
+            cto (int): Destination address memory.
+
+        Returns:
+            [str]: The differences between regions.
+        """
         diffs = []
 
         for a in range(cfrom, cend):
@@ -392,7 +424,18 @@ class Cpu(asm8086Listener):
 
         return diffs
 
-    def cat(self, disk, addrb, addrn):
+    def cat(self, disk: Disk, addrb: int, addrn: int) -> None:
+        """
+        Shows the content of the vdisk region.
+
+        Args:
+            disk: A Disk class type object.
+            addrb: Start address.
+            addrn: End address.
+
+        Returns:
+
+        """
         bytes_per_row = int("F", 16)
         pointer = 0
         ascvisual = ""
@@ -421,7 +464,18 @@ class Cpu(asm8086Listener):
 
         print("")
 
-    def display(self, memory, addrb, addrn):
+    def display(self, memory: Memory, addrb: int, addrn: int) -> None:
+        """
+        Displays a memory region.
+
+        Args:
+            memory: A Memory class type object.
+            addrb: Start address.
+            addrn: End address.
+
+        Returns:
+            None.
+        """
         page = memory.active_page
         bytes_per_row = int("F", 16)
         pointer = 0
@@ -451,11 +505,37 @@ class Cpu(asm8086Listener):
 
         print("")
 
-    def write_to_vdisk(self, memory, disk, address, firstsector, number):
+    def write_to_vdisk(self, memory: Memory, disk: Disk, address: int, firstsector: int, number: int) -> None:
+        """
+        Writes to vdisk a memory block.
+
+        Args:
+            memory (Memory): A Memory type class object.
+            disk (Disk): A Disk type class object.
+            address (int): Source memory address.
+            firstsector (int): Destination sector address.
+            number (int): Number of bytes to be copied.
+
+        Returns:
+            None.
+        """
         for i in range(0, number - 1):
             disk.write(firstsector, memory.peek(address + i))
 
-    def read_from_vdisk(self, memory, disk, address, firstsector, number):
+    def read_from_vdisk(self, memory: Memory, disk: Disk, address: int, firstsector: int, number: int) -> None:
+        """
+        Writes to memory a vdisk block.
+
+        Args:
+            memory (Memory): A Memory type class object.
+            disk (Disk): A Disk type class object.
+            address (int): Destination memory address.
+            firstsector (int): Source sector address.
+            number (int): Number of bytes to be copied.
+
+        Returns:
+            None.
+        """
         for i in range(0, number - 1):
             memory.poke(address, disk.read(firstsector + i))
 

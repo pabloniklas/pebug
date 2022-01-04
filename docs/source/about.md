@@ -1,6 +1,7 @@
 # About
  
-This is a x86 old-debug-like program.
+
+[PEBUG](https://github.com/pabloniklas/pebug) is a x86 old-debug-like program.
 
 The main goal of this project is to provide an educational and introductory interface to assembler, x86 flavor in
 particular.

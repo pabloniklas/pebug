@@ -21,14 +21,15 @@ API Reference
 
 .. autoclass:: asm8086Machine.Disk
    :members:
+   :show-inheritance:
 
 .. autoclass:: asm8086Machine.Cpu
    :members:
+   :show-inheritance:
 
 .. autoclass:: asm8086Machine.Memory
-   .. automethod:: peek(page, address)
-   .. automethod:: peek(address)
-
+   :members:
+   :show-inheritance:
 
 Indices and tables
 ==================

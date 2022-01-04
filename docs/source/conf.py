@@ -49,7 +49,6 @@ extensions = [
     'sphinx.ext.viewcode',
     'sphinx.ext.githubpages',
     'myst_parser',
-#    'sphinx_design',
     'sphinx.ext.autosummary',
 ]
 
