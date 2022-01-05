@@ -258,7 +258,7 @@ class Cpu(asm8086Listener):
         print("This part of the CPU hasn't been implemented yet. =)")
 
     @dispatch(str)
-    def get_bin(x):
+    def get_bin(x: int) -> str:
         """Convert any integer into 8 bit binary format.
 
         Parameters:
@@ -271,7 +271,7 @@ class Cpu(asm8086Listener):
         return format(int(x, 2), 'b').zfill(8)
 
     @dispatch(int, n=int)
-    def get_bin(x, n=bits):
+    def get_bin(x: int, n: int=bits) -> str:
         """Convert any integer into n bit binary format.
 
         Parameters:
@@ -283,7 +283,7 @@ class Cpu(asm8086Listener):
         return format(x, 'b').zfill(8)
 
     @dispatch(int)
-    def get_hex(x):
+    def get_hex(x: int) -> str:
         """Convert any integer into 16 bit hexadecimal format.
 
         Parameters:
@@ -306,7 +306,7 @@ class Cpu(asm8086Listener):
         print(
             f"SP={self.get_bin(self.SP)} BP={self.get_bin(self.BP)}  SI={self.get_bin(self.SI)}  DI={self.get_bin(self.DI)}")
 
-    def move(self, memory, from_begin, from_end, destination):
+    def move(self, memory: Memory, from_begin: int, from_end: int, destination: int) -> bool:
         """Copy a memory region to other memory region.
 
         Parameters:
@@ -330,7 +330,7 @@ class Cpu(asm8086Listener):
             print("Invalid value.")
             return False
 
-    def fill(self, memory, start, end, pattern):
+    def fill(self, memory: Memory, start: int, end: int, pattern: str) -> bool:
         """Fill a memory region with a specified pattern.
 
         Parameters:
