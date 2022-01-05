@@ -31,6 +31,7 @@ API Reference
    :members:
    :show-inheritance:
 
+
 Indices and tables
 ==================
 
