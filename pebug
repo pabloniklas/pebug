@@ -230,7 +230,7 @@ def byte_poke(memory: Memory, cmd: str):
     args = cmd.split(" ")
     address = int(args[1], 16)
     value = int(args[2], 16)
-    memory.poke(memory.active_page, address, value)
+    memory.poke(memory.active_page, value, address)
 
 
 def compare(cpu: Cpu, memory: Memory, cmd: str):
@@ -296,14 +296,14 @@ def cat(cpu: Cpu, disk: Disk, cmd: str):
 
 
 def pebug_help():
-    print("See https://github.com/pabloniklas/pebug")
+    print("See https://pebug.readthedocs.io/en/latest/commands.html")
 
 
 def demo(cpu: Cpu, memory: Memory):
     oldap = memory.active_page
     memory.active_page = 49152
     cpu.load_into(memory, 0, "This is a demo. Welcome.")  # TODO: Random text (like fortune)
-    print("The demo text was loaded into C000:0000, type 'd 0 30' to read_from_vdisk it.")
+    print("The demo text was loaded into C000:0000, type 'd 0 30' to read it.")
     memory.active_page = oldap
 
 

@@ -3,8 +3,8 @@ from typing import List
 
 from multipledispatch import dispatch
 
-from asm8086Listener import *
-from asm8086Parser import *
+from .asm8086Listener import *
+from .asm8086Parser import *
 
 
 class Disk:
@@ -13,19 +13,28 @@ class Disk:
     """
 
     def __init__(self, size, filename):
-        """ Class Constructor """
+        """
+        Class constructor. Initialize the vdisk object.
+
+        Args:
+            size (int): Size in bytes of the vdisk.
+            filename (str): Real filename of the vdisk in the filesystem.
+        """
         self._filename = os.path.join(os.path.expanduser("~"), "." + filename)
         self._size = size
         self._disk = [0b00000000 * self._size]
 
+    @property
     def __str__(self):
         """ Diskinfo """
         return f"Filename: {self._filename} // Size: {self._size} bytes."
 
+    @property
     def size(self):
         """ Disk size """
         return self._size
 
+    @property
     def filename(self):
         """ Filename of the real disk """
         return self._filename
@@ -112,6 +121,10 @@ class Disk:
 class Memory:
     """
     Class emulating paginated memory bank.
+
+    Methods:
+        peek: Retrieve the content of a memory address.
+        poke: Write a value to a memory address.
     """
 
     def __init__(self, pages=1):
@@ -230,6 +243,7 @@ class Cpu(asm8086Listener):
 
         # Control flags not implemented
 
+    @property
     def bits(self):
         return self._bits
 
@@ -271,7 +285,7 @@ class Cpu(asm8086Listener):
         return format(int(x, 2), 'b').zfill(8)
 
     @dispatch(int, n=int)
-    def get_bin(x: int, n: int=bits) -> str:
+    def get_bin(x: int, n: int = bits) -> str:
         """Convert any integer into n bit binary format.
 
         Parameters:
