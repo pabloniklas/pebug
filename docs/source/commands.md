@@ -205,7 +205,7 @@ The assembly process will stop after you ENTER an empty line.
 :::
 A
 xxxx:0100 jmp 126
-xxxx:0102 db 0d,0a,'This is my first DEBUG program!'
+xxxx:0102 db 0d,0a,'This is my first PEBUG program!'
 xxxx:0123 db 0d,0a,'$'
 xxxx:0126 xor ax,ax
 xxxx:0128 mov ah,9
@@ -222,10 +222,10 @@ Disassembles machine instructions into 8086 Assembly code.
 Without the optional [range], it uses Offset 100 as its starting point,
 disassembles about 32 bytes and then remembers the next byte it should start with if the command is used again.
 ( The word 'about' was used above, because it may be necessary to finish with an odd-number 
-of bytes greater than 32, depending upon the last type of instruction DEBUG has to disassemble.
+of bytes greater than 32, depending upon the last type of instruction PEBUG has to disassemble.
 
 :::{warning}
-The user must decide whether the bytes that DEBUG disassembles are all 8086 instructions, 
+The user must decide whether the bytes that PEBUG disassembles are all 8086 instructions, 
 just data or any of the newer x86 instructions which are all beyond the ability of PEBUG to understand! 
 :::
 
@@ -244,14 +244,12 @@ xxxx:0132 CD21 INT 21
 ## Go: G [=address] [addresses]
 
 Go is used to run a program and set breakpoints in the program's code. 
-As we saw in an Example for the ENTER command, the '=address' option is used to tell DEBUG a starting location. 
+As we saw in an Example for the ENTER command, the '=address' option is used to tell PEBUG a starting location. 
 If you use 'g' all by itself, execution will begin at whatever location is pointed to by the CS:IP registers. 
 Optional breakpoints ( meaning the program will HALT before executing the code at any of these locations) 
 of up to any ten addresses may be set by simply listing them on the command line. 
 
-
 # Commands in the original DEBUG but not in PEBUG
-
 
 ## Input: I port
 
