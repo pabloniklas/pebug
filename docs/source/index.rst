@@ -14,6 +14,7 @@ and introductory interface to assembler, x86 flavor in particular.
    requirements.md
    commands.md
    screenshots.md
+   vdisk.md
    modules
 
 API Reference

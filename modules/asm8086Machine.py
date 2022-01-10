@@ -3,8 +3,12 @@ from typing import List
 
 from multipledispatch import dispatch
 
-from .asm8086Listener import *
-from .asm8086Parser import *
+if __name__ is not None and "." in __name__:
+    from .asm8086Parser import asm8086Parser
+    from .asm8086Listener import *
+else:
+    from asm8086Parser import asm8086Parser
+    from asm8086Listener import *
 
 
 class Disk:
