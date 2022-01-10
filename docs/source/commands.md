@@ -1,15 +1,13 @@
-# Commands
+# Available Commands
 
 [Source](https://montcs.bloomu.edu/Information/LowLevel/DOS-Debug.html)
 
-## General purpose
-
-### Quit: Q
+## Quit: Q
 
 Immediately quits (exits) the PEBUG program! No questions ever asked... 
 should be the first command you remember along with the "?" command.
 
-### Hex: H value1 value2
+## Hex: H value1 value2
 
 A very simple (add and subtract only) Hex calculator. 
 Never forget that all numbers inside of PEBUG are always Hexadecimal. 
@@ -18,14 +16,14 @@ then the DIFFERENCE of those values. Examples:
 
 ```-h aaa 531 -h fff 3 -h dbf ace```
 
-### Dump: D [range]
+## Dump: D [range]
 
 ```D [address] [length]```
 
 Displays the contents of a block of memory. 
 This first example shows we have a Matrox card in this system.
 
-#### Examples:
+### Examples:
 
 :::
 d c000:0010
@@ -40,12 +38,12 @@ C000:0070 40 00 12 10 00 80 00 00-38 37 34 2D 32 00 FF FF @.......874-2...
 C000:0080 E8 26 56 8B D8 E8 C6 56-74 22 8C C8 3D 00 C0 74 .&V....Vt"..=..t
 :::
 
-### Search: S range list
+## Search: S range list
 
 Searches within a range of addresses for a pattern of one or more byte values given in a list.
 The list can be comprised of numbers or character strings enclosed by matching single or double quote marks. 
 
-#### Examples:
+### Examples:
 
 :::
 s fe00:0 ffff "BIOS"
@@ -63,7 +61,7 @@ FE00:0070 49 4F 53 20 76 34 2E 35-31 50 47 00 DB 32 EC 33 IOS v4.51PG..2.3
 :::
 
 
-### Compare: C range address
+## Compare: C range address
 
 Compares two blocks of memory. 
 If there are no differences, then PEBUG simply displays another prompt. 
@@ -80,12 +78,12 @@ The bytes at locations 140 through 148 are being compared to those at 340 (throu
 the bytes are displayed side by side for those which are different 
 (with their exact locations, including the segment, on either side of them). 
 
-### Fill: F range list
+## Fill: F range list
 
 This command can also be used to clear large areas of Memory as well as filling 
 smaller areas with a continuously repeating phrase or single byte. 
 
-#### Examples:
+### Example:
 
 :::
 f 100 12f 'BUFFER'
@@ -95,11 +93,11 @@ xxxx:0110 45 52 42 55 46 46 45 52-42 55 46 46 45 52 42 55 ERBUFFERBUFFERBU
 xxxx:0120 46 46 45 52 42 55 46 46-45 52 42 55 46 46 45 52 FFERBUFFERBUFFER
 :::
 
-### Enter: E address [list]
+## Enter: E address [list]
 
 Used to enter data or instructions (as machine code) directly into Memory locations.
 
-#### Example
+### Example
 
 First we'll change a single byte at location CS:FFCB from whatever it was before to D2
 
@@ -114,7 +112,7 @@ you can include the other type of quote mark within your entry string:
 
 ```e 22a "a zero-byte ('00h')." 00```
 
-### Load: L [address] [firstsector] [number] 
+## Load: L [address] [firstsector] [number] 
 
 This command will LOAD the selected number of sectors from the vdisk into Memory. 
 The address is the location in Memory the data will be copied to 
@@ -122,11 +120,11 @@ The address is the location in Memory the data will be copied to
 firstsector counts from ZERO to the largest sector in the volume and finally 
 number specifies in hexadecimal the total number of sectors that will be copied into Memory
 
-### Move: M range address
+## Move: M range address
 
 This command should really be called: COPY (not Move) as it actually copies all the bytes from within the specified range to a new address.
 
-#### Examples:
+### Examples:
 
 1) ```m 7c00 7cff 600```
 
@@ -142,15 +140,15 @@ PEBUG has protections to avoid overwritting the source bytes.
 :::
 
 
-### Register: R [register]
+## Register: R [register]
 
 Entering ```r``` all by itself will display all of the 8086 register's contents 
 
-### Write: W [address] [firstsector] [number] 
+## Write: W [address] [firstsector] [number]
 
 The WRITE (W) command is often used to save a program to the vdisk.
 
-### Extra commands
+## Extra commands
 
 | Command Name | Parameters      | Description                                                  |
 |--------------|-----------------|--------------------------------------------------------------|
@@ -161,7 +159,7 @@ The WRITE (W) command is often used to save a program to the vdisk.
  | ```?```      |                 | Quick help.                                                  |
 
 
-### Only for the flag register
+## Only for the flag register
 
 | Flag Name               | Set      | Clear    |
 |-------------------------|----------|----------|
@@ -185,4 +183,93 @@ The following operators are available (more are coming):
 | ```not```    | ```not a```   | NOT of _a_                         |
 | ```shl```    | ```shl a```   | Shift to the left of _a_           |
 | ```shr```    | ```shr a```   | Shift to the right of _a_          |
+
+
+# Commands I'm working on
+
+## Assemble: A [address]
+
+Creates machine executable code in memory beginning at CS:0100 (or the specified address) from the 8086/8088
+(and 8087) Assembly Language instructions which are entered. 
+Although no Macro instructions nor labels are recognized, you can use the pseudo-instructions 'DB' and 'DW' 
+(so you can use the DB opcode to enter ASCII data like this: DB 'This is a string',0D,0A ).
+The 'A' command remembers the last location where any data was assembled, so successive 'A' commands
+(when no address is specified) will always begin at the next address in the chain of assembled instructions. 
+This aspect of the command is similar to the Dump command which remembers the location of its last dump 
+(if no new address is specified).
+
+The assembly process will stop after you ENTER an empty line.
+
+### Example:
+
+:::
+A
+xxxx:0100 jmp 126
+xxxx:0102 db 0d,0a,'This is my first DEBUG program!'
+xxxx:0123 db 0d,0a,'$'
+xxxx:0126 xor ax,ax
+xxxx:0128 mov ah,9
+xxxx:012A mov dx,102
+xxxx:012D int 21
+xxxx:012F mov ax,4c
+xxxx:0132 int 21
+xxxx:0134
+:::
+
+## Unassemble: U [range]
+
+Disassembles machine instructions into 8086 Assembly code. 
+Without the optional [range], it uses Offset 100 as its starting point,
+disassembles about 32 bytes and then remembers the next byte it should start with if the command is used again.
+( The word 'about' was used above, because it may be necessary to finish with an odd-number 
+of bytes greater than 32, depending upon the last type of instruction DEBUG has to disassemble.
+
+:::{warning}
+The user must decide whether the bytes that DEBUG disassembles are all 8086 instructions, 
+just data or any of the newer x86 instructions which are all beyond the ability of PEBUG to understand! 
+:::
+
+### Example:
+
+:::
+u 126 133
+xxxx:0126 31C0 XOR AX,AX
+xxxx:0128 B409 MOV AH,09
+xxxx:012A BA0201 MOV DX,0102
+xxxx:012D CD21 INT 21
+xxxx:012F B84C00 MOV AX,004C
+xxxx:0132 CD21 INT 21
+:::
+
+## Go: G [=address] [addresses]
+
+Go is used to run a program and set breakpoints in the program's code. 
+As we saw in an Example for the ENTER command, the '=address' option is used to tell DEBUG a starting location. 
+If you use 'g' all by itself, execution will begin at whatever location is pointed to by the CS:IP registers. 
+Optional breakpoints ( meaning the program will HALT before executing the code at any of these locations) 
+of up to any ten addresses may be set by simply listing them on the command line. 
+
+
+# Commands in the original DEBUG but not in PEBUG
+
+
+## Input: I port
+
+The use of I/O commands while running Windows™9x/Me is just plain unreliable! This is especially true when trying to directly access hard disks! Under Win NT/2000/XP, the I/O commands are only an emulation; so don't trust them. Though the example below still works under Win2000/XP, it's most likely using some WinAPI code to show what's in the Windows clock area; not directly from an RTC chip.
+
+Long ago (when DOS was the only OS for PCs), there were dozens of BASIC programs that used I/O commands for handling tasks through parallel and serial ports (e.g., to change the font used by a printer or values in a modem's control registers). Under real DOS, they can still be used for direct communications with keyboards or a floppy drive's control chips along with many other hardware devices.
+Here's an example of how to read the hours and minutes from a computer's "real time clock" (RTC):
+
+:::
+-o 70 04 <-- Check the hours.
+-i 71
+18 <----- 18 hours (or 6 p.m.)
+-o 70 02 <-- Check the minutes.
+-i 71
+52 <----- 52 minutes
+:::
+
+## Output: O port byte
+
+See comments under the Input command. 
 
