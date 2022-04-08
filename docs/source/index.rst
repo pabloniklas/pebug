@@ -33,7 +33,7 @@ API Reference
    :show-inheritance:
 
 
-Indices and tables
+Index and tables
 ==================
 
 * :ref:`genindex`
