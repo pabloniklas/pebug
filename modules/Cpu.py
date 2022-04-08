@@ -21,6 +21,16 @@ class Cpu(asm8086Listener):
     def __init__(self):
         self._bits = 16
 
+        # 8 bit registers
+        self.AH = 0b0 * self._bits/2
+        self.AL = 0b0 * self._bits/2
+        self.BH = 0b0 * self._bits/2
+        self.BL = 0b0 * self._bits/2
+        self.CH = 0b0 * self._bits/2
+        self.CL = 0b0 * self._bits/2
+        self.DH = 0b0 * self._bits/2
+        self.DL = 0b0 * self._bits/2
+
         # 16 bit X86 registers
         self.AX = 0b0 * self._bits
         self.BX = 0b0 * self._bits
@@ -47,8 +57,8 @@ class Cpu(asm8086Listener):
         # TODO: Fill in the dictionary
         self._opcode = {
             r"^(\s*)add(\s+)[abcd][hl](\s*),(\s*)[abcd][hl](\s*)$": {
-                "mnemonic": "add m8,r8",
-                "opcode": int(0x00),
+                "mnemonic": "add r8,r8",
+                "opcode": int(0x02),
                 "flags": "OSZAPC"
             },
             r"^(\s*)ret(\s*)$": {
@@ -69,6 +79,10 @@ class Cpu(asm8086Listener):
         }
 
         # Control flags not implemented
+
+    # TODO: Setter para los registros. Ya que los de uso general tienen contraparte de 8 bits.
+    def set_register(self, *reg, value: int):
+        pass
 
     # https://www.geeksforgeeks.org/python-program-to-add-two-binary-numbers/
     def _find_matches(self, d: {str}, item: str) -> {str}:
