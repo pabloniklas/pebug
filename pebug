@@ -21,8 +21,18 @@ def pebug_main(filename="pebug_disk.bin"):
 
     cpu = Cpu()
 
-    print("pebug - An x86 old-debug-like program written in Python.")
+    print("""
+                 _
+                | |
+     ____  _____| |__  _   _  ____
+    |  _ \| ___ |  _ \| | | |/ _  |
+    | |_| | ____| |_) ) |_| ( (_| |
+    |  __/|_____)____/|____/ \___ |
+    |_|                     (_____|
+    """)
+    print("An x86 old-debug-like program written in Python.")
     print("By Pablo Niklas <pablo.niklas@gmail.com>.")
+    print("Online manual at https://pebug.readthedocs.io")
     print(f"Main memory size: {memory.pages} pages.")
     print(f"Stack size: {stack.pages} page/s.")
     print(f"Virtual disk size: {disk.size} bytes.")
@@ -30,83 +40,83 @@ def pebug_main(filename="pebug_disk.bin"):
     """https://montcs.bloomu.edu/Information/LowLevel/DOS-Debug.html"""
     mode = "C"
     cmd = prompt(mode)
-    while not re.match("^[qQ]", cmd):
+    while not re.match(r"^[qQ]", cmd):
 
-        if re.match("^[sS] [0-9a-f]{,4} .*$", cmd):
+        if re.match(r"^[sS] [0-9a-f]{,4} .*$", cmd):
             search(cpu, memory, cmd)
-        elif re.match("^[hH] [0-9a-f]{,4} [0-9a-f]{,4}$", cmd):
+        elif re.match(r"^[hH] [0-9a-f]{,4} [0-9a-f]{,4}$", cmd):
             hex_cmd(cmd)
-        elif re.match("^[rR]$", cmd):
+        elif re.match(r"^[rR]$", cmd):
             cpu.print_registers()
             cpu.print_status_flags()
-        elif re.match("^[cC] [0-9a-f]{,4} [0-9a-f]{,4} [0-9a-f]{,4}$", cmd):
+        elif re.match(r"^[cC] [0-9a-f]{,4} [0-9a-f]{,4} [0-9a-f]{,4}$", cmd):
             compare(cpu, memory, cmd)
-        elif re.match("^[cC][aA][tT] [0-9a-f]{,4} [0-9a-f]{,4}$", cmd):
+        elif re.match(r"^[cC][aA][tT] [0-9a-f]{,4} [0-9a-f]{,4}$", cmd):
             cat(cpu, disk, cmd)
-        elif re.match("^[mM] [0-9a-f]{,4} [0-9a-f]{,4} [0-9a-f]{,4}$", cmd):
+        elif re.match(r"^[mM] [0-9a-f]{,4} [0-9a-f]{,4} [0-9a-f]{,4}$", cmd):
             move(cpu, memory, cmd)
-        elif re.match("^[oO][vV]$", cmd):
+        elif re.match(r"^[oO][vV]$", cmd):
             cpu.OF = 0b1
-        elif re.match("^[nN][vV]$", cmd):
+        elif re.match(r"^[nN][vV]$", cmd):
             cpu.OF = 0b0
-        elif re.match("^[nN][gG]$", cmd):
+        elif re.match(r"^[nN][gG]$", cmd):
             cpu.SF = 0b1
-        elif re.match("^[pP][lL]$", cmd):
+        elif re.match(r"^[pP][lL]$", cmd):
             cpu.sh = 0b0
-        elif re.match("^[zZ][rR]$", cmd):
+        elif re.match(r"^[zZ][rR]$", cmd):
             cpu.ZF = 0b1
-        elif re.match("^[nN][zZ]$", cmd):
+        elif re.match(r"^[nN][zZ]$", cmd):
             cpu.ZF = 0b0
-        elif re.match("^[aA][cC]$", cmd):
+        elif re.match(r"^[aA][cC]$", cmd):
             cpu.AC = 0b1
-        elif re.match("^[nN][aA]$", cmd):
+        elif re.match(r"^[nN][aA]$", cmd):
             cpu.AC = 0b0
-        elif re.match("^[pP][eE]$", cmd):
+        elif re.match(r"^[pP][eE]$", cmd):
             cpu.OP = 0b1
-        elif re.match("^[pP][oO]$", cmd):
+        elif re.match(r"^[pP][oO]$", cmd):
             cpu.OP = 0b0
-        elif re.match("^[cC][yY]$", cmd):
+        elif re.match(r"^[cC][yY]$", cmd):
             cpu.CY = 0b1
-        elif re.match("^[nN][cC]$", cmd):
+        elif re.match(r"^[nN][cC]$", cmd):
             cpu.vy = 0b0
-        elif cmd == "?":
-            pebug_help()
-        elif re.match("^[fF] [0-9a-f]{,4} [0-9a-f]{,4}$", cmd):
+        elif re.match(r"^[fF] [0-9a-f]{,4} [0-9a-f]{,4}$", cmd):
             reset_memory_range(cpu, memory, cmd)
-        elif re.match("^[fF] [0-9a-f]{,4} [0-9a-f]{,4} .*$", cmd):
+        elif re.match(r"^[fF] [0-9a-f]{,4} [0-9a-f]{,4} .*$", cmd):
             fill_memory_range(cpu, memory, cmd)
-        elif re.match("^[dD] [0-9a-f]{,4} [0-9a-f]{,4}$", cmd):
+        elif re.match(r"^[dD] [0-9a-f]{,4} [0-9a-f]{,4}$", cmd):
             display(cpu, memory, cmd)
-        elif re.match("^[sS][pP] [0-9a-f]{,4}$", cmd):
+        elif re.match(r"^[sS][pP] [0-9a-f]{,4}$", cmd):
             setting_memory_page(memory, cmd)
-        elif re.match("^[eE] [0-9a-f]{,4} [0-9a-f]{,2}$", cmd):
+        elif re.match(r"^[eE] [0-9a-f]{,4} [0-9a-f]{,2}$", cmd):
             byte_poke(memory, cmd)
-        elif re.match("^[eE] [0-9a-f]{,4} ['].*[']$", cmd):
+        elif re.match(r"^[eE] [0-9a-f]{,4} ['].*[']$", cmd):
             string_poke(cpu, memory, cmd)
-        elif re.match("[dD][eE][mM][oO]", cmd):
+        elif re.match(r"^[dD][eE][mM][oO]$", cmd):
             demo(cpu, memory)
-        elif re.match("[wW] [0-9a-f]{,4} [0-9a-f]{,4} [0-9a-f]{,4}", cmd):
+        elif re.match(r"^[wW] [0-9a-f]{,4} [0-9a-f]{,4} [0-9a-f]{,4}$", cmd):
             write(disk, memory, cpu, cmd)
-        elif re.match("[lL] [0-9a-f]{,4} [0-9a-f]{,4} [0-9a-f]{,4}", cmd):
+        elif re.match(r"^[lL] [0-9a-f]{,4} [0-9a-f]{,4} [0-9a-f]{,4}$", cmd):
             read(disk, memory, cpu, cmd)
-        elif re.match("^[nN] ['].*[']$", cmd):
+        elif re.match(r"^[nN] ['].*[']$", cmd):
             setname(disk, cmd)
+        elif re.match(r"^[aA]$", cmd):
+            assemble(cpu, memory)
 
         # Arithmetic mode.
-        elif re.match("^[aA][lL][uU]$", cmd):
+        elif re.match(r"^[aA][lL][uU]$", cmd):
             print("Welcome to the ALU mode. Enter q to quit this mode.")
             mode = "M"
             cmd = prompt(mode)
-            while not re.match("^[qQ]$", cmd):
-                if re.match("^[xX][oO][rR] [0-9a-f]{,2} [0-9a-f]{,2}$", cmd):
+            while not re.match(r"^[qQ]$", cmd):
+                if re.match(r"^[xX][oO][rR] [0-9a-f]{,2} [0-9a-f]{,2}$", cmd):
                     asm_xor(cpu, cmd)
-                elif re.match("^[oO][rR] [0-9a-f]{,2} [0-9a-f]{,2}$", cmd):
+                elif re.match(r"^[oO][rR] [0-9a-f]{,2} [0-9a-f]{,2}$", cmd):
                     asm_or(cpu, cmd)
-                elif re.match("^[aA][nN][dD] [0-9a-f]{,2} [0-9a-f]{,2}$", cmd):
+                elif re.match(r"^[aA][nN][dD] [0-9a-f]{,2} [0-9a-f]{,2}$", cmd):
                     asm_and(cpu, cmd)
-                elif re.match("^[nN][oO][tT] [0-9a-f]{,2}$", cmd):
+                elif re.match(r"^[nN][oO][tT] [0-9a-f]{,2}$", cmd):
                     asm_not(cpu, cmd)
-                elif re.match("^[sS][hH][rR] [0-9a-f]{,2}$", cmd):
+                elif re.match(r"^[sS][hH][rR] [0-9a-f]{,2}$", cmd):
                     asm_shr(cpu, cmd)
                 elif re.match("^[sS][hH][lL] [0-9a-f]{,2}$", cmd):
                     asm_shl(cpu, cmd)
@@ -115,7 +125,7 @@ def pebug_main(filename="pebug_disk.bin"):
 
                 cmd = prompt(mode)
         else:
-            print("Input not recognized. Enter <?> for a quick help.")
+            print("Input not recognized.")
 
         mode = "C"
         cmd = prompt(mode)
@@ -192,6 +202,11 @@ def setname(disk: Disk, cmd: str):
     args[1] = args[1][1:]  # To strip the initial '
     filename = " ".join(args[1:])
     disk.filename(filename)
+
+
+def assemble(cpu: Cpu, memory: Memory):
+    print("Welcome to the Assemble mode. Enter twice to quit this mode.")
+    cpu.assemble(memory)
 
 
 def write(disk: Disk, memory: Memory, cpu: Cpu, cmd: str):
@@ -295,15 +310,12 @@ def cat(cpu: Cpu, disk: Disk, cmd: str):
     cpu.cat(disk, a, b)
 
 
-def pebug_help():
-    print("See https://pebug.readthedocs.io/en/latest/commands.html")
-
-
 def demo(cpu: Cpu, memory: Memory):
     oldap = memory.active_page
     memory.active_page = 49152
-    cpu.load_into(memory, 0, "This is a demo. Welcome.")  # TODO: Random text (like fortune)
-    print("The demo text was loaded into C000:0000, type 'd 0 30' to read it.")
+    # TODO: Random text (like fortune)
+    cpu.load_into(memory, 0, "This is a demo. Welcome.")
+    print("The demo text was loaded into C000:0000, enter 'd 0 30' to read it.")
     memory.active_page = oldap
 
 
@@ -326,4 +338,7 @@ if __name__ == '__main__':
     pebug_main()
 
     readline.write_history_file(histfile)
+    print("")
+    print("Bye! =)")
+
     sys.exit(0)
