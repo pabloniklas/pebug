@@ -1,7 +1,7 @@
 asm8086Machine module
 =====================
 
-.. automodule:: asm8086Machine
+.. automodule:: Cpu
    :members:
    :undoc-members:
    :show-inheritance:
