@@ -21,7 +21,7 @@ class Cpu(asm8086Listener):
     def __init__(self):
         self._bits = 16
 
-        # 8 bit registers
+        # 8 bit X86 registers
         self.AH = 0b0 * self._bits/2
         self.AL = 0b0 * self._bits/2
         self.BH = 0b0 * self._bits/2

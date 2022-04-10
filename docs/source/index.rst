@@ -20,15 +20,15 @@ and introductory interface to assembler, x86 flavor in particular.
 API Reference
 =============
 
-.. autoclass:: asm8086Machine.Disk
+.. autoclass:: Disk.Disk
    :members:
    :show-inheritance:
 
-.. autoclass:: asm8086Machine.Cpu
+.. autoclass:: Cpu.Cpu
    :members:
    :show-inheritance:
 
-.. autoclass:: asm8086Machine.Memory
+.. autoclass:: Memory.Memory
    :members:
    :show-inheritance:
 
