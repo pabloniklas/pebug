@@ -1,16 +1,18 @@
 import re
 from typing import List
-from . import Memory, Disk
-
 
 from multipledispatch import dispatch
 
 if __name__ is not None and "." in __name__:
     from .asm8086Parser import asm8086Parser
     from .asm8086Listener import *
+    from .Memory import Memory
+    from .Disk import Disk
 else:
     from asm8086Parser import asm8086Parser
     from asm8086Listener import *
+    from Memory import Memory
+    from Disk import Disk
 
 
 class Cpu(asm8086Listener):

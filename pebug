@@ -7,7 +7,9 @@ import sys
 
 from multipledispatch import dispatch
 
-from modules.asm8086Machine import Disk, Memory, Cpu
+from modules.Disk import Disk
+from modules.Memory import Memory
+from modules.Cpu import Cpu
 
 
 def pebug_main(filename="pebug_disk.bin"):

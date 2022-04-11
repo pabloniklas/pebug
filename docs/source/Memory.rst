@@ -1,4 +1,4 @@
-asm8086Machine module
+Memory module
 =====================
 
 .. automodule:: Memory

@@ -1,4 +1,4 @@
-asm8086Machine module
+Cpu module
 =====================
 
 .. automodule:: Cpu
