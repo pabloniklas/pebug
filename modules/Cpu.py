@@ -68,9 +68,44 @@ class Cpu(asm8086Listener):
                 "opcode": int(0xc3),
                 "flags": ""
             },
+            r"^(\s*)aaa(\s*)$": {
+                "mnemonic": "aaa",
+                "opcode": int(0x37),
+                "flags": "AC"
+            },
+            r"^(\s*)aas(\s*)$": {
+                "mnemonic": "aas",
+                "opcode": int(0x37),
+                "flags": "3F"
+            },
+            r"^(\s*)daa(\s*)$": {
+                "mnemonic": "daa",
+                "opcode": int(0x27),
+                "flags": "SZPA"
+            },
+            r"^(\s*)das(\s*)$": {
+                "mnemonic": "das",
+                "opcode": int(0x2F),
+                "flags": "SZPA"
+            },
             r"^(\s*)push(\s+)es(\s*)$": {
                 "mnemonic": "push es",
                 "opcode": int(0x06),
+                "flags": ""
+            },
+            r"^(\s*)pop(\s+)es(\s*)$": {
+                "mnemonic": "push es",
+                "opcode": int(0x07),
+                "flags": ""
+            },
+            r"^(\s*)push(\s+)ad?(\s*)$": {
+                "mnemonic": "push a",
+                "opcode": int(0x60),
+                "flags": ""
+            },
+            r"^(\s*)pop(\s+)ad?(\s*)$": {
+                "mnemonic": "pop a",
+                "opcode": int(0x61),
                 "flags": ""
             },
             r"^(\s*)nop(\s*)$": {
