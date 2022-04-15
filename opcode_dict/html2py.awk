@@ -1,3 +1,6 @@
+BEGIN{
+    print "opcode = {"
+}
 {
     gsub("[F,]", "", $4)
 
@@ -47,4 +50,7 @@
     print "    \"mnemonic\": \"" $2 " " $3 "\","
     print "    \"opcode\": int(0x" $1 "),"
     print "    \"flags\": \"" $4 "\"},"
+}
+END {
+    print "}"
 }
