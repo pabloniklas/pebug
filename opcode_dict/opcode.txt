@@ -1,1327 +1,648 @@
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-
-80x86 Instructions by Opcode
-
-Opcode Mnemonic Operand(s)        Flags affected    Number Timing Timing Timing
-                                                    of     386    486    Pentium
-                                                    bytes
-
 00     add      mem8,reg8         SF,ZF,OF,CF,PF,AF 2+     7      3      3
-
 01     add      mem16,reg16       SF,ZF,OF,CF,PF,AF 2+     7      3      3
-
-                mem32,reg32                                               
-
+01     add      mem32,reg32                                               
 02     add      reg8,reg8         SF,ZF,OF,CF,PF,AF 2      2      1      1
-
 02     add      reg8,mem8         SF,ZF,OF,CF,PF,AF 2+     6      2      2
-
 03     add      reg16,reg16       SF,ZF,OF,CF,PF,AF 2      2      1      1
-
-                reg32,reg32                                               
-
-03     add      reg16,mem16       SF,ZF,OF,CF,PF,AF 2+     6      2      2
-
-                reg32,mem32                                               
-
+                reg32,reg32                                                                                       
 04     add      AL,imm8           SF,ZF,OF,CF,PF,AF 2      2      1      1
-
 05     add      AX,imm16          SF,ZF,OF,CF,PF,AF 3      2      1      1
-
-                EAX,imm32                           5                     
-
+                EAX,imm32                           5                     
 06     push     ES                none              1      2      3      1
-
 07     pop      ES                none              1      7      3      3
-
 08     or       mem8,reg8         SF,ZF,OF,CF,PF,AF 2+     7      3      3
-
 09     or       mem16,reg16       SF,ZF,OF,CF,PF,AF 2+     7      3      3
-
-                mem32,reg32                                               
-
+                mem32,reg32                                               
 0A     or       reg8,reg8         SF,ZF,OF,CF,PF,AF 2      2      1      1
-
 0A     or       reg8,mem8         SF,ZF,OF,CF,PF,AF 2+     6      2      2
-
 0B     or       reg16,reg16       SF,ZF,OF,CF,PF,AF 2      2      1      1
-
-                reg32,reg32                                               
-
+                reg32,reg32                                               
 0B     or       reg16,mem16       SF,ZF,OF,CF,PF,AF 2+     6      2      2
-
-                reg32,mem32                                               
-
+                reg32,mem32                                               
 0C     or       AL,imm8           SF,ZF,OF,CF,PF,AF 2      2      1      1
-
 0D     or       AX,imm16          SF,ZF,OF,CF,PF,AF 3      2      1      1
-
-                EAX,imm32                           5                     
-
+                EAX,imm32                           5                     
 0E     push     CS                none              1      2      3      1
-
 0F 04  shld     reg16,reg16,imm8  SF,ZF,CF,PF       4      3      2      4
-
-                reg32,reg32,imm8  OF,AF ?                                 
-
+                reg32,reg32,imm8  OF,AF                                   
 0F 04  shld     mem16,reg16,imm8  SF,ZF,CF,PF       4+     7      4      4
-
-                mem32,reg32,imm8  OF,AF ?                                 
-
+                mem32,reg32,imm8  OF,AF                                   
 0F 05  shld     reg16,reg16,CL    SF,ZF,CF,PF       3      3      3      4
-
-                reg32,reg32,CL    OF,AF ?                                 
-
+                reg32,reg32,CL    OF,AF                                   
 0F 05  shld     mem16,reg16,CL    SF,ZF,CF,PF       3+     7      4      5
-
-                mem32,reg32,CL    OF,AF ?                                 
-
+                mem32,reg32,CL    OF,AF                                   
 0F 80  jo       rel32             none              7+,3   3,1    1      6
-
 0F 81  jno      rel32             none              7+,3   3,1    1      6
-
 0F 82  jb       rel32             none              7+,3   3,1    1      6
-
-       jnae                                                               
-
+       jnae                                                               
 0F 82  jc       rel32             none              7+,3   3,1    1      6
-
 0F 83  jae      rel32             none              7+,3   3,1    1      6
-
-       jnb                                                                
-
+       jnb                                                                
 0F 83  jnc      rel32             none              7+,3   3,1    1      6
-
 0F 84  je       rel32             none              7+,3   3,1    1      6
-
-       jz                                                                 
-
+       jz                                                                 
 0F 85  jne      rel32             none              7+,3   3,1    1      6
-
-       jnz                                                                
-
+       jnz                                                                
 0F 86  jbe      rel32             none              7+,3   3,1    1      6
-
-       jna                                                                
-
+       jna                                                                
 0F 87  ja       rel32             none              7+,3   3,1    1      6
-
-       jnbe                                                               
-
+       jnbe                                                               
 0F 88  js       rel32             none              7+,3   3,1    1      6
-
 0F 89  jns      rel32             none              7+,3   3,1    1      6
-
 0F 8A  jp       rel32             none              7+,3   3,1    1      6
-
-       jpe                                                                
-
+       jpe                                                                
 0F 8B  jnp      rel32             none              7+,3   3,1    1      6
-
-       jpo                                                                
-
+       jpo                                                                
 0F 8C  jl       rel32             none              7+,3   3,1    1      6
-
-       jnge                                                               
-
+       jnge                                                               
 0F 8D  jge      rel32             none              7+,3   3,1    1      6
-
-       jnl                                                                
-
+       jnl                                                                
 0F 8E  jle      rel32             none              7+,3   3,1    1      6
-
-       jng                                                                
-
+       jng                                                                
 0F 8F  jg       rel32             none              7+,3   3,1    1      6
-
-       jnle                                                               
-
+       jnle                                                               
 0F A0  push     FS                none              2      2      3      1
-
 0F A1  pop      FS                none              2      7      3      3
-
 0F A8  push     GS                none              2      2      3      1
-
 0F A9  pop      GS                none              2      7      3      3
-
 0F AC  shrd     reg16,reg16,imm8  SF,ZF,CF,PF       4      3      2      4
-
-                reg32,reg32,imm8  OF,AF ?                                 
-
+                reg32,reg32,imm8  OF,AF                                   
 0F AC  shrd     mem16,reg16,imm8  SF,ZF,CF,PF       4+     7      4      4
-
-                mem32,reg32,imm8  OF,AF ?                                 
-
+                mem32,reg32,imm8  OF,AF                                   
 0F AD  shrd     reg16,reg16,CL    SF,ZF,CF,PF       3      3      3      4
-
-                reg32,reg32,CL    OF,AF ?                                 
-
+                reg32,reg32,CL    OF,AF                                   
 0F AD  shrd     mem16,reg16,CL    SF,ZF,CF,PF       3+     7      4      5
-
-                mem32,reg32,CL    OF,AF ?                                 
-
-0F AF  imul     reg16,reg16       OF,CF             3      9-22   13-26  11
-
-                reg32,reg32       SF,ZF, PF,AF ?           9-38   13-42  10
-
-0F AF  imul     reg16,mem16       OF,CF             3+     12-25  13-26  11
-
-                reg32,mem32       SF,ZF, PF,AF ?           12-41  13-42  10
-
+                mem32,reg32,CL    OF,AF                                   
+0F AF  imul     reg16,reg16       OF,CF             3      9 22   13 26  11
+                reg32,reg32       SF,ZF, PF,AF             9 38   13 42  10
+0F AF  imul     reg16,mem16       OF,CF             3+     12 25  13 26  11
+                reg32,mem32       SF,ZF, PF,AF             12 41  13 42  10
 0F B6  movzx    reg16,reg8        none              3      3      3      3
-
-                reg32,reg8                                                
-
+                reg32,reg8                                                
 0F B6  movzx    reg16,mem8        none              3+     6      3      3
-
-                reg32,mem8                                                
-
+                reg32,mem8                                                
 0F B7  movzx    reg32,reg16       none              3      3      3      3
-
 0F B7  movzx    reg32,mem16       none              3+     6      3      3
-
 0F BE  movsx    reg16,reg8        none              3      3      3      3
-
-                reg32,reg8                                                
-
+                reg32,reg8                                                
 0F BE  movsx    reg16,mem8        none              3+     6      3      3
-
-                reg32,mem8                                                
-
+                reg32,mem8                                                
 0F BF  movsx    reg32,reg16       none              3      3      3      3
-
 0F BF  movsx    reg32,mem16       none              3+     6      3      3
-
 10     adc      mem8,reg8         SF,ZF,OF,CF,PF,AF 2+     7      3      3
-
 11     adc      mem16,reg16       SF,ZF,OF,CF,PF,AF 2+     7      3      3
-
-                mem32,reg32                                               
-
+                mem32,reg32                                               
 12     adc      reg8,reg8         SF,ZF,OF,CF,PF,AF 2      2      1      1
-
 12     adc      reg8,mem8         SF,ZF,OF,CF,PF,AF 2+     6      2      2
-
 13     adc      reg16,reg16       SF,ZF,OF,CF,PF,AF 2      2      1      1
-
-                reg32,reg32                                               
-
+                reg32,reg32                                               
 13     adc      reg16,mem16       SF,ZF,OF,CF,PF,AF 2+     6      2      2
-
-                reg32,mem32                                               
-
+                reg32,mem32                                               
 14     adc      AL,imm8           SF,ZF,OF,CF,PF,AF 2      2      1      1
-
 15     adc      AX,imm16          SF,ZF,OF,CF,PF,AF 3      2      1      1
-
-                EAX,imm32                           5                     
-
+                EAX,imm32                           5                     
 16     push     SS                none              1      2      3      1
-
 17     pop      SS                none              1      7      3      3
-
 18     sbb      mem8,reg8         SF,ZF,OF,CF,PF,AF 2+     7      3      3
-
 19     sbb      mem16,reg16       SF,ZF,OF,CF,PF,AF 2+     7      3      3
-
-                mem32,reg32                                               
-
+                mem32,reg32                                               
 1A     sbb      reg8,reg8         SF,ZF,OF,CF,PF,AF 2      2      1      1
-
 1A     sbb      reg8,mem8         SF,ZF,OF,CF,PF,AF 2+     6      2      2
-
 1B     sbb      reg16,reg16       SF,ZF,OF,CF,PF,AF 2      2      1      1
-
-                reg32,reg32                                               
-
+                reg32,reg32                                               
 1B     sbb      reg16,mem16       SF,ZF,OF,CF,PF,AF 2+     6      2      2
-
-                reg32,mem32                                               
-
+                reg32,mem32                                               
 1C     sbb      AL,imm8           SF,ZF,OF,CF,PF,AF 2      2      1      1
-
 1D     sbb      AX,imm16          SF,ZF,OF,CF,PF,AF 3      2      1      1
-
-                EAX,imm32                           5                     
-
+                EAX,imm32                           5                     
 1E     push     DS                none              1      2      3      1
-
 1F     pop      DS                none              1      7      3      3
-
 20     and      mem8,reg8         SF,ZF,OF,CF,PF,AF 2+     7      3      3
-
 21     and      mem16,reg16       SF,ZF,OF,CF,PF,AF 2+     7      3      3
-
-                mem32,reg32                                               
-
+                mem32,reg32                                               
 22     and      reg8,reg8         SF,ZF,OF,CF,PF,AF 2      2      1      1
-
 22     and      reg8,mem8         SF,ZF,OF,CF,PF,AF 2+     6      2      2
-
 23     and      reg16,reg16       SF,ZF,OF,CF,PF,AF 2      2      1      1
-
-                reg32,reg32                                               
-
+                reg32,reg32                                               
 23     and      reg16,mem16       SF,ZF,OF,CF,PF,AF 2+     6      2      2
-
-                reg32,mem32                                               
-
+                reg32,mem32                                               
 24     and      AL,imm8           SF,ZF,OF,CF,PF,AF 2      2      1      1
-
 25     and      AX,imm16          SF,ZF,OF,CF,PF,AF 3      2      1      1
-
-                EAX,imm32                           5                     
-
-27     daa      none              SF,ZF,PF,AF       1      4      2      3
-
-                                  OF ?                                    
-
+                EAX,imm32                           5                     
+27     daa      none              SF,ZF,PF,AF,OF    1      4      2      3
 28     sub      mem8,reg8         SF,ZF,OF,CF,PF,AF 2+     7      3      3
-
 29     sub      mem16,reg16       SF,ZF,OF,CF,PF,AF 2+     7      3      3
-
-                mem32,reg32                                               
-
+                mem32,reg32                                               
 2A     sub      reg8,reg8         SF,ZF,OF,CF,PF,AF 2      2      1      1
-
 2A     sub      reg8,mem8         SF,ZF,OF,CF,PF,AF 2+     6      2      2
-
 2B     sub      reg16,reg16       SF,ZF,OF,CF,PF,AF 2      2      1      1
-
-                reg32,reg32                                               
-
+                reg32,reg32                                               
 2B     sub      reg16,mem16       SF,ZF,OF,CF,PF,AF 2+     6      2      2
-
-                reg32,mem32                                               
-
+                reg32,mem32                                               
 2C     sub      AL,imm8           SF,ZF,OF,CF,PF,AF 2      2      1      1
-
 2D     sub      AX,imm16          SF,ZF,OF,CF,PF,AF 3      2      1      1
-
-                EAX,imm32                           5                     
-
-2F     das      none              SF,ZF,PF,AF       1      4      2      3
-
-                                  OF ?                                    
-
+                EAX,imm32                           5                     
+2F     das      none              SF,ZF,PF,AF,OF    1      4      2      3                                  
 30     xor      mem8,reg8         SF,ZF,OF,CF,PF,AF 2+     7      3      3
-
 31     xor      mem16,reg16       SF,ZF,OF,CF,PF,AF 2+     7      3      3
-
-                mem32,reg32                                               
-
+                mem32,reg32                                               
 32     xor      reg8,reg8         SF,ZF,OF,CF,PF,AF 2      2      1      1
-
 32     xor      reg8,mem8         SF,ZF,OF,CF,PF,AF 2+     6      2      2
-
 33     xor      reg16,reg16       SF,ZF,OF,CF,PF,AF 2      2      1      1
-
-                reg32,reg32                                               
-
+                reg32,reg32                                               
 33     xor      reg16,mem16       SF,ZF,OF,CF,PF,AF 2+     6      2      2
-
-                reg32,mem32                                               
-
+                reg32,mem32                                               
 34     xor      AL,imm8           SF,ZF,OF,CF,PF,AF 2      2      1      1
-
 35     xor      AX,imm16          SF,ZF,OF,CF,PF,AF 3      2      1      1
-
-                EAX,imm32                           5                     
-
-37     aaa      none              AF,CF             1      4      3      3
-
-                                  SF,ZF,OF,PF ?                           
-
+                EAX,imm32                           5                     
+37     aaa      none              AF,CF,SF,ZF,OF,PF 1      4      3      3                                                             
 38     cmp      reg8,reg8         SF,ZF,OF,CF,PF,AF 2      2      1      1
-
 38     cmp      mem8,reg8         SF,ZF,OF,CF,PF,AF 2+     5      2      2
-
 39     cmp      mem16,reg16       SF,ZF,OF,CF,PF,AF 2+     5      2      2
-
-                mem32,reg32                                               
-
+                mem32,reg32                                               
 3A     cmp      reg8,mem8         SF,ZF,OF,CF,PF,AF 2+     6      2      2
-
 3B     cmp      reg16,reg16       SF,ZF,OF,CF,PF,AF 2      2      1      1
-
-                reg32,reg32                                               
-
+                reg32,reg32                                               
 3B     cmp      reg16,mem16       SF,ZF,OF,CF,PF,AF 2+     6      2      2
-
-                reg32,mem32                                               
-
+                reg32,mem32                                               
 3C     cmp      AL,imm8           SF,ZF,OF,CF,PF,AF 2      2      1      1
-
 3D     cmp      AX,imm16          SF,ZF,OF,CF,PF,AF 3      2      1      1
-
-                EAX,imm32                           5                     
-
-3F     aas      none              AF,CF             1      4      3      3
-
-                                  SF,ZF,OF,PF ?                           
-
+                EAX,imm32                           5                     
+3F     aas      none              AF,CF,SF,ZF,OF,PF 1      4      3      3
 40     inc      AX                SF,ZF,OF,PF,AF    1      2      1      1
-
-                EAX                                                       
-
+                EAX                                                       
 41     inc      CX                SF,ZF,OF,PF,AF    1      2      1      1
-
-                ECX                                                       
-
+                ECX                                                       
 42     inc      DX                SF,ZF,OF,PF,AF    1      2      1      1
-
-                EDX                                                       
-
+                EDX                                                       
 43     inc      BX                SF,ZF,OF,PF,AF    1      2      1      1
-
-                EBX                                                       
-
+                EBX                                                       
 44     inc      SP                SF,ZF,OF,PF,AF    1      2      1      1
-
-                ESP                                                       
-
+                ESP                                                       
 45     inc      BP                SF,ZF,OF,PF,AF    1      2      1      1
-
-                EBP                                                       
-
+                EBP                                                       
 47     inc      SI                SF,ZF,OF,PF,AF    1      2      1      1
-
-                ESI                                                       
-
+                ESI                                                       
 48     dec      AX                SF,ZF,OF,PF,AF    1      2      1      1
-
-                EAX                                                       
-
+                EAX                                                       
 48     inc      DI                SF,ZF,OF,PF,AF    1      2      1      1
-
-                EDI                                                       
-
+                EDI                                                       
 49     dec      CX                SF,ZF,OF,PF,AF    1      2      1      1
-
-                ECX                                                       
-
+                ECX                                                       
 4A     dec      DX                SF,ZF,OF,PF,AF    1      2      1      1
-
-                EDX                                                       
-
+                EDX                                                       
 4B     dec      BX                SF,ZF,OF,PF,AF    1      2      1      1
-
-                EBX                                                       
-
+                EBX                                                       
 4C     dec      SP                SF,ZF,OF,PF,AF    1      2      1      1
-
-                ESP                                                       
-
+                ESP                                                       
 4D     dec      BP                SF,ZF,OF,PF,AF    1      2      1      1
-
-                EBP                                                       
-
+                EBP                                                       
 4E     dec      SI                SF,ZF,OF,PF,AF    1      2      1      1
-
-                ESI                                                       
-
+                ESI                                                       
 4F     dec      DI                SF,ZF,OF,PF,AF    1      2      1      1
-
-                EDI                                                       
-
+                EDI                                                       
 50     push     AX                none              1      2      1      1
-
-                EAX                                                       
-
+                EAX                                                       
 51     push     CX                none              1      2      1      1
-
-                ECX                                                       
-
+                ECX                                                       
 52     push     DX                none              1      2      1      1
-
-                EDX                                                       
-
+                EDX                                                       
 53     push     BX                none              1      2      1      1
-
-                EBX                                                       
-
+                EBX                                                       
 54     push     SP                none              1      2      1      1
-
-                ESP                                                       
-
+                ESP                                                       
 55     push     BP                none              1      2      1      1
-
-                EBP                                                       
-
+                EBP                                                       
 56     push     SI                none              1      2      1      1
-
-                ESI                                                       
-
+                ESI                                                       
 57     push     DI                none              1      2      1      1
-
-                EDI                                                       
-
+                EDI                                                       
 58     pop      AX                none              1      4      1      1
-
-                EAX                                                       
-
+                EAX                                                       
 59     pop      CX                none              1      4      1      1
-
-                ECX                                                       
-
+                ECX                                                       
 5A     pop      DX                none              1      4      1      1
-
-                EDX                                                       
-
+                EDX                                                       
 5B     pop      BX                none              1      4      1      1
-
-                EBX                                                       
-
+                EBX                                                       
 5C     pop      SP                none              1      4      1      1
-
-                ESP                                                       
-
+                ESP                                                       
 5D     pop      BP                none              1      4      1      1
-
-                EBP                                                       
-
+                EBP                                                       
 5E     pop      SI                none              1      4      1      1
-
-                ESI                                                       
-
+                ESI                                                       
 5F     pop      DI                none              1      4      1      1
-
-                EDI                                                       
-
+                EDI                                                       
 60     pusha    none              none              1      18     11     5
-
-       pushad                                                             
-
+       pushad                                                             
 61     popa     none              none              1      24     9      5
-
-       popad                                                              
-
+       popad                                                              
 68     push     imm16             none              3      2      1      1
-
-                imm32                               5                     
-
-69     imul     reg16,reg16,imm16 OF,CF             4      9-22   13-26  10
-
-                reg32,reg32,imm32 SF,ZF, PF,AF ?    6      9-38   13-42  10
-
-69     imul     reg16,mem16,imm16 OF,CF             4+     12-25  13-26  10
-
-                reg32,mem32,imm32 SF,ZF, PF,AF ?    6+     12-41  13-42  10
-
+                imm32                               5                     
+69     imul     reg16,reg16,imm16 OF,CF             4      9 22   13 26  10
+                reg32,reg32,imm32 SF,ZF, PF,AF      6      9 38   13 42  10
+69     imul     reg16,mem16,imm16 OF,CF             4+     12 25  13 26  10
+                reg32,mem32,imm32 SF,ZF, PF,AF      6+     12 41  13 42  10
 6A     push     imm8              none              2      2      1      1
-
-6B     imul     reg16,imm8        OF,CF             3      9-14   13-18  10
-
-                reg32,imm8        SF,ZF, PF,AF ?                          
-
-6B     imul     reg16,reg16,imm8  OF,CF             3      9-14   13-18  10
-
-                reg32,reg32,imm8  SF,ZF, PF,AF ?                          
-
-6B     imul     reg16,mem16,imm8  OF,CF             3+     9-17   13-18  10
-
-                reg32,mem32,imm8  SF,ZF, PF,AF ?                          
-
+6B     imul     reg16,imm8        OF,CF             3      9 14   13 18  10
+                reg32,imm8        SF,ZF, PF,AF                            
+6B     imul     reg16,reg16,imm8  OF,CF             3      9 14   13 18  10
+                reg32,reg32,imm8  SF,ZF, PF,AF                            
+6B     imul     reg16,mem16,imm8  OF,CF             3+     9 17   13 18  10
+                reg32,mem32,imm8  SF,ZF, PF,AF                            
 70     jo       rel8              none              7+,3   3,1    1      2
-
 71     jno      rel8              none              7+,3   3,1    1      2
-
 72     jb       rel8              none              7+,3   3,1    1      2
-
-       jnae                                                               
-
+       jnae                                                               
 72     jc       rel8              none              7+,3   3,1    1      2
-
 73     jae      rel8              none              7+,3   3,1    1      2
-
-       jnb                                                                
-
+       jnb                                                                
 73     jnc      rel8              none              7+,3   3,1    1      2
-
 74     je       rel8              none              7+,3   3,1    1      2
-
-       jz                                                                 
-
+       jz                                                                 
 75     jne      rel8              none              7+,3   3,1    1      2
-
-       jnz                                                                
-
+       jnz                                                                
 76     jbe      rel8              none              7+,3   3,1    1      2
-
-       jna                                                                
-
+       jna                                                                
 77     ja       rel8              none              7+,3   3,1    1      2
-
-       jnbe                                                               
-
+       jnbe                                                               
 78     js       rel8              none              7+,3   3,1    1      2
-
 79     jns      rel8              none              7+,3   3,1    1      2
-
 7A     jp       rel8              none              7+,3   3,1    1      2
-
-       jpe                                                                
-
+       jpe                                                                
 7B     jnp      rel8              none              7+,3   3,1    1      2
-
-       jpo                                                                
-
+       jpo                                                                
 7C     jl       rel8              none              7+,3   3,1    1      2
-
-       jnge                                                               
-
+       jnge                                                               
 7D     jge      rel8              none              7+,3   3,1    1      2
-
-       jnl                                                                
-
+       jnl                                                                
 7E     jle      rel8              none              7+,3   3,1    1      2
-
-       jng                                                                
-
+       jng                                                                
 7F     jg       rel8              none              7+,3   3,1    1      2
-
-       jnle                                                               
-
+       jnle                                                               
 80     adc      reg8,imm8         SF,ZF,OF,CF,PF,AF 3      2      1      1
-
 80     adc      mem8,imm8         SF,ZF,OF,CF,PF,AF 3+     7      3      3
-
 80     add      reg8,imm8         SF,ZF,OF,CF,PF,AF 3      2      1      1
-
 80     add      mem8,imm8         SF,ZF,OF,CF,PF,AF 3+     7      3      3
-
 80     and      reg8,imm8         SF,ZF,OF,CF,PF,AF 3      2      1      1
-
 80     and      mem8,imm8         SF,ZF,OF,CF,PF,AF 3+     7      3      3
-
 80     cmp      reg8,imm8         SF,ZF,OF,CF,PF,AF 3      2      1      1
-
 80     cmp      mem8,imm8         SF,ZF,OF,CF,PF,AF 3+     5      2      2
-
 80     or       reg8,imm8         SF,ZF,OF,CF,PF,AF 3      2      1      1
-
 80     or       mem8,imm8         SF,ZF,OF,CF,PF,AF 3+     7      3      3
-
 80     sbb      reg8,imm8         SF,ZF,OF,CF,PF,AF 3      2      1      1
-
 80     sbb      mem8,imm8         SF,ZF,OF,CF,PF,AF 3+     7      3      3
-
 80     sub      reg8,imm8         SF,ZF,OF,CF,PF,AF 3      2      1      1
-
 80     sub      mem8,imm8         SF,ZF,OF,CF,PF,AF 3+     7      3      3
-
 80     xor      reg8,imm8         SF,ZF,OF,CF,PF,AF 3      2      1      1
-
 80     xor      mem8,imm8         SF,ZF,OF,CF,PF,AF 3+     7      3      3
-
 81     adc      reg16,imm16       SF,ZF,OF,CF,PF,AF 4      2      1      1
-
-                reg32,imm32                         6                     
-
+                reg32,imm32                         6                     
 81     adc      mem16,imm16       SF,ZF,OF,CF,PF,AF 4+     7      3      3
-
-                mem32,imm32                         6+                    
-
+                mem32,imm32                         6+                    
 81     add      reg16,imm16       SF,ZF,OF,CF,PF,AF 4      2      1      1
-
-                reg32,imm32                         6                     
-
+                reg32,imm32                         6                     
 81     add      mem16,imm16       SF,ZF,OF,CF,PF,AF 4+     7      3      3
-
-                mem32,imm32                         6+                    
-
+                mem32,imm32                         6+                    
 81     and      reg16,imm16       SF,ZF,OF,CF,PF,AF 4      2      1      1
-
-                reg32,imm32                         6                     
-
+                reg32,imm32                         6                     
 81     and      mem16,imm16       SF,ZF,OF,CF,PF,AF 4+     7      3      3
-
-                mem32,imm32                         6+                    
-
+                mem32,imm32                         6+                    
 81     cmp      reg16,imm16       SF,ZF,OF,CF,PF,AF 4      2      1      1
-
-                reg32,imm32                         6                     
-
+                reg32,imm32                         6                     
 81     cmp      mem16,imm16       SF,ZF,OF,CF,PF,AF 4+     5      2      2
-
-                mem32,imm32                         6+                    
-
+                mem32,imm32                         6+                    
 81     or       reg16,imm16       SF,ZF,OF,CF,PF,AF 4      2      1      1
-
-                reg32,imm32                         6                     
-
+                reg32,imm32                         6                     
 81     or       mem16,imm16       SF,ZF,OF,CF,PF,AF 4+     7      3      3
-
-                mem32,imm32                         6+                    
-
+                mem32,imm32                         6+                    
 81     sbb      reg16,imm16       SF,ZF,OF,CF,PF,AF 4      2      1      1
-
-                reg32,imm32                         6                     
-
+                reg32,imm32                         6                     
 81     sbb      mem16,imm16       SF,ZF,OF,CF,PF,AF 4+     7      3      3
-
-                mem32,imm32                         6+                    
-
+                mem32,imm32                         6+                    
 81     sub      reg16,imm16       SF,ZF,OF,CF,PF,AF 4      2      1      1
-
-                reg32,imm32                         6                     
-
+                reg32,imm32                         6                     
 81     sub      mem16,imm16       SF,ZF,OF,CF,PF,AF 4+     7      3      3
-
-                mem32,imm32                         6+                    
-
+                mem32,imm32                         6+                    
 81     xor      reg16,imm16       SF,ZF,OF,CF,PF,AF 4      2      1      1
-
-                reg32,imm32                         6                     
-
+                reg32,imm32                         6                     
 81     xor      mem16,imm16       SF,ZF,OF,CF,PF,AF 4+     7      3      3
-
-                mem32,imm32                         6+                    
-
+                mem32,imm32                         6+                    
 83     adc      reg16,imm8        SF,ZF,OF,CF,PF,AF 3      2      1      1
-
-                reg32,imm8                                                
-
+                reg32,imm8                                                
 83     adc      mem16,imm8        SF,ZF,OF,CF,PF,AF 3+     7      3      3
-
-                mem32,imm8                                                
-
+                mem32,imm8                                                
 83     add      reg16,imm8        SF,ZF,OF,CF,PF,AF 3      2      1      1
-
-                reg32,imm8                                                
-
+                reg32,imm8                                                
 83     add      mem16,imm8        SF,ZF,OF,CF,PF,AF 3+     7      3      3
-
-                mem32,imm8                                                
-
+                mem32,imm8                                                
 83     and      reg16,imm8        SF,ZF,OF,CF,PF,AF 3      2      1      1
-
-                reg32,imm8                                                
-
+                reg32,imm8                                                
 83     and      mem16,imm8        SF,ZF,OF,CF,PF,AF 3+     7      3      3
-
-                mem32,imm8                                                
-
+                mem32,imm8                                                
 83     cmp      reg16,imm8        SF,ZF,OF,CF,PF,AF 3      2      1      1
-
-                reg32,imm8                                                
-
+                reg32,imm8                                                
 83     cmp      mem16,imm8        SF,ZF,OF,CF,PF,AF 3+     5      2      2
-
-                mem32,imm8                                                
-
+                mem32,imm8                                                
 83     or       reg16,imm8        SF,ZF,OF,CF,PF,AF 3      2      1      1
-
-                reg32,imm8                                                
-
+                reg32,imm8                                                
 83     or       mem16,imm8        SF,ZF,OF,CF,PF,AF 3+     7      3      3
-
-                mem32,imm8                                                
-
+                mem32,imm8                                                
 83     sbb      reg16,imm8        SF,ZF,OF,CF,PF,AF 3      2      1      1
-
-                reg32,imm8                                                
-
+                reg32,imm8                                                
 83     sbb      mem16,imm8        SF,ZF,OF,CF,PF,AF 3+     7      3      3
-
-                mem32,imm8                                                
-
+                mem32,imm8                                                
 83     sub      reg16,imm8        SF,ZF,OF,CF,PF,AF 3      2      1      1
-
-                reg32,imm8                                                
-
+                reg32,imm8                                                
 83     sub      mem16,imm8        SF,ZF,OF,CF,PF,AF 3+     7      3      3
-
-                mem32,imm8                                                
-
+                mem32,imm8                                                
 83     xor      reg16,imm8        SF,ZF,OF,CF,PF,AF 3      2      1      1
-
-                reg32,imm8                                                
-
+                reg32,imm8                                                
 83     xor      mem16,imm8        SF,ZF,OF,CF,PF,AF 3+     7      3      3
-
-                mem32,imm8                                                
-
+                mem32,imm8                                                
 84     test     reg8,reg8         SF,ZF,OF,CF,PF,AF 2      2      1      1
-
 84     test     mem8,reg8         SF,ZF,OF,CF,PF,AF 2+     5      2      2
-
 85     test     reg16,reg16       SF,ZF,OF,CF,PF,AF 2      2      1      1
-
-                reg32,reg32                                               
-
+                reg32,reg32                                               
 85     test     mem16,reg16       SF,ZF,OF,CF,PF,AF 2+     5      2      2
-
-                mem32,reg32                                               
-
+                mem32,reg32                                               
 86     xchg     reg8,reg8         none              2      3      3      3
-
 86     xchg     reg8,mem8         none              2+     5      5      3
-
 87     xchg     reg16,reg16       none              2      3      3      3
-
 87     xchg     reg16,mem16       none              2+     5      5      3
-
 88     mov      mem8,reg8         none              2+     2      1      1
-
 89     mov      mem16,reg16       none              2+     2      1      1
-
-                mem32,reg32                                               
-
+                mem32,reg32                                               
 8A     mov      reg8,reg8         none              2      2      1      1
-
 8A     mov      reg8,mem8         none              2+     4      1      1
-
 8B     mov      reg16,reg16       none              2      2      1      1
-
-                reg32,reg32                                               
-
+                reg32,reg32                                               
 8B     mov      reg16,mem16       none              2+     4      1      1
-
-                reg32,mem32                                               
-
+                reg32,mem32                                               
 8C     mov      reg16, sreg       none              2      2      3      1
-
 8C     mov      mem16,sreg        none              2+     2      3      1
-
 8D     lea      reg32,mem32       none              2+     2      1      1
-
 8E     mov      sreg, reg16       none              2      2      3      1
-
-8E     mov      sreg,mem16        none              2+     2      3^[*]  2^[*]
-
+8E     mov      sreg,mem16        none              2+     2      3      2    
 8F     pop      mem16             none              2+     5      6      3
-
-                mem32                                                     
-
+                mem32                                                     
 91     xchg     AX, CX            none              1      3      3      2
-
-                EAX, ECX                                                  
-
+                EAX, ECX                                                  
 92     xchg     AX, DX            none              1      3      3      2
-
-                EAX, EDX                                                  
-
+                EAX, EDX                                                  
 93     xchg     AX, BX            none              1      3      3      2
-
-                EAX, EBX                                                  
-
+                EAX, EBX                                                  
 94     xchg     AX, SP            none              1      3      3      2
-
-                EAX, ESP                                                  
-
+                EAX, ESP                                                  
 95     xchg     AX, BP            none              1      3      3      2
-
-                EAX, EBP                                                  
-
+                EAX, EBP                                                  
 96     xchg     AX, SI            none              1      3      3      2
-
-                EAX, ESI                                                  
-
+                EAX, ESI                                                  
 97     xchg     AX, DI            none              1      3      3      2
-
-                EAX, EDI                                                  
-
+                EAX, EDI                                                  
 98     cbw      none              none              1      3      3      3
-
 98     cwde     none              none              1      3      3      3
-
 99     cdq      none              none              1      2      3      2
-
 99     cwd      none              none              1      2      3      2
-
 9A     call     far direct        none              7      17+    18     4
-
 9C     pushf    none              none              1      4      4      3
-
-       pushfd                                                             
-
+       pushfd                                                             
 9D     popf     none              none              1      5      9      4
-
-       popfd                                                              
-
+       popfd                                                              
 A0     mov      AL, direct        none              5      4      1      1
-
 A1     mov      AX, direct        none              5      4      1      1
-
-                EAX, direct                                               
-
+                EAX, direct                                               
 A2     mov      direct ,AL        none              5      2      1      1
-
 A3     mov      direct, AX        none              5      2      1      1
-
-                direct, EAX                                               
-
+                direct, EAX                                               
 A4     movsb    none              none              1      7      7      4
-
 A5     movsw    none              none              1      7      7      4
-
-       movsd                                                              
-
+       movsd                                                              
 A6     cmpsb    none              none              1      10     8      5
-
 A7     cmpsw    none              none              1      10     8      5
-
-       cmpsd                                                              
-
+       cmpsd                                                              
 A8     test     AL,imm8           SF,ZF,OF,CF,PF,AF 2      2      1      1
-
 A9     test     AX,imm16          SF,ZF,OF,CF,PF,AF 3      2      1      1
-
-                EAX,imm32                           5                     
-
+                EAX,imm32                           5                     
 AA     stosb    none              none              1      4      5      3
-
 AB     stosw    none              none              1      4      5      3
-
-       stosd                                                              
-
+       stosd                                                              
 AC     lodsb    none              none              1      5      5      2
-
 AD     lodsw    none              none              1      5      5      2
-
-       lodsd                                                              
-
+       lodsd                                                              
 AE     scasb    none              none              1      7      6      4
-
 AE     scasw    none              none              1      7      6      4
-
-       scasd                                                              
-
+       scasd                                                              
 B0     mov      AL, imm8          none              2      2      1      1
-
 B1     mov      CL, imm8          none              2      2      1      1
-
 B2     mov      DL, imm8          none              2      2      1      1
-
 B3     mov      BL, imm8          none              2      2      1      1
-
 B4     mov      AH, imm8          none              2      2      1      1
-
 B5     mov      CH, imm8          none              2      2      1      1
-
 B6     mov      DH, imm8          none              2      2      1      1
-
 B7     mov      BH, imm8          none              2      2      1      1
-
 B8     mov      AX, imm16         none              3      2      1      1
-
-                EAX, imm32                          5                     
-
+                EAX, imm32                          5                     
 B9     mov      CX, imm16         none              3      2      1      1
-
-                ECX, imm32                          5                     
-
+                ECX, imm32                          5                     
 BA     mov      DX, imm16         none              3      2      1      1
-
-                EDX, imm32                          5                     
-
+                EDX, imm32                          5                     
 BB     mov      BX, imm16         none              3      2      1      1
-
-                EBX, imm32                          5                     
-
+                EBX, imm32                          5                     
 BC     mov      SP, imm16         none              3      2      1      1
-
-                ESP, imm32                          5                     
-
+                ESP, imm32                          5                     
 BD     mov      BP, imm16         none              3      2      1      1
-
-                EPB, imm32                          5                     
-
+                EPB, imm32                          5                     
 BE     mov      SI, imm16         none              3      2      1      1
-
-                ESI, imm32                          5                     
-
+                ESI, imm32                          5                     
 BF     mov      DI, imm16         none              3      2      1      1
-
-                EDI, imm32                          5                     
-
-C0     rol      reg8, imm8        SF,ZF,OF,CF,PF    3      3      2      1
-
-       ror                        AF ?                                    
-
-C0     rol      mem8, imm8        SF,ZF,OF,CF,PF    3+     7      4      3
-
-       ror                        AF ?                                    
-
-C0     shl/sal  reg8, imm8        SF,ZF,OF,CF,PF    3      3      2      1
-
-       shr                        AF ?                                    
-
-       sar                                                                
-
-C0     shl/sal  mem8, imm8        SF,ZF,OF,CF,PF    3+     7      4      3
-
-       shr                        AF ?                                    
-
-       sar                                                                
-
+                EDI, imm32                          5                     
+C0     rol      reg8, imm8        SF,ZF,OF,CF,PF,AF 3      3      2      1
+       ror                                                              
+C0     rol      mem8, imm8        SF,ZF,OF,CF,PF,AF 3+     7      4      3
+       ror                                                              
+C0     shl sal  reg8, imm8        SF,ZF,OF,CF,PF,AF 3      3      2      1
+       shr                                                              
+       sar                                                                
+C0     shl sal  mem8, imm8        SF,ZF,OF,CF,PF,AF 3+     7      4      3
+       shr                                                              
+       sar                                                                
 C1     rol      reg16,imm8        SF,ZF,OF,CF,PF    3      3      2      1
-
-       ror      reg32,imm8        AF ?                                    
-
+       ror      reg32,imm8        AF                                      
 C1     rol      mem16,imm8        SF,ZF,OF,CF,PF    3+     7      4      3
-
-       ror      mem32,imm8        AF ?                                    
-
-C1     shl/sal  reg16,imm8        SF,ZF,OF,CF,PF    3      3      2      1
-
-       shr      reg32,imm8        AF ?                                    
-
-       sar                                                                
-
-C1     shl/sal  mem16,imm8        SF,ZF,OF,CF,PF    3+     7      4      3
-
-       shr      mem32,imm8        AF ?                                    
-
-       sar                                                                
-
+       ror      mem32,imm8        AF                                      
+C1     shl sal  reg16,imm8        SF,ZF,OF,CF,PF    3      3      2      1
+       shr      reg32,imm8        AF                                      
+       sar                                                                
+C1     shl sal  mem16,imm8        SF,ZF,OF,CF,PF    3+     7      4      3
+       shr      mem32,imm8        AF                                      
+       sar                                                                
 C2     ret      imm16             none              3      10+    5      3
-       (near)
-
 C3     ret      none              none              1      10+    5      2
-       (near)
-
 C6     mov      mem8, imm8        none              3+     2      1      1
-
 C7     mov      mem16,imm16       none              4+     2      1      1
-
-                mem32,imm32       6+                                      
-
+                mem32,imm32       6+                                      
 CA     ret      imm16             none              3      18+    14     4
-       (far)
-
 CB     ret      none              none              1      18+    13     4
-       (far)
-
 D0     rol      reg8              SF,ZF,OF,CF,PF    2      3      3      1
-
-       ror                        AF ?                                    
-
+       ror                        AF                                      
 D0     rol      mem8              SF,ZF,OF,CF,PF    2+     7      4      3
-
-       ror                        AF ?                                    
-
-D0     shl/sal  reg8              SF,ZF,OF,CF,PF    2      3      3      1
-
-       shr                        AF ?                                    
-
-       sar                                                                
-
-D0     shl/sal  mem8              SF,ZF,OF,CF,PF    2+     7      4      3
-
-       shr                        AF ?                                    
-
-       sar                                                                
-
+       ror                        AF                                      
+D0     shl sal  reg8              SF,ZF,OF,CF,PF    2      3      3      1
+       shr                        AF                                      
+       sar                                                                
+D0     shl sal  mem8              SF,ZF,OF,CF,PF    2+     7      4      3
+       shr                        AF                                      
+       sar                                                                
 D1     rol      reg16             SF,ZF,OF,CF,PF    2      3      3      1
-
-       ror      reg32             AF ?                                    
-
+       ror      reg32             AF                                      
 D1     rol      reg16             SF,ZF,OF,CF,PF    2+     7      4      3
-
-       ror      reg32             AF ?                                    
-
-D1     shl/sal  reg16             SF,ZF,OF,CF,PF    2      3      3      1
-
-       shr      reg32             AF ?                                    
-
-       sar                                                                
-
-D1     shl/sal  reg16             SF,ZF,OF,CF,PF    2+     7      4      3
-
-       shr      reg32             AF ?                                    
-
-       sar                                                                
-
+       ror      reg32             AF                                      
+D1     shl sal  reg16             SF,ZF,OF,CF,PF    2      3      3      1
+       shr      reg32             AF                                      
+       sar                                                                
+D1     shl sal  reg16             SF,ZF,OF,CF,PF    2+     7      4      3
+       shr      reg32             AF                                      
+       sar                                                                
 D2     rol      reg8, CL          SF,ZF,OF,CF,PF    2      3      2      1
-
-       ror      AF ?                                                      
-
+       ror      AF                                                        
 D2     rol      mem8, CL          SF,ZF,OF,CF,PF    2+     7      4      4
-
-       ror                        AF ?                                    
-
-D2     shl/sal  reg8, CL          SF,ZF,OF,CF,PF    2      3      2      1
-
-       shr                        AF ?                                    
-
-       sar                                                                
-
-D2     shl/sal  mem8, CL          SF,ZF,OF,CF,PF    2+     7      4      4
-
-       shr                        AF ?                                    
-
-       sar                                                                
-
+       ror                        AF                                      
+D2     shl sal  reg8, CL          SF,ZF,OF,CF,PF    2      3      2      1
+       shr                        AF                                      
+       sar                                                                
+D2     shl sal  mem8, CL          SF,ZF,OF,CF,PF    2+     7      4      4
+       shr                        AF                                      
+       sar                                                                
 D3     rol      reg16,CL          SF,ZF,OF,CF,PF    2      3      2      1
-
-       ror      reg32,CL          AF ?                                    
-
+       ror      reg32,CL          AF                                      
 D3     rol      mem16,CL          SF,ZF,OF,CF,PF    2+     7      4      4
-
-       ror      mem32,CL          AF ?                                    
-
-D3     shl/sal  reg16,CL          SF,ZF,OF,CF,PF    2      3      2      1
-
-       shr      reg32,CL          AF ?                                    
-
-       sar                                                                
-
-D3     shl/sal  mem16,CL          SF,ZF,OF,CF,PF    2+     7      4      4
-
-       shr      mem32,CL          AF ?                                    
-
-       sar                                                                
-
+       ror      mem32,CL          AF                                      
+D3     shl sal  reg16,CL          SF,ZF,OF,CF,PF    2      3      2      1
+       shr      reg32,CL          AF                                      
+       sar                                                                
+D3     shl sal  mem16,CL          SF,ZF,OF,CF,PF    2+     7      4      4
+       shr      mem32,CL          AF                                      
+       sar                                                                
 D4 0A  aam      none              SF,ZF,PF          2      17     15     18
-
-                                  OF,AF,CF ?                              
-
+                                  OF,AF,CF                                
 D5 0A  aad      none              SF,ZF,PF          2      19     14     10
-
-                                  OF,AF,CF ?                              
-
+                                  OF,AF,CF                                
 D7     xlat     none              none              1      5      4      4
-
 E0     loopne   none              none              11+    6,9    7,8    2
-
-       loopnz                                                             
-
+       loopnz                                                             
 E1     loope    none              none              11+    6,9    7,8    2
-
-       loopz                                                              
-
+       loopz                                                              
 E2     loop     none              none              11+    6,7    5,6    2
-
-E3     jecxz    rel8              none                            6,5    2
-
+E3     jecxz    rel8              none                            6,5    2
 E8     call     rel32             none              5      7+     3      1
-
 E9     jmp      rel32             none              5      7+     3      1
-
 EB     jmp      rel8              none              2      7+     3      1
-
-F2     repnz    none              none              1                     
-
-       repne    (string                                                   
-                instruction
-                prefix)
-
+F2     repnz    none              none              1                     
+       repne
 F2 A6  repne    none              none              2      5+9n   7+7n   9+4n
-
-       cmpsb                                                              
-
+       cmpsb                                                              
 F2 A7  repne    none              none              2      5+9n   7+7n   9+4n
-
-       cmpsw                                                              
-
-       repne                                                              
-
-       cmpsd                                                              
-
+       cmpsw                                                              
+       repne                                                              
+       cmpsd                                                              
 F2 AE  repne    none              none              2      5+8n   7+5n   9+4n
-
-       scasb                                                              
-
+       scasb                                                              
 F2 AF  repne    none              none              2      5+8n   7+5n   9+4n
-
-       scasw                                                              
-
-       repne                                                              
-
-       scasd                                                              
-
-F3     rep      none              none              1                     
-
-       repz     (string                                                   
-       repe     instruction
-                prefix)
-
+       scasw                                                              
+       repne                                                              
+       scasd                                                              
+F3     rep      none              none              1                     
+       repz                                                       
+       repe     
 F3 A4  rep      none              none              2      7+4n   12+3n  13+4n
-
-       movsb                                                              
-
+       movsb                                                              
 F3 A5  rep      none              none              2      7+4n   12+3n  13+4n
-
-       movsw                                                              
-
-       rep                                                                
-
-       movsd                                                              
-
+       movsw                                                              
+       rep                                                                
+       movsd                                                              
 F3 A6  rep      none              none              2      5+5n   7+4n   9n
        stosb
-
 F3 A6  repe     none              none              2      5+9n   7+7n   9+4n
-
-       cmpsb                                                              
-
+       cmpsb                                                              
 F3 A7  rep      none              none              2      5+5n   7+4n   9n
        stosw
-
-       rep      stosd                                                     
-
+       rep      stosd                                                     
 F3 A7  repe     none              none              2      5+9n   7+7n   9+4n
-
-       cmpsw                                                              
-
-       repe                                                               
-
-       cmpsd                                                              
-
+       cmpsw                                                              
+       repe                                                               
+       cmpsd                                                              
 F3 AE  repe     none              none              2      5+8n   7+5n   9+4n
-
-       scasb                                                              
-
+       scasb                                                              
 F3 AF  repe     none              none              2      5+8n   7+5n   9+4n
-
-       scasw                                                              
-
-       repe                                                               
-
-       scasd                                                              
-
+       scasw                                                              
+       repe                                                               
+       scasd                                                              
 F5     cmc      none              CF                1      2      2      2
-
-F6     div      reg8              SF,ZF,OF,PF,AF ?  2      14     16     17
-
-F6     div      mem8              SF,ZF,OF,PF,AF ?  2+     17     16     17
-
-F6     idiv     reg8              SF,ZF,OF,PF,AF ?  2      19     19     22
-
-F6     idiv     mem8              SF,ZF,OF,PF,AF ?  2+     22     20     22
-
-F6     imul     reg8              OF,CF             2      9-14   13-18  11
-
-                                  SF,ZF, PF,AF ?                          
-
-F6     imul     mem8              OF,CF             2+     12-17  13-18  11
-
-                                  SF,ZF, PF,AF ?                          
-
-F6     mul      reg8              OF,CF             2      9-14   13-18  11
-
-                                  SF,ZF, PF,AF ?                          
-
-F6     mul      mem8              OF,CF             2+     12-17  13-18  11
-
-                                  SF,ZF, PF,AF ?                          
-
+F6     div      reg8              SF,ZF,OF,PF,AF    2      14     16     17
+F6     div      mem8              SF,ZF,OF,PF,AF    2+     17     16     17
+F6     idiv     reg8              SF,ZF,OF,PF,AF    2      19     19     22
+F6     idiv     mem8              SF,ZF,OF,PF,AF    2+     22     20     22
+F6     imul     reg8              OF,CF             2      9 14   13 18  11
+                                  SF,ZF, PF,AF                            
+F6     imul     mem8              OF,CF             2+     12 17  13 18  11
+                                  SF,ZF, PF,AF                            
+F6     mul      reg8              OF,CF             2      9 14   13 18  11
+                                  SF,ZF, PF,AF                            
+F6     mul      mem8              OF,CF             2+     12 17  13 18  11
+                                  SF,ZF, PF,AF                            
 F6     neg      reg8              SF,ZF,OF,CF,PF,AF 2      2      1      1
-
 F6     neg      mem8              SF,ZF,OF,CF,PF,AF 2+     2      1      1
-
 F6     not      reg8              none              2      2      1      1
-
 F6     not      mem8              none              2+     6      3      3
-
 F6     test     reg8,imm8         SF,ZF,OF,CF,PF,AF 3      2      1      1
-
 F6     test     mem8,imm8         SF,ZF,OF,CF,PF,AF 3+     5      2      2
-
-F7     div      reg16             SF,ZF,OF,PF,AF ?  2      22     24     25
-
-                reg32                                      38     40     41
-
-F7     div      mem16             SF,ZF,OF,PF,AF ?  2+     25     24     25
-
-                mem32                                      41     40     41
-
-F7     idiv     reg16             SF,ZF,OF,PF,AF ?  2      27     27     30
-
-                reg32                                      43     43     48
-
-F7     idiv     mem16             SF,ZF,OF,PF,AF ?  2+     30     28     30
-
-                mem32                                      46     44     48
-
-F7     imul     reg16             OF,CF             2      9-22   13-26  11
-
-                reg32             SF,ZF, PF,AF ?           9-38   13-42  10
-
-F7     imul     mem16             OF,CF             2+     12-25  13-26  11
-
-                mem32             SF,ZF, PF,AF ?           12-41  13-42  10
-
-F7     imul     mem16             OF,CF             4      9-22   13-26  11
-
-                mem32             SF,ZF, PF,AF ?    6      9-38   13-42  10
-
-F7     mul      reg16             OF,CF             2      9-22   13-26  11
-
-                reg32             SF,ZF, PF,AF ?           9-38   13-42  10
-
-F7     mul      mem16             OF,CF             2+     12-25  13-26  11
-
-                mem32             SF,ZF, PF,AF ?           12-41  13-42  10
-
+F7     div      reg16             SF,ZF,OF,PF,AF    2      22     24     25
+                reg32                                      38     40     41
+F7     div      mem16             SF,ZF,OF,PF,AF    2+     25     24     25
+                mem32                                      41     40     41
+F7     idiv     reg16             SF,ZF,OF,PF,AF    2      27     27     30
+                reg32                                      43     43     48
+F7     idiv     mem16             SF,ZF,OF,PF,AF    2+     30     28     30
+                mem32                                      46     44     48
+F7     imul     reg16             OF,CF             2      9 22   13 26  11
+                reg32             SF,ZF, PF,AF             9 38   13 42  10
+F7     imul     mem16             OF,CF             2+     12 25  13 26  11
+                mem32             SF,ZF, PF,AF             12 41  13 42  10
+F7     imul     mem16             OF,CF             4      9 22   13 26  11
+                mem32             SF,ZF, PF,AF      6      9 38   13 42  10
+F7     mul      reg16             OF,CF             2      9 22   13 26  11
+                reg32             SF,ZF, PF,AF             9 38   13 42  10
+F7     mul      mem16             OF,CF             2+     12 25  13 26  11
+                mem32             SF,ZF, PF,AF             12 41  13 42  10
 F7     neg      reg16             SF,ZF,OF,CF,PF,AF 2      2      1      1
-
-                reg32                                                     
-
+                reg32                                                     
 F7     neg      mem16             SF,ZF,OF,CF,PF,AF 2+     2      1      1
-
-                mem32                                                     
-
+                mem32                                                     
 F7     not      reg16             none              2      2      1      1
-
-                reg32                                                     
-
+                reg32                                                     
 F7     not      mem16             none              2+     6      3      3
-
-                mem32                                                     
-
+                mem32                                                     
 F7     test     reg16,imm16       SF,ZF,OF,CF,PF,AF 4      2      1      1
-
-                reg32,imm32                         6                     
-
+                reg32,imm32                         6                     
 F7     test     mem16,imm16       SF,ZF,OF,CF,PF,AF 4+     5      2      2
-
-                mem32,imm32                         6+                    
-
+                mem32,imm32                         6+                    
 F8     clc      none              CF                1      2      2      2
-
 F9     stc      none              CF                1      2      2      2
-
 FC     cld      none              DF                1      2      2      2
-
 FD     std      none              DF                1      2      2      2
-
-FE     dec      reg8                                2      2      1      1
-
+FE     dec      reg8                                2      2      1      1
 FE     dec      mem8              SF,ZF,OF,PF,AF    2+     6      3      3
-
 FE     inc      reg8              SF,ZF,OF,PF,AF    2      2      1      1
-
 FE     inc      mem8              SF,ZF,OF,PF,AF    2+     6      3      3
-
-FF     call     reg32 (near       none              2      7+     5      2
-                indirect)
-
-FF     call     mem32 (near       none              2+     10+    5      2
-                indirect)
-
+FF     call     reg32             none              2      7+     5      2
+FF     call     mem32             none              2+     10+    5      2
 FF     call     far indirect      none              6      22+    17     5
-
 FF     dec      mem16             SF,ZF,OF,PF,AF    2+     6      3      3
-
-                mem32                                                     
-
+                mem32                                                     
 FF     inc      mem16             SF,ZF,OF,PF,AF    2+     6      3      3
-
-                mem32                                                     
-
+                mem32                                                     
 FF     jmp      reg32             none              2      10+    5      2
-
 FF     jmp      mem32             none              2+     10+    5      2
-
 FF     push     mem16             none              2+     5      4      2
-
-                mem32                                                     
-
-^[*]timing varies
-
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+                mem32                                                     
