@@ -16,8 +16,8 @@ The memory model es similar to the DOS (pages of 64Kb)
 | Stage        | Kanban Status |
 |--------------|---------------|
  | Commands     | Done          |
- | Arithmetic   | Doing         | 
- | Assembly     | To Do         | 
+ | Arithmetic   | Done          | 
+ | Assembly     | Doing         | 
  | Dissassembly | To Do         | 
 
 
