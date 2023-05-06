@@ -4,6 +4,7 @@ import os
 import re
 import readline
 import sys
+import curses
 
 from multipledispatch import dispatch
 
@@ -35,9 +36,12 @@ def pebug_main(filename="pebug_disk.bin"):
     print("An x86 old-debug-like program written in Python.")
     print("By Pablo Niklas <pablo.niklas@gmail.com>.")
     print("Online manual at https://pebug.readthedocs.io")
+    print(f"History file: {readline.get_history_length()} lines loaded.")
     print(f"Main memory size: {memory.pages} pages.")
     print(f"Stack size: {stack.pages} page/s.")
     print(f"Virtual disk size: {disk.size} bytes.")
+    print("")
+    print("Type 'q' to quit the program.")
 
     """https://montcs.bloomu.edu/Information/LowLevel/DOS-Debug.html"""
     mode = "C"
@@ -103,10 +107,12 @@ def pebug_main(filename="pebug_disk.bin"):
             setname(disk, cmd)
         elif re.match(r"^[aA]$", cmd):
             assemble(cpu, memory)
+        elif re.match(r"^[pP] .*$", cmd):
+            parse(cpu, cmd)
 
         # Arithmetic mode.
         elif re.match(r"^[aA][lL][uU]$", cmd):
-            print("Welcome to the ALU mode. Enter q to quit this mode.")
+            print("Welcome to the ALU mode. Enter 'q' to quit this mode.")
             mode = "M"
             cmd = prompt(mode)
             while not re.match(r"^[qQ]$", cmd):
@@ -123,16 +129,20 @@ def pebug_main(filename="pebug_disk.bin"):
                 elif re.match("^[sS][hH][lL] [0-9a-f]{,2}$", cmd):
                     asm_shl(cpu, cmd)
                 else:
-                    print("Input not recognized.")
+                    _error_msg
 
                 cmd = prompt(mode)
         else:
-            print("Input not recognized.")
+            _error_msg
 
         mode = "C"
         cmd = prompt(mode)
 
     disk.save()  # Save vdisk to a _real_ disk.
+
+
+def _error_msg():
+    print("Input not recognized.")
 
 
 @dispatch(object, str, int, int)
@@ -209,6 +219,12 @@ def setname(disk: Disk, cmd: str):
 def assemble(cpu: Cpu, memory: Memory):
     print("Welcome to the Assemble mode. Enter twice to quit this mode.")
     cpu.assemble(memory)
+
+
+def parse(cpu: Cpu, cmd: str):
+    args = cmd.split(" ")
+    line = args[1:]
+    cpu.parse_instruction(" ".join(line))
 
 
 def write(disk: Disk, memory: Memory, cpu: Cpu, cmd: str):
