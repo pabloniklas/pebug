@@ -1,4 +1,9 @@
-import re
+from multipledispatch import dispatch
+from rply import (
+    ParserGenerator,
+    LexerGenerator,
+    errors
+)
 from typing import (
     List,
     Set,
@@ -6,13 +11,9 @@ from typing import (
     Tuple,
     Optional
 )
+import re
+import pdb
 
-import nltk
-
-from peachpy import *
-from peachpy.x86_64 import *
-
-from multipledispatch import dispatch
 
 if __name__ is not None and "." in __name__:
     from .Memory import Memory
@@ -26,6 +27,85 @@ class Cpu():
     """
     Class emulating a 8086 CPU.
     """
+
+    class _Lexer():
+        def __init__(self):
+            self.lexer = LexerGenerator()
+
+        def _add_tokens(self):
+
+            # Opcodes
+            self.lexer.add('OPCODE', r'(aaa|aad|aam|aas|adc|add|and|call|cbw|cdq|clc|cld|cmc|cmp|cmpsb|cmpsd|cmpsw|cwd|cwde|daa|das|dec|div|idiv|imul|inc|ja|jae|jb|jbe|jc|je|jecxz|jg|jge|jl|jle|jmp|jna|jnae|jnb|jnbe|jnc|jne|jng|jnge|jnl|jnle|jno|jnp|jns|jnz|jo|jp|jpe|jpo|js|jz|lodsb|lodsd|lodsw|loop|loope|loopne|loopnz|loopz|mov|movsb|movsd|movsw|movsx|movzx|mul|neg|not|or|pop|popa|popad|popf|popfd|push|pusha|pushad|pushf|pushfd|rep|repe|repne|repne|repnz|repz|ret|rol|ror|sar|sbb|scasb|scasd|scasw|shl|shld|shr|shrd|stc|std|stosb|stosb|stosd|stosw|stosw|sub|test|xchg|xlat|xor)')
+
+            # Registers
+            self.lexer.add(
+                'REG8', r'(af|ah|al|ax|bh|bl|bp|bp|bx|cl|cs|cx|ch|dh|di|dl|ds|dx|es|fs|gs|si|sp|ss)')
+            self.lexer.add('REG16', r'(eax|eax|ebp|ebx|ecx|edi|edx|esi|esp)')
+
+            # Signs and operators
+            self.lexer.add('COMMA', r',')
+            # self.lexer.add('PLUS', r'\+')
+
+            # Integers
+            self.lexer.add('IMM8', r'[0-9a-f]{2}')
+            self.lexer.add('IMM16', r'[0-9a-f]{4}')
+
+            # Memory
+            self.lexer.add('MEMORY', r'\[.*?\]')
+
+            self.lexer.ignore('\s+')
+
+        def get_lexer(self):
+            self._add_tokens()
+            return self.lexer.build()
+
+    # https://joshsharp.com.au/blog/rpython-rply-interpreter-1.html
+
+    class _Parser():
+        def __init__(self):
+            self.pg = ParserGenerator(
+                ["OPCODE", "REG8", "REG16", "IMM8", "IMM16", "MEMORY",
+                    "COMMA"],
+                precedence=[
+                    ('left', ['OPCODE']),
+                    ('left', ['REG8', 'REG16']),
+                    ('left', ['COMMA']),
+                ],
+                cache_id="my_parser"
+            )
+
+        def parse(self):
+            @self.pg.production('instruction : OPCODE operands')
+            def expression(p):
+                opcode = p[0].getstr()
+                operands = p[1]   # ALL the operands (is a list).
+
+                if opcode == "xor":
+                    arg1 = operands[0].getstr()
+                    arg2 = operands[2].getstr()
+                    print(f"{arg1} / {arg2}")
+
+            # @self.pg.production('mem8 : MLEFT_BRACKET REG8 RIGHT_BRACKET')
+            # @self.pg.production('mem8 : LEFT_BRACKET REG8 PLUS REG8 RIGHT_BRACKET')
+            @self.pg.production('operand : operand COMMA operand')
+            def multiple_operands(p):
+                return p
+
+            @self.pg.production('operand : REG8')
+            @self.pg.production('operand : REG16')
+            @self.pg.production('operand : IMM8')
+            @self.pg.production('operand : IMM16')
+            @self.pg.production('operand : MEMORY')
+            @self.pg.production('operands : operand')
+            def operands_single(p):
+                return p[0]
+
+            @self.pg.error
+            def error_handle(token):
+                raise ValueError(f"ERROR: Invalid token '{token.getstr()}'.")
+
+        def get_parser(self):
+            return self.pg.build()
 
     def __init__(self):
         self._bits = 16
@@ -140,58 +220,22 @@ class Cpu():
         # Define the grammar rules for decoding x86 instructions
         # https://pastraiser.com/cpu/i8088/i8088_opcodes.html
 
-        # https://groups.google.com/g/nltk-users/c/4nC6J7DJcOc
-        nltk.RegexpTagger(
-            [
-                (r"^[0-9a-f]{2}$", "imm8"),
-                (r"^[0-9a-f]{4}$", "imm16"),
-            ])
+    def parse_instruction(self, cmd):
+        lexer = self._Lexer().get_lexer()
+        tokens = lexer.lex(cmd)
+        pg = self._Parser()
+        pg.parse()
+        parser = pg.get_parser()
 
-        self._grammar = nltk.CFG.fromstring("""
-            S -> opcode operand
-            opcode -> 'aaa' | 'aad' | 'aam' | 'aas' | 'adc' | 'add' | 'and' | 'call' | 'cbw' | 'cdq' | 'clc' | 'cld' | 'cmc' | 'cmp' | 'cmpsb' | 'cmpsd' | 'cmpsw' | 'cwd' | 'cwde' | 'daa' | 'das' | 'dec' | 'div' | 'idiv' | 'imul' | 'inc' | 'ja' | 'jae' | 'jb' | 'jbe' | 'jc' | 'je' | 'jecxz' | 'jg' | 'jge' | 'jl' | 'jle' | 'jmp' | 'jna' | 'jnae' | 'jnb' | 'jnbe' | 'jnc' | 'jne' | 'jng' | 'jnge' | 'jnl' | 'jnle' | 'jno' | 'jnp' | 'jns' | 'jnz' | 'jo' | 'jp' | 'jpe' | 'jpo' | 'js' | 'jz' | 'lodsb' | 'lodsd' | 'lodsw' | 'loop' | 'loope' | 'loopne' | 'loopnz' | 'loopz' | 'mov' | 'movsb' | 'movsd' | 'movsw' | 'movsx' | 'movzx' | 'mul' | 'neg' | 'not' | 'or' | 'pop' | 'popa' | 'popad' | 'popf' | 'popfd' | 'push' | 'pusha' | 'pushad' | 'pushf' | 'pushfd' | 'rep' | 'repe' | 'repne' | 'repne' | 'repnz' | 'repz' | 'ret' | 'rol' | 'ror' | 'sar' | 'sbb' | 'scasb' | 'scasd' | 'scasw' | 'shl' | 'shld' | 'shr' | 'shrd' | 'stc' | 'std' | 'stosb' | 'stosb' | 'stosd' | 'stosw' | 'stosw' | 'sub' | 'test' | 'xchg' | 'xlat' | 'xor'
-            operand -> reg8 | reg16 | imm8 | imm16 | mem8 | mem16 | operand ',' operand
-            reg8 ->  'af' | 'ah' | 'al' | 'ax' | 'bh' | 'bl' | 'bp' | 'bp' | 'bx' | 'cl' | 'cs' | 'cx' | 'ch' | 'dh' | 'di' | 'dl' | 'ds' | 'dx' | 'es' | 'fs' | 'gs' | 'si' | 'sp' | 'ss'
-            reg16 -> 'eax' | 'eax' | 'ebp' | 'ebx' | 'ecx' | 'edi' | 'edx' | 'esi' | 'esp' 
-            imm8 -> "imm8"
-            imm16 -> "imm16"
-            mem8 -> '[' reg8 ']' | '[' reg8 '+' reg8 ']' | '[' reg8 '*' imm8 ']'
-            mem16 -> '[' reg16 ']' | '[' reg16 '+' reg16 ']' | '[' reg16 '*' imm16 ']'
-        """)
-
-        # Create a parser using the grammar rules
-        self._parser = nltk.ChartParser(self._grammar)
-
-    # Define a function for decoding an instruction
-    def decode_instruction(self, instruction) -> str:
-
-        # Parse the instruction using the parser
         try:
-            trees = self._parser.parse(instruction.split())
-
-            # Iterate over the parse trees and extract the decoded components
-            for tree in trees:
-                if tree.label() == 'S':
-                    opcode = tree[0].label()
-                    operands = [child.label() for child in tree[1]]
-                    return opcode, operands
-
-        except ValueError as e:
-            # If the instruction couldn't be parsed, return None
-            print(f"Invalid instruction: {e.__str__()}")
-            return None, None
-
-    # Assemble instruction
-    # def assemble_instruction(self, line) -> str:
-    #    instr = asm(line)
-
-    #    return instr.to_hex()
-
-    def parse_instruction(self, cmd) -> str:
-        opcode, operands = self.decode_instruction(cmd)
-        if opcode is not None:
-            print("Opcode: " + opcode)
-            print("Operands: " + operands)
+            parser.parse(tokens)
+        except errors.LexingError as e:
+            error = e.args[1]
+            idx = error.idx
+            lineno = error.lineno
+            colno = error.colno
+            print(" "*(cmd.count(" ")+idx+7)+"^")
+            print("ERROR: Invalid token")
 
     def set_register_upper(self, reg: int, value: int) -> int:
         reg = (reg & 0x00ff) | (value << 8)
