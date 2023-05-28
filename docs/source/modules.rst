@@ -4,4 +4,6 @@ modules
 .. toctree::
    :maxdepth: 4
 
-   modules
+   CpuX8086
+   Disk
+   Memory

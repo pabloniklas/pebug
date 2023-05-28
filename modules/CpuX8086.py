@@ -295,6 +295,15 @@ class CpuX8086():
         return a & b
 
     def asm_add(self, a, b):
+        """Addition between two numbers.
+
+        Parameters:
+            a (int): first number.
+            b (int): second number.
+
+        Returns:
+            int: a+b
+        """
 
         result = a + b
 
@@ -321,6 +330,16 @@ class CpuX8086():
         return result
 
     def asm_sub(self, a, b):
+        """Substraction between two numbers.
+
+        Parameters:
+            a (int): first number.
+            b (int): second number.
+
+        Returns:
+            int: a-b
+        """
+
         result = a - b
 
         # Update the zero flag

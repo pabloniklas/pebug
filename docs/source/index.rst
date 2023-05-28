@@ -17,18 +17,19 @@ and introductory interface to assembler, x86 flavor in particular.
    vdisk.md
    modules
 
+
 API Reference
 =============
 
-.. autoclass:: Disk.Disk
+.. autoclass:: Disk
    :members:
    :show-inheritance:
 
-.. autoclass:: CpuX8086.CpuX8086
+.. autoclass:: CpuX8086
    :members:
    :show-inheritance:
 
-.. autoclass:: Memory.Memory
+.. autoclass:: Memory
    :members:
    :show-inheritance:
 
