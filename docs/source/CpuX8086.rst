@@ -1,0 +1,7 @@
+CpuX8086 module
+=====================
+
+.. automodule:: CpuX8086
+   :members:
+   :undoc-members:
+   :show-inheritance:
