@@ -45,7 +45,7 @@ The list can be comprised of numbers or character strings enclosed by matching s
 
 ### Examples
 
-:::
+```
 s fe00:0 ffff "BIOS"
 FE00:0021
 FE00:006F
@@ -58,7 +58,7 @@ FE00:0040 6E 63 2E 6F 66 74 77 61-72 65 20 49 6E 63 2E 20 nc.oftware Inc.
 FE00:0050 41 77 03 0C 04 01 01 6F-66 74 77 E9 12 14 20 43 Aw.....oftw... C
 FE00:0060 1B 41 77 61 72 64 20 4D-6F 64 75 6C 61 72 20 42 .Award Modular B
 FE00:0070 49 4F 53 20 76 34 2E 35-31 50 47 00 DB 32 EC 33 IOS v4.51PG..2.3
-:::
+```
 
 ## Compare: C range address
 
@@ -66,12 +66,12 @@ Compares two blocks of memory.
 If there are no differences, then PEBUG simply displays another prompt.
 Here's an example of what happens when there are differences:
 
-:::
+```
 c 140 148 340
 127D:0143 30 6D 127D:0343
 127D:0146 10 63 127D:0346
 127D:0148 49 30 127D:0348
-:::
+```
 
 The bytes at locations 140 through 148 are being compared to those at 340 (through 348, implied);
 the bytes are displayed side by side for those which are different
@@ -84,13 +84,13 @@ smaller areas with a continuously repeating phrase or single byte.
 
 ### Example
 
-:::
+```
 f 100 12f 'BUFFER'
 d 100 12f
 xxxx:0100 42 55 46 46 45 52 42 55-46 46 45 52 42 55 46 46 BUFFERBUFFERBUFF
 xxxx:0110 45 52 42 55 46 46 45 52-42 55 46 46 45 52 42 55 ERBUFFERBUFFERBU
 xxxx:0120 46 46 45 52 42 55 46 46-45 52 42 55 46 46 45 52 FFERBUFFERBUFFER
-:::
+```
 
 ## Enter: E address [list]
 
@@ -196,7 +196,7 @@ The assembly process will stop after you ENTER an empty line.
 
 ### Example
 
-:::
+```
 A
 xxxx:0100 jmp 126
 xxxx:0102 db 0d,0a,'This is my first PEBUG program!'
@@ -208,7 +208,7 @@ xxxx:012D int 21
 xxxx:012F mov ax,4c
 xxxx:0132 int 21
 xxxx:0134
-:::
+```
 
 ## Unassemble: U [range]
 
@@ -225,7 +225,7 @@ just data or any of the newer x86 instructions which are all beyond the ability 
 
 ### Example
 
-:::
+```
 u 126 133
 xxxx:0126 31C0 XOR AX,AX
 xxxx:0128 B409 MOV AH,09
@@ -233,7 +233,7 @@ xxxx:012A BA0201 MOV DX,0102
 xxxx:012D CD21 INT 21
 xxxx:012F B84C00 MOV AX,004C
 xxxx:0132 CD21 INT 21
-:::
+```
 
 ## Go: G [=address] [addresses]
 
@@ -252,14 +252,14 @@ The use of I/O commands while running Windows™9x/Me is just plain unreliable! 
 Long ago (when DOS was the only OS for PCs), there were dozens of BASIC programs that used I/O commands for handling tasks through parallel and serial ports (e.g., to change the font used by a printer or values in a modem's control registers). Under real DOS, they can still be used for direct communications with keyboards or a floppy drive's control chips along with many other hardware devices.
 Here's an example of how to read the hours and minutes from a computer's "real time clock" (RTC):
 
-:::
+```
 -o 70 04 <-- Check the hours.
 -i 71
 18 <----- 18 hours (or 6 p.m.)
 -o 70 02 <-- Check the minutes.
 -i 71
 52 <----- 52 minutes
-:::
+```
 
 ## Output: O port byte
 
