@@ -27,7 +27,7 @@ sys.path.insert(0, os.path.abspath('../../modules'))
 # -- Project information -----------------------------------------------------
 
 project = 'PEBUG'
-copyright = '2022, Pablo Niklas'
+copyright = '2022,3, Pablo Niklas'
 author = 'Pablo Niklas'
 
 source_suffix = ['.rst', '.md']
@@ -68,11 +68,11 @@ napoleon_use_ivar = False
 napoleon_use_param = True
 napoleon_use_rtype = True
 
-## Include Python objects as they appear in source files
-## Default: alphabetically ('alphabetical')
+# Include Python objects as they appear in source files
+# Default: alphabetically ('alphabetical')
 
 autodoc_member_order = 'bysource'
-## Default flags used by autodoc directives
+# Default flags used by autodoc directives
 
 autodoc_default_options = {
     'members': True,
@@ -82,7 +82,7 @@ autodoc_default_options = {
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = 'sphinx'
 
-## Generate autodoc stubs with summaries from code
+# Generate autodoc stubs with summaries from code
 autosummary_generate = True
 
 # Add any paths that contain templates here, relative to this directory.

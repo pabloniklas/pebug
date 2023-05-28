@@ -12,8 +12,6 @@ from typing import (
     Optional
 )
 import re
-import pdb
-
 
 if __name__ is not None and "." in __name__:
     from .Memory import Memory
@@ -22,92 +20,83 @@ else:
     from Memory import Memory
     from Disk import Disk
 
+# https://joshsharp.com.au/blog/rpython-rply-interpreter-1.html
 
-class Cpu():
+
+class CpuX8086():
     """
     Class emulating a 8086 CPU.
     """
 
-    class _Lexer():
-        def __init__(self):
-            self.lexer = LexerGenerator()
-
-        def _add_tokens(self):
-
-            # Opcodes
-            self.lexer.add('OPCODE', r'(aaa|aad|aam|aas|adc|add|and|call|cbw|cdq|clc|cld|cmc|cmp|cmpsb|cmpsd|cmpsw|cwd|cwde|daa|das|dec|div|idiv|imul|inc|ja|jae|jb|jbe|jc|je|jecxz|jg|jge|jl|jle|jmp|jna|jnae|jnb|jnbe|jnc|jne|jng|jnge|jnl|jnle|jno|jnp|jns|jnz|jo|jp|jpe|jpo|js|jz|lodsb|lodsd|lodsw|loop|loope|loopne|loopnz|loopz|mov|movsb|movsd|movsw|movsx|movzx|mul|neg|not|or|pop|popa|popad|popf|popfd|push|pusha|pushad|pushf|pushfd|rep|repe|repne|repne|repnz|repz|ret|rol|ror|sar|sbb|scasb|scasd|scasw|shl|shld|shr|shrd|stc|std|stosb|stosb|stosd|stosw|stosw|sub|test|xchg|xlat|xor)')
-
-            # Registers
-            self.lexer.add(
-                'REG8', r'(af|ah|al|ax|bh|bl|bp|bp|bx|cl|cs|cx|ch|dh|di|dl|ds|dx|es|fs|gs|si|sp|ss)')
-            self.lexer.add('REG16', r'(eax|eax|ebp|ebx|ecx|edi|edx|esi|esp)')
-
-            # Signs and operators
-            self.lexer.add('COMMA', r',')
-            # self.lexer.add('PLUS', r'\+')
-
-            # Integers
-            self.lexer.add('IMM8', r'[0-9a-f]{2}')
-            self.lexer.add('IMM16', r'[0-9a-f]{4}')
-
-            # Memory
-            self.lexer.add('MEMORY', r'\[.*?\]')
-
-            self.lexer.ignore('\s+')
-
-        def get_lexer(self):
-            self._add_tokens()
-            return self.lexer.build()
-
-    # https://joshsharp.com.au/blog/rpython-rply-interpreter-1.html
-
-    class _Parser():
-        def __init__(self):
-            self.pg = ParserGenerator(
-                ["OPCODE", "REG8", "REG16", "IMM8", "IMM16", "MEMORY",
-                    "COMMA"],
-                precedence=[
-                    ('left', ['OPCODE']),
-                    ('left', ['REG8', 'REG16']),
-                    ('left', ['COMMA']),
-                ],
-                cache_id="my_parser"
-            )
-
-        def parse(self):
-            @self.pg.production('instruction : OPCODE operands')
-            def expression(p):
-                opcode = p[0].getstr()
-                operands = p[1]   # ALL the operands (is a list).
-
-                if opcode == "xor":
-                    arg1 = operands[0].getstr()
-                    arg2 = operands[2].getstr()
-                    print(f"{arg1} / {arg2}")
-
-            # @self.pg.production('mem8 : MLEFT_BRACKET REG8 RIGHT_BRACKET')
-            # @self.pg.production('mem8 : LEFT_BRACKET REG8 PLUS REG8 RIGHT_BRACKET')
-            @self.pg.production('operand : operand COMMA operand')
-            def multiple_operands(p):
-                return p
-
-            @self.pg.production('operand : REG8')
-            @self.pg.production('operand : REG16')
-            @self.pg.production('operand : IMM8')
-            @self.pg.production('operand : IMM16')
-            @self.pg.production('operand : MEMORY')
-            @self.pg.production('operands : operand')
-            def operands_single(p):
-                return p[0]
-
-            @self.pg.error
-            def error_handle(token):
-                raise ValueError(f"ERROR: Invalid token '{token.getstr()}'.")
-
-        def get_parser(self):
-            return self.pg.build()
-
     def __init__(self):
+        self.lexer = LexerGenerator()
+
+        # Opcodes
+        self.lexer.add('OPCODE',
+                       r'(aaa|aad|aam|aas|adc|add|and|call|cbw|cdq|clc|cld|cmc|cmp|cmpsb|cmpsd|cmpsw|cwd|cwde|daa|das|dec|div|idiv|imul|inc|ja|jae|jb|jbe|jc|je|jecxz|jg|jge|jl|jle|jmp|jna|jnae|jnb|jnbe|jnc|jne|jng|jnge|jnl|jnle|jno|jnp|jns|jnz|jo|jp|jpe|jpo|js|jz|lodsb|lodsd|lodsw|loop|loope|loopne|loopnz|loopz|mov|movsb|movsd|movsw|movsx|movzx|mul|neg|not|or|pop|popa|popad|popf|popfd|push|pusha|pushad|pushf|pushfd|rep|repe|repne|repne|repnz|repz|ret|rol|ror|sar|sbb|scasb|scasd|scasw|shl|shld|shr|shrd|stc|std|stosb|stosb|stosd|stosw|stosw|sub|test|xchg|xlat|xor)')
+
+        # Registers
+        self.lexer.add(
+            'REG8', r'(af|ah|al|ax|bh|bl|bp|bp|bx|cl|cs|cx|ch|dh|di|dl|ds|dx|es|fs|gs|si|sp|ss)')
+        self.lexer.add('REG16', r'(eax|eax|ebp|ebx|ecx|edi|edx|esi|esp)')
+
+        # Signs and operators
+        self.lexer.add('COMMA', r',')
+        # self.lexer.add('PLUS', r'\+')
+
+        # Integers
+        self.lexer.add('IMM8', r'[0-9a-f]{2}')
+        self.lexer.add('IMM16', r'[0-9a-f]{4}')
+
+        # Memory
+        self.lexer.add('MEMORY', r'\[.*?\]')
+
+        self.lexer.ignore('\s+')
+
+        self.cpu_lexer = self.lexer.build()
+
+        self.pg = ParserGenerator(
+            ["OPCODE", "REG8", "REG16", "IMM8", "IMM16", "MEMORY",
+             "COMMA"],
+            precedence=[
+                ('left', ['OPCODE']),
+                ('left', ['REG8', 'REG16']),
+                ('left', ['COMMA']),
+            ],
+            cache_id="my_parser"
+        )
+
+        @self.pg.production('instruction : OPCODE operands')
+        def expression(p):
+            opcode = p[0].getstr()
+            operands = p[1]  # ALL the operands (is a list).
+
+            if opcode == "xor":
+                arg1 = operands[0].getstr()
+                arg2 = operands[2].getstr()
+
+                setattr(self, arg1.upper(), self.asm_xor(getattr(self, arg1.upper()),
+                                                         getattr(self, arg2.upper())))
+
+        # @self.pg.production('mem8 : MLEFT_BRACKET REG8 RIGHT_BRACKET')
+        # @self.pg.production('mem8 : LEFT_BRACKET REG8 PLUS REG8 RIGHT_BRACKET')
+        @self.pg.production('operand : operand COMMA operand')
+        def multiple_operands(p):
+            return p
+
+        @self.pg.production('operand : REG8')
+        @self.pg.production('operand : REG16')
+        @self.pg.production('operand : IMM8')
+        @self.pg.production('operand : IMM16')
+        @self.pg.production('operand : MEMORY')
+        @self.pg.production('operands : operand')
+        def operands_single(p):
+            return p[0]
+
+        @self.pg.error
+        def error_handle(token):
+            raise ValueError(f"ERROR: Invalid token '{token.getstr()}'.")
+
         self._bits = 16
 
         # 8 bit X86 registers
@@ -221,11 +210,8 @@ class Cpu():
         # https://pastraiser.com/cpu/i8088/i8088_opcodes.html
 
     def parse_instruction(self, cmd):
-        lexer = self._Lexer().get_lexer()
-        tokens = lexer.lex(cmd)
-        pg = self._Parser()
-        pg.parse()
-        parser = pg.get_parser()
+        tokens = self.cpu_lexer.lex(cmd)
+        parser = self.pg.build()
 
         try:
             parser.parse(tokens)
@@ -234,8 +220,8 @@ class Cpu():
             idx = error.idx
             lineno = error.lineno
             colno = error.colno
-            print(" "*(cmd.count(" ")+idx+7)+"^")
-            print("ERROR: Invalid token")
+            print(" " * (cmd.count(" ") + idx + 7) + "^")
+            print("ERROR: Invalid token.")
 
     def set_register_upper(self, reg: int, value: int) -> int:
         reg = (reg & 0x00ff) | (value << 8)
@@ -373,21 +359,20 @@ class Cpu():
 
         return format(int(x, 2), '08b')
 
-    @dispatch(int, n=int)
-    def get_bin(x: int, n: int = bits) -> str:
+    @dispatch(int)
+    def get_bin(self, x: int) -> str:
         """Convert any integer into n bit binary format.
 
         Parameters:
             x (int): The integer to be converted.
-            n (int): Number of bits.
 
         Returns:
-            str: n bit binary as string.
+            str: 16 bit binary as string.
         """
-        return format(x, '0' + str(n) + 'b')
+        return format(x, '0' + str(self._bits) + 'b')
 
     @dispatch(int)
-    def get_hex(x: int) -> str:
+    def get_hex(self, x: int) -> str:
         """Convert any integer into 16 bit hexadecimal format.
 
         Parameters:
@@ -408,10 +393,10 @@ class Cpu():
         """ Print the CPU registers and it's value."""
         print(
             f"AX={self.get_bin(self.AX)} BX={self.get_bin(self.BX)}"
-            f"CX={self.get_bin(self.CX)}  DX={self.get_bin(self.DX)}")
+            f"CX={self.get_bin(self.CX)} DX={self.get_bin(self.DX)}")
         print(
             f"SP={self.get_bin(self.SP)} BP={self.get_bin(self.BP)}  "
-            f"SI={self.get_bin(self.SI)}  DI={self.get_bin(self.DI)}")
+            f"SI={self.get_bin(self.SI)} DI={self.get_bin(self.DI)}")
 
     def move(self, memory: Memory, from_begin: int, from_end: int, destination: int) -> bool:
         """Copy a memory region to other memory region.

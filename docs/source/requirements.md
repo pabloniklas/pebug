@@ -1,4 +1,4 @@
 # Requirements
 
-* antlr4-python3-runtime
+* rply
 * multipledispatch

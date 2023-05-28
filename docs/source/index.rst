@@ -24,7 +24,7 @@ API Reference
    :members:
    :show-inheritance:
 
-.. autoclass:: Cpu.Cpu
+.. autoclass:: CpuX8086.CpuX8086
    :members:
    :show-inheritance:
 

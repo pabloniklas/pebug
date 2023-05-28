@@ -10,11 +10,10 @@ from multipledispatch import dispatch
 
 from modules.Disk import Disk
 from modules.Memory import Memory
-from modules.Cpu import Cpu
+from modules.CpuX8086 import CpuX8086
 
 
 def pebug_main(filename="pebug_disk.bin"):
-    print("")
 
     memory = Memory(65536)
     stack = Memory(1)
@@ -22,7 +21,7 @@ def pebug_main(filename="pebug_disk.bin"):
     disk = Disk(65536, filename)  # 64Kb
     disk.load()
 
-    cpu = Cpu()
+    cpu = CpuX8086()
 
     print("""
                  _
@@ -146,7 +145,7 @@ def _error_msg():
 
 
 @dispatch(object, str, int, int)
-def _show_result(cpu: Cpu, oper: str, a: int, r: int):
+def _show_result(cpu: CpuX8086, oper: str, a: int, r: int):
     oper = oper.upper()
     bin_a = cpu.get_bin(a)
     bin_r = cpu.get_bin(r)
@@ -155,7 +154,7 @@ def _show_result(cpu: Cpu, oper: str, a: int, r: int):
 
 
 @dispatch(object, str, int, int, int)
-def _show_result(cpu: Cpu, oper: str, a: int, b: int, r: int):
+def _show_result(cpu: CpuX8086, oper: str, a: int, b: int, r: int):
     oper = oper.upper()
     bin_a = cpu.get_bin(a)
     bin_b = cpu.get_bin(b)
@@ -164,28 +163,28 @@ def _show_result(cpu: Cpu, oper: str, a: int, b: int, r: int):
     cpu.print_status_flags()
 
 
-def asm_shl(cpu, cmd):
+def asm_shl(cpu: CpuX8086, cmd: str):
     args = cmd.split(" ")
     oper1 = int(args[1], 16)
     result = cpu.asm_shl(oper1)
     _show_result(cpu, "SHL", oper1, result)
 
 
-def asm_shr(cpu, cmd):
+def asm_shr(cpu: CpuX8086, cmd: str):
     args = cmd.split(" ")
     oper1 = int(args[1], 16)
     result = cpu.asm_shr(oper1)
     _show_result(cpu, "SHR", oper1, result)
 
 
-def asm_not(cpu: Cpu, cmd: str):
+def asm_not(cpu: CpuX8086, cmd: str):
     args = cmd.split(" ")
     oper1 = int(args[1], 16)
     result = cpu.asm_not(oper1)
     _show_result(cpu, "NOT", oper1, result)
 
 
-def asm_or(cpu: Cpu, cmd: str):
+def asm_or(cpu: CpuX8086, cmd: str):
     args = cmd.split(" ")
     oper1 = int(args[1], 16)
     oper2 = int(args[2], 16)
@@ -193,7 +192,7 @@ def asm_or(cpu: Cpu, cmd: str):
     _show_result(cpu, "OR", oper1, oper2, result)
 
 
-def asm_and(cpu: Cpu, cmd: str):
+def asm_and(cpu: CpuX8086, cmd: str):
     args = cmd.split(" ")
     oper1 = int(args[1], 16)
     oper2 = int(args[2], 16)
@@ -201,7 +200,7 @@ def asm_and(cpu: Cpu, cmd: str):
     _show_result(cpu, "AND", oper1, oper2, result)
 
 
-def asm_xor(cpu: Cpu, cmd: str):
+def asm_xor(cpu: CpuX8086, cmd: str):
     args = cmd.split(" ")
     oper1 = int(args[1], 16)
     oper2 = int(args[2], 16)
@@ -216,18 +215,18 @@ def setname(disk: Disk, cmd: str):
     disk.filename(filename)
 
 
-def assemble(cpu: Cpu, memory: Memory):
+def assemble(cpu: CpuX8086, memory: Memory):
     print("Welcome to the Assemble mode. Enter twice to quit this mode.")
     cpu.assemble(memory)
 
 
-def parse(cpu: Cpu, cmd: str):
+def parse(cpu: CpuX8086, cmd: str):
     args = cmd.split(" ")
     line = args[1:]
     cpu.parse_instruction(" ".join(line))
 
 
-def write(disk: Disk, memory: Memory, cpu: Cpu, cmd: str):
+def write(disk: Disk, memory: Memory, cpu: CpuX8086, cmd: str):
     args = cmd.split(" ")
     address = int(args[1], 16)
     firstsector = int(args[2], 16)
@@ -235,7 +234,7 @@ def write(disk: Disk, memory: Memory, cpu: Cpu, cmd: str):
     cpu.write_to_vdisk(memory, disk, address, firstsector, number)
 
 
-def read(disk: Disk, memory: Memory, cpu: Cpu, cmd: str):
+def read(disk: Disk, memory: Memory, cpu: CpuX8086, cmd: str):
     args = cmd.split(" ")
     address = int(args[1], 16)
     firstsector = int(args[2], 16)
@@ -243,7 +242,7 @@ def read(disk: Disk, memory: Memory, cpu: Cpu, cmd: str):
     cpu.read_from_vdisk(memory, disk, address, firstsector, number)
 
 
-def move(cpu: Cpu, memory: Memory, cmd: str):
+def move(cpu: CpuX8086, memory: Memory, cmd: str):
     args = cmd.split(" ")
     oper1 = int(args[1], 16)
     oper2 = int(args[2], 16)
@@ -251,7 +250,7 @@ def move(cpu: Cpu, memory: Memory, cmd: str):
     cpu.move(memory, oper1, oper2, oper3)
 
 
-def string_poke(cpu: Cpu, memory: Memory, cmd: str):
+def string_poke(cpu: CpuX8086, memory: Memory, cmd: str):
     args = cmd.split(" ")
     address = int(args[1], 16)
     args[2] = args[2][1:]  # To strip the initial '
@@ -266,7 +265,7 @@ def byte_poke(memory: Memory, cmd: str):
     memory.poke(memory.active_page, value, address)
 
 
-def compare(cpu: Cpu, memory: Memory, cmd: str):
+def compare(cpu: CpuX8086, memory: Memory, cmd: str):
     args = cmd.split(" ")
     oper1 = int(args[1], 16)
     oper2 = int(args[2], 16)
@@ -285,7 +284,7 @@ def hex_cmd(cmd: str):
     print('%04X' % res_add, '%04X' % res_sub)
 
 
-def search(cpu: Cpu, memory: Memory, cmd: str):
+def search(cpu: CpuX8086, memory: Memory, cmd: str):
     args = cmd.split(" ")
     start = int(args[1], 16)
     pattern = args[2]
@@ -294,14 +293,14 @@ def search(cpu: Cpu, memory: Memory, cmd: str):
         print(aa)
 
 
-def reset_memory_range(cpu: Cpu, memory: Memory, cmd: str):
+def reset_memory_range(cpu: CpuX8086, memory: Memory, cmd: str):
     args = cmd.split(" ")
     start = int(args[1], 16)
     end = int(args[2], 16)
     cpu.fill(memory, start, end, chr(0))
 
 
-def fill_memory_range(cpu: Cpu, memory: Memory, cmd: str):
+def fill_memory_range(cpu: CpuX8086, memory: Memory, cmd: str):
     args = cmd.split(" ")
     start = int(args[1], 16)
     end = int(args[2], 16)
@@ -314,21 +313,21 @@ def setting_memory_page(memory: Memory, cmd: str):
     memory.active_page = int(arg[1], 16)
 
 
-def display(cpu: Cpu, memory: Memory, cmd: str):
+def display(cpu: CpuX8086, memory: Memory, cmd: str):
     args = cmd.split(" ")
     a = int(args[1], 16)
     b = int(args[2], 16)
     cpu.display(memory, a, b)
 
 
-def cat(cpu: Cpu, disk: Disk, cmd: str):
+def cat(cpu: CpuX8086, disk: Disk, cmd: str):
     args = cmd.split(" ")
     a = int(args[1], 16)
     b = int(args[2], 16)
     cpu.cat(disk, a, b)
 
 
-def demo(cpu: Cpu, memory: Memory):
+def demo(cpu: CpuX8086, memory: Memory):
     oldap = memory.active_page
     memory.active_page = 49152
     # TODO: Random text (like fortune)
