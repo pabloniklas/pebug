@@ -24,7 +24,6 @@ class Memory:
     def peek(self, address: int) -> int:
         """
         peek(self, address: int) -> int
-        Retrieve the content of a memory address.
 
         Parameters:
             address (int): Address where to peek.
@@ -38,7 +37,6 @@ class Memory:
     @dispatch(int, int)
     def peek(self, page: int, address: int) -> int:
         """
-        peek(self, page: int, address: int) -> int
         Retrieve the content of a memory address.
 
         Parameters:
@@ -59,7 +57,6 @@ class Memory:
     @dispatch(str, str)
     def peek(self, page: str, address: str) -> int:
         """
-        peek(self, page: str, address: str) -> int
         Retrieve the content of a memory address.
 
         Parameters:
@@ -74,7 +71,6 @@ class Memory:
     @dispatch(int, int, int)
     def poke(self, page: int, address: int, value: int) -> bool:
         """
-        poke(self, page: int, address: int, value: int) -> bool
         Write a value to a memory address.
 
         Parameters:

@@ -275,11 +275,11 @@ class CpuX8086():
         return self._bits
 
     def asm_shr(self, x: int):
-        rest, self.CY = x >> 1, x & 1
+        rest, self.CF = x >> 1, x & 1
         return rest
 
     def asm_shl(self, x):
-        rest, self.CY = x << 1, x & 1
+        rest, self.CF = x << 1, x & 1
         return rest
 
     def asm_not(self, a):
@@ -365,8 +365,8 @@ class CpuX8086():
     def _not_yet():
         print("This part of the CPU hasn't been implemented yet. =)")
 
-    @dispatch(int)
-    def get_bin(x: int) -> str:
+#    @dispatch(int)
+#    def get_bin(x: int) -> str:
         """Convert any integer into 8 bit binary format.
 
         Parameters:
@@ -376,11 +376,11 @@ class CpuX8086():
             str: 8 bit binary as string.
         """
 
-        return format(int(x, 2), '08b')
+#        return format(int(x, 2), '08b')
 
     @dispatch(int)
     def get_bin(self, x: int) -> str:
-        """Convert any integer into n bit binary format.
+        """Convert any integer into any bit binary format.
 
         Parameters:
             x (int): The integer to be converted.
@@ -406,15 +406,15 @@ class CpuX8086():
     def print_status_flags(self) -> None:
         """ Print the status of the flags. """
         print(
-            f"SF={self.SF} ZF={self.ZF} CY={self.CY} PF={self.PF} OF={self.OF} CY={self.CY}")
+            f"SF={self.SF} ZF={self.ZF} F={self.CF} PF={self.PF} OF={self.OF}")
 
     def print_registers(self) -> None:
         """ Print the CPU registers and it's value."""
         print(
-            f"AX={self.get_bin(self.AX)} BX={self.get_bin(self.BX)}"
+            f"AX={self.get_bin(self.AX)} BX={self.get_bin(self.BX)} "
             f"CX={self.get_bin(self.CX)} DX={self.get_bin(self.DX)}")
         print(
-            f"SP={self.get_bin(self.SP)} BP={self.get_bin(self.BP)}  "
+            f"SP={self.get_bin(self.SP)} BP={self.get_bin(self.BP)} "
             f"SI={self.get_bin(self.SI)} DI={self.get_bin(self.DI)}")
 
     def move(self, memory: Memory, from_begin: int, from_end: int, destination: int) -> bool:
