@@ -1,0 +1,397 @@
+#!/usr/bin/env python3
+
+from modules.Gui import *
+
+from PyQt5.QtWidgets import QMessageBox
+from PyQt5.QtCore import Qt
+
+import os
+import re
+import sys
+import qtawesome as qta
+
+from multipledispatch import dispatch
+
+from modules.Disk import Disk
+from modules.Memory import Memory
+from modules.CpuX8086 import CpuX8086
+
+FILENAME = "pebug_disk.bin"
+
+
+class RegsStatus(QtWidgets.QLabel):
+    def __init__(self, label : QtWidgets.QLabel):
+        super().__init__()
+
+        self.led_width = 8
+        self.led_height = label.geometry().height()-1
+        self.ledON = '#ff0000'
+        self.ledOFF = '#890000'
+
+        canvas = QtGui.QPixmap(label.geometry().width(),label.geometry().height())
+        canvas.fill(Qt.transparent)
+        label.setPixmap(canvas)
+
+        painter = QtGui.QPainter(label.pixmap())
+        pen = QtGui.QPen()
+        pen.setWidth(1)
+        pen.setColor(QtGui.QColor(self.ledOFF))
+        painter.setPen(pen)
+
+        brush = QtGui.QBrush()
+        brush.setColor(QtGui.QColor(self.ledOFF))
+        brush.setStyle(Qt.SolidPattern)
+        painter.setBrush(brush)
+
+        led_list=[]
+
+        for x in range(15):
+            x_coor = x * (self.led_width + 2)
+            y_coor = 0
+            led_list.append(
+                QtCore.QRect(x_coor, y_coor, self.led_width, self.led_height)
+            )
+
+        painter.drawRects(led_list)
+        painter.end()
+
+
+class MainWindow(QtWidgets.QMainWindow, Ui_PEBUG):
+
+    def __init__(self):
+        QtWidgets.QMainWindow.__init__(self)
+        self.setupUi(self)
+
+        self.memory = Memory(65536)
+        self.stack = Memory(1)
+
+        self.disk = Disk(65536, FILENAME)  # 64Kb
+        self.disk.load()
+
+        self.cpu = CpuX8086()
+
+        # Gráficos para los botones
+        self.sendButton.setIcon(qta.icon("ei.cogs"))
+        self.exitButton.setIcon(qta.icon("mdi.exit-run"))
+        self.aboutButton.setIcon(qta.icon("ei.map-marker"))
+
+        for r in [ self.ledEAX, self.ledEBX, self.ledECX, self.ledEDX,
+                   self.ledEDI, self.ledESI, self.ledESP, self.ledEBP]:
+            self.eaxDisplay = RegsStatus(r)
+
+        # Conectamos los eventos con sus acciones
+        self.exitButton.clicked.connect(self.exit_pebug)
+        self.sendButton.clicked.connect(self.parse_command)
+        self.aboutButton.clicked.connect(self.about_dialog)
+
+        self.print_roller_tape("""                 _
+                | |
+     ____  _____| |__  _   _  ____
+    |  _ \| ___ |  _ \| | | |/ _  |
+    | |_| | ____| |_) ) |_| ( (_| |
+    |  __/|_____)____/|____/ \___ |
+    |_|                     (_____|""")
+
+        self.print_roller_tape("")
+        self.print_roller_tape("An x86 old-debug-like program written in Python.")
+        self.print_roller_tape("By Pablo Niklas <pablo.niklas@gmail.com>.")
+        self.print_roller_tape("Online manual at https://pebug.readthedocs.io")
+        self.print_roller_tape(f"Main memory size: {self.memory.pages} pages.")
+        self.print_roller_tape(f"Stack size: {self.stack.pages} page/s.")
+        self.print_roller_tape(f"Virtual disk size: {self.disk.size} bytes.")
+        self.print_roller_tape("")
+        self.print_roller_tape("Type 'q' to quit the program.")
+
+        self.prompt("C")
+
+    def keyPressEvent(self, qKeyEvent):
+        if qKeyEvent.key() == QtCore.Qt.Key_Return:
+            self.parse_command()
+        else:
+            super().keyPressEvent(qKeyEvent)
+
+    def about_dialog(self):
+        QMessageBox.information(self, "PEBUG 1.0", """PEBUG 1.0
+        \nAn x86 old-debug-like program written in Python.\n\nBy Pablo Niklas""")
+
+    def prompt(self, mode: str):
+        self.promptMode.setText(f"[{mode}]=>")
+
+    def print_roller_tape(self, txt: str):
+        self.rollerPaper.append(txt)
+
+    def parse_command(self):
+
+        cmd = self.cmdInput.text()
+        self.cmdInput.setText("")
+
+        if re.match(r"[qQ]", cmd):
+            sys.exit(0)
+        elif re.match(r"^[sS] [0-9a-f]{,4} .*$", cmd):
+            self.search(self.cpu, self.memory, cmd)
+        elif re.match(r"^[hH] [0-9a-f]{,4} [0-9a-f]{,4}$", cmd):
+            self.hex_cmd(cmd)
+        elif re.match(r"^[rR]$", cmd):
+            self.cpu.print_registers()
+            self.cpu.print_status_flags()
+        elif re.match(r"^[cC] [0-9a-f]{,4} [0-9a-f]{,4} [0-9a-f]{,4}$", cmd):
+            self.compare(self.cpu, self.memory, cmd)
+        elif re.match(r"^[cC][aA][tT] [0-9a-f]{,4} [0-9a-f]{,4}$", cmd):
+            self.cat(self.cpu, self.disk, cmd)
+        elif re.match(r"^[mM] [0-9a-f]{,4} [0-9a-f]{,4} [0-9a-f]{,4}$", cmd):
+            self.cpu_move(self.cpu, self.memory, cmd)
+        elif re.match(r"^[oO][vV]$", cmd):
+            self.cpu.OF = 0b1
+        elif re.match(r"^[nN][vV]$", cmd):
+            self.cpu.OF = 0b0
+        elif re.match(r"^[nN][gG]$", cmd):
+            self.cpu.SF = 0b1
+        elif re.match(r"^[pP][lL]$", cmd):
+            self.cpu.sh = 0b0
+        elif re.match(r"^[zZ][rR]$", cmd):
+            self.cpu.ZF = 0b1
+        elif re.match(r"^[nN][zZ]$", cmd):
+            self.cpu.ZF = 0b0
+        elif re.match(r"^[aA][cC]$", cmd):
+            self.cpu.AC = 0b1
+        elif re.match(r"^[nN][aA]$", cmd):
+            self.cpu.AC = 0b0
+        elif re.match(r"^[pP][eE]$", cmd):
+            self.cpu.OP = 0b1
+        elif re.match(r"^[pP][oO]$", cmd):
+            self.cpu.OP = 0b0
+        elif re.match(r"^[cC][yY]$", cmd):
+            self.cpu.CY = 0b1
+        elif re.match(r"^[nN][cC]$", cmd):
+            self.cpu.vy = 0b0
+        elif re.match(r"^[fF] [0-9a-f]{,4} [0-9a-f]{,4}$", cmd):
+            self.reset_memory_range(self.cpu, self.memory, cmd)
+        elif re.match(r"^[fF] [0-9a-f]{,4} [0-9a-f]{,4} .*$", cmd):
+            self.fill_memory_range(self.cpu, self.memory, cmd)
+        elif re.match(r"^[dD] [0-9a-f]{,4} [0-9a-f]{,4}$", cmd):
+            self.display(self.cpu, self.memory, cmd)
+        elif re.match(r"^[sS][pP] [0-9a-f]{,4}$", cmd):
+            self.setting_memory_page(self.memory, cmd)
+        elif re.match(r"^[eE] [0-9a-f]{,4} [0-9a-f]{,2}$", cmd):
+            self.byte_poke(self.memory, cmd)
+        elif re.match(r"^[eE] [0-9a-f]{,4} ['].*[']$", cmd):
+            self.string_poke(self.cpu, self.memory, cmd)
+        elif re.match(r"^[dD][eE][mM][oO]$", cmd):
+            self.demo(self.cpu, self.memory)
+        elif re.match(r"^[wW] [0-9a-f]{,4} [0-9a-f]{,4} [0-9a-f]{,4}$", cmd):
+            self.write(self.disk, self.memory, self.cpu, cmd)
+        elif re.match(r"^[lL] [0-9a-f]{,4} [0-9a-f]{,4} [0-9a-f]{,4}$", cmd):
+            self.read(self.disk, self.memory, self.cpu, cmd)
+        elif re.match(r"^[nN] ['].*[']$", cmd):
+            self.setname(self.disk, cmd)
+        elif re.match(r"^[aA]$", cmd):
+            self.assemble(self.cpu, self.memory)
+        elif re.match(r"^[pP] .*$", cmd):
+            self.parse(self.cpu, cmd)
+
+        # Arithmetic mode.
+        elif re.match(r"^[aA][lL][uU]$", cmd):
+            print("Welcome to the ALU mode. Enter 'q' to quit this mode.")
+            mode = "M"
+            while not re.match(r"^[qQ]$", cmd):
+                if re.match(r"^[xX][oO][rR] [0-9a-f]{,2} [0-9a-f]{,2}$", cmd):
+                    self.asm_xor(self.cpu, cmd)
+                elif re.match(r"^[oO][rR] [0-9a-f]{,2} [0-9a-f]{,2}$", cmd):
+                    self.asm_or(self.cpu, cmd)
+                elif re.match(r"^[aA][nN][dD] [0-9a-f]{,2} [0-9a-f]{,2}$", cmd):
+                    self.asm_and(self.cpu, cmd)
+                elif re.match(r"^[nN][oO][tT] [0-9a-f]{,2}$", cmd):
+                    self.asm_not(self.cpu, cmd)
+                elif re.match(r"^[sS][hH][rR] [0-9a-f]{,2}$", cmd):
+                    self.asm_shr(self.cpu, cmd)
+                elif re.match("^[sS][hH][lL] [0-9a-f]{,2}$", cmd):
+                    self.asm_shl(self.cpu, cmd)
+                else:
+                    self._error_msg
+
+                cmd = self.prompt(mode)
+        else:
+            self._error_msg
+
+        mode = "C"
+        self.disk.save()  # Save vdisk to a _real_ disk.
+
+    def _error_msg(self):
+        self.print_roller_tape("ERROR: Input not recognized.")
+
+    @dispatch(object, str, int, int)
+    def _show_result(self, cpu: CpuX8086, oper: str, a: int, r: int):
+        oper = oper.upper()
+        bin_a = cpu.get_bin(a)
+        bin_r = cpu.get_bin(r)
+        self.print_roller_tape(f"{oper} {bin_a}({'%02X' % a}) => {bin_r}({'%02X' % r})")
+        cpu.print_status_flags()
+
+    @dispatch(object, str, int, int, int)
+    def _show_result(self, cpu: CpuX8086, oper: str, a: int, b: int, r: int):
+        oper = oper.upper()
+        bin_a = cpu.get_bin(a)
+        bin_b = cpu.get_bin(b)
+        bin_r = cpu.get_bin(r)
+        self.print_roller_tape(f"{oper} {bin_a}({'%02X' % a}) {bin_b}({'%02X' % b}) => {bin_r}({'%02X' % r})")
+        cpu.print_status_flags()
+
+    def asm_shl(self, cpu: CpuX8086, cmd: str):
+        args = cmd.split(" ")
+        oper1 = int(args[1], 16)
+        result = cpu.asm_shl(oper1)
+        self._show_result(cpu, "SHL", oper1, result)
+
+    def asm_shr(self, cpu: CpuX8086, cmd: str):
+        args = cmd.split(" ")
+        oper1 = int(args[1], 16)
+        result = cpu.asm_shr(oper1)
+        self._show_result(cpu, "SHR", oper1, result)
+
+    def asm_not(self, cpu: CpuX8086, cmd: str):
+        args = cmd.split(" ")
+        oper1 = int(args[1], 16)
+        result = cpu.asm_not(oper1)
+        self._show_result(cpu, "NOT", oper1, result)
+
+    def asm_or(self, cpu: CpuX8086, cmd: str):
+        args = cmd.split(" ")
+        oper1 = int(args[1], 16)
+        oper2 = int(args[2], 16)
+        result = cpu.asm_or(oper1, oper2)
+        self._show_result(cpu, "OR", oper1, oper2, result)
+
+    def asm_and(self, cpu: CpuX8086, cmd: str):
+        args = cmd.split(" ")
+        oper1 = int(args[1], 16)
+        oper2 = int(args[2], 16)
+        result = cpu.asm_and(oper1, oper2)
+        self._show_result(cpu, "AND", oper1, oper2, result)
+
+    def asm_xor(self, cpu: CpuX8086, cmd: str):
+        args = cmd.split(" ")
+        oper1 = int(args[1], 16)
+        oper2 = int(args[2], 16)
+        result = cpu.asm_xor(oper1, oper2)
+        self._show_result(cpu, "XOR", oper1, oper2, result)
+
+    def setname(self, disk: Disk, cmd: str):
+        args = cmd.split(" ")
+        args[1] = args[1][1:]  # To strip the initial '
+        filename = " ".join(args[1:])
+        disk.filename(filename)
+
+    def assemble(self, cpu: CpuX8086, memory: Memory):
+        print("Welcome to the Assemble mode. Enter twice to quit this mode.")
+        cpu.assemble(memory)
+
+    def parse(self, cpu: CpuX8086, cmd: str):
+        args = cmd.split(" ")
+        line = args[1:]
+        cpu.parse_instruction(" ".join(line))
+
+    def write(self, disk: Disk, memory: Memory, cpu: CpuX8086, cmd: str):
+        args = cmd.split(" ")
+        address = int(args[1], 16)
+        firstsector = int(args[2], 16)
+        number = int(args[3], 16)
+        cpu.write_to_vdisk(memory, disk, address, firstsector, number)
+
+    def read(self, disk: Disk, memory: Memory, cpu: CpuX8086, cmd: str):
+        args = cmd.split(" ")
+        address = int(args[1], 16)
+        firstsector = int(args[2], 16)
+        number = int(args[3], 16)
+        cpu.read_from_vdisk(memory, disk, address, firstsector, number)
+
+    def cpu_move(self, cpu: CpuX8086, memory: Memory, cmd: str):
+        args = cmd.split(" ")
+        oper1 = int(args[1], 16)
+        oper2 = int(args[2], 16)
+        oper3 = int(args[3], 16)
+        cpu.move(memory, oper1, oper2, oper3)
+
+    def string_poke(self, cpu: CpuX8086, memory: Memory, cmd: str):
+        args = cmd.split(" ")
+        address = int(args[1], 16)
+        args[2] = args[2][1:]  # To strip the initial '
+        value = " ".join(args[2:])
+        cpu.load_into(memory, address, value)
+
+    def byte_poke(self, memory: Memory, cmd: str):
+        args = cmd.split(" ")
+        address = int(args[1], 16)
+        value = int(args[2], 16)
+        memory.poke(memory.active_page, value, address)
+
+    def compare(self, cpu: CpuX8086, memory: Memory, cmd: str):
+        args = cmd.split(" ")
+        oper1 = int(args[1], 16)
+        oper2 = int(args[2], 16)
+        oper3 = int(args[3], 16)
+        diff_list = cpu.compare(memory, oper1, oper2, oper3)
+        for aa in diff_list:
+            self.print_roller_tape(aa)
+
+    def hex_cmd(self, cmd: str):
+        args = cmd.split(" ")
+        oper1 = int(args[1], 16)
+        oper2 = int(args[2], 16)
+        res_add = oper1 + oper2
+        res_sub = oper1 - oper2
+        self.print_roller_tape('%04X' % res_add, '%04X' % res_sub)
+
+    def search(self, cpu: CpuX8086, memory: Memory, cmd: str):
+        args = cmd.split(" ")
+        start = int(args[1], 16)
+        pattern = args[2]
+        found_list = cpu.search(memory, start, pattern)
+        for aa in found_list:
+            self.print_roller_tape(aa)
+
+    def reset_memory_range(self, cpu: CpuX8086, memory: Memory, cmd: str):
+        args = cmd.split(" ")
+        start = int(args[1], 16)
+        end = int(args[2], 16)
+        cpu.fill(memory, start, end, chr(0))
+
+    def fill_memory_range(self, cpu: CpuX8086, memory: Memory, cmd: str):
+        args = cmd.split(" ")
+        start = int(args[1], 16)
+        end = int(args[2], 16)
+        pattern = args[3]
+        cpu.fill(memory, start, end, pattern)
+
+    def setting_memory_page(self, memory: Memory, cmd: str):
+        arg = cmd.split(" ")
+        memory.active_page = int(arg[1], 16)
+
+    def display(self, cpu: CpuX8086, memory: Memory, cmd: str):
+        args = cmd.split(" ")
+        a = int(args[1], 16)
+        b = int(args[2], 16)
+        cpu.display(memory, a, b)
+
+    def cat(self, cpu: CpuX8086, disk: Disk, cmd: str):
+        args = cmd.split(" ")
+        a = int(args[1], 16)
+        b = int(args[2], 16)
+        cpu.cat(disk, a, b)
+
+    def demo(self, cpu: CpuX8086, memory: Memory):
+        oldap = memory.active_page
+        memory.active_page = 49152
+        # TODO: Random text (like fortune)
+        cpu.load_into(memory, 0, "This is a demo. Welcome.")
+        self.print_roller_tape("The demo text was loaded into C000:0000, enter 'd 0 30' to read it.")
+        memory.active_page = oldap
+
+    def exit_pebug(self):
+        sys.exit(0)
+
+
+if __name__ == "__main__":
+    app = QtWidgets.QApplication([])
+    window = MainWindow()
+    window.show()
+    app.exec_()

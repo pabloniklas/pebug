@@ -33,20 +33,25 @@ class CpuX8086():
 
         # Opcodes
         self.lexer.add('OPCODE',
-                       r'(aaa|aad|aam|aas|adc|add|and|call|cbw|cdq|clc|cld|cmc|cmp|cmpsb|cmpsd|cmpsw|cwd|cwde|daa|das|dec|div|idiv|imul|inc|ja|jae|jb|jbe|jc|je|jecxz|jg|jge|jl|jle|jmp|jna|jnae|jnb|jnbe|jnc|jne|jng|jnge|jnl|jnle|jno|jnp|jns|jnz|jo|jp|jpe|jpo|js|jz|lodsb|lodsd|lodsw|loop|loope|loopne|loopnz|loopz|mov|movsb|movsd|movsw|movsx|movzx|mul|neg|not|or|pop|popa|popad|popf|popfd|push|pusha|pushad|pushf|pushfd|rep|repe|repne|repne|repnz|repz|ret|rol|ror|sar|sbb|scasb|scasd|scasw|shl|shld|shr|shrd|stc|std|stosb|stosb|stosd|stosw|stosw|sub|test|xchg|xlat|xor)')
+                       r'(aaa|aad|aam|aas|adc|add|and|call|cbw|cdq|clc|cld|cmc|cmp|cmpsb|cmpsd|cmpsw|cwd|cwde|daa|das|dec|div|idiv|imul|inc|ja|jae|jb|jbe|jc|je|jecxz|jg|jge|jl|jle|jmp|jna|jnae|jnb|jnbe|jnc|jne|jng|jnge|jnl|jnle|jno|jnp|jns|jnz|jo|jp|jpe|jpo|js|jz|lodsb|lodsd|lodsw|loop|loope|loopne|loopnz|loopz|mov|movsb|movsd|movsw|movsx|movzx|mul|neg|not|or|pop|popa|popad|popf|popfd|push|pusha|pushad|pushf|pushfd|rep|repe|repne|repne|repnz|repz|ret|rol|ror|sar|sbb|scasb|scasd|scasw|shl|shld|shr|shrd|stc|std|stosb|stosb|stosd|stosw|stosw|sub|test|xchg|xlat|xor)'
+        )
 
         # Registers
         self.lexer.add(
-            'REG8', r'(af|ah|al|ax|bh|bl|bp|bp|bx|cl|cs|cx|ch|dh|di|dl|ds|dx|es|fs|gs|si|sp|ss)')
-        self.lexer.add('REG16', r'(eax|eax|ebp|ebx|ecx|edi|edx|esi|esp)')
+            'REG16', r'(ax|bx|cx|dx|si|di|bp|sp|ip|cs|ds|es|ss)'
+        )
+
+        self.lexer.add(
+            'REG8', r'(ah|al|bh|bl|ch|cl|dh|dl)'
+        )
 
         # Signs and operators
         self.lexer.add('COMMA', r',')
         # self.lexer.add('PLUS', r'\+')
 
         # Integers
-        self.lexer.add('IMM8', r'[0-9a-f]{2}')
         self.lexer.add('IMM16', r'[0-9a-f]{4}')
+        self.lexer.add('IMM8', r'[0-9a-f]{2}')
 
         # Memory
         self.lexer.add('MEMORY', r'\[.*?\]')
@@ -56,11 +61,10 @@ class CpuX8086():
         self.cpu_lexer = self.lexer.build()
 
         self.pg = ParserGenerator(
-            ["OPCODE", "REG8", "REG16", "IMM8", "IMM16", "MEMORY",
-             "COMMA"],
+            ["OPCODE", "REG", "IMM", "MEMORY", "COMMA"],
             precedence=[
                 ('left', ['OPCODE']),
-                ('left', ['REG8', 'REG16']),
+                ('left', ['REG']),
                 ('left', ['COMMA']),
             ],
             cache_id="my_parser"
