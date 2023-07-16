@@ -1,0 +1,473 @@
+#!/usr/bin/env python3
+
+import os
+import re
+import readline
+import sys
+
+import PySimpleGUI
+
+from multipledispatch import dispatch
+
+from modules.Disk import Disk
+from modules.Memory import Memory
+from modules.CpuX8086 import CpuX8086
+
+import PySimpleGUI as sg
+
+CONSOLE_KEY = '-CONSOLE-' + sg.WRITE_ONLY_KEY
+CMD_KEY = '-CMD-'
+
+
+###### LEDS ######
+
+ledON = '#ff0000'
+ledOFF = '#890000'
+
+
+def led_indicator(key=None, radius=30):
+    return sg.Graph(canvas_size=(radius, radius),
+                    graph_bottom_left=(-radius, -radius),
+                    graph_top_right=(radius, radius),
+                    pad=(0, 0), key=key)
+
+
+def set_led(window: PySimpleGUI.Window, key: str, color):
+    graph = window[key]
+    graph.erase()
+    graph.draw_circle((0, 0), 12, fill_color=color, line_color=color)
+
+###### CONSOLE #######
+
+def console_output(w: PySimpleGUI.Window, text: str):
+    w[CONSOLE_KEY].update(f"\n{text}", append=True)
+
+###### MAIN ######
+
+def pebug_main(filename="pebug_disk.bin"):
+    memory = Memory(65536)
+    stack = Memory(1)
+
+    disk = Disk(65536, filename)  # 64Kb
+    disk.load()
+
+    cpu = CpuX8086()
+
+    sg.theme("Gray Gray Gray")
+
+    left_column = [
+        [sg.Text("Registers")],
+        [sg.Graph(
+            canvas_size=(100, 20),
+            graph_bottom_left=(0, 0),
+            graph_top_right=(100, 20),
+            key="leds_ax")],
+    ]
+
+    right_column = [
+        [
+            sg.Text("Console"),
+        ],
+        [
+            sg.Multiline(size=(60, 30),
+                         justification="left",
+                         key=CONSOLE_KEY,
+                         autoscroll=True,
+                         font=('Monospace', 10),
+                         auto_refresh=True,
+                         expand_x=True,
+                         write_only=True)
+        ]
+    ]
+
+    layout = [
+        [
+            sg.Column(left_column),
+            sg.VSeperator(),
+            sg.Column(right_column),
+        ],
+        [
+            sg.InputText(font=('Monospace', 10),
+                         size=(80),
+                         key=CMD_KEY,
+                         focus=True,
+                         do_not_clear=False),
+        ],
+        [
+            sg.Button("Send", bind_return_key=True),
+            sg.Button("Exit"),
+            sg.Button("About")
+        ]
+
+    ]
+
+
+    window = sg.Window("PEBUG", layout, finalize=True)
+
+    graph = window.Element("leds_ax")
+    graph.DrawRectangle((0, 0), (0, 18), line_color=ledOFF, fill_color=ledOFF)
+
+    console_output(window, """
+                 _
+                | |
+     ____  _____| |__  _   _  ____
+    |  _ \| ___ |  _ \| | | |/ _  |
+    | |_| | ____| |_) ) |_| ( (_| |
+    |  __/|_____)____/|____/ \___ |
+    |_|                     (_____|
+    """)
+
+    console_output(window, "An x86 old-debug-like program written in Python.")
+    console_output(window, "By Pablo Niklas <pablo.niklas@gmail.com>.")
+    console_output(window, "Online manual at https://pebug.readthedocs.io")
+    console_output(window, f"History file: {readline.get_history_length()} lines loaded.")
+    console_output(window, f"Main memory size: {memory.pages} pages.")
+    console_output(window, f"Stack size: {stack.pages} page/s.")
+    console_output(window, f"Virtual disk size: {disk.size} bytes.")
+    console_output(window, "")
+    console_output(window, "Type 'q' to quit the program.")
+
+    """https://montcs.bloomu.edu/Information/LowLevel/DOS-Debug.html"""
+    mode = "C"
+    while True:
+
+        event, values = window.read()
+        # End program if user closes window or
+        # presses the OK button
+
+        if event == "Exit" or event == sg.WIN_CLOSED:
+            break
+        elif event == "About":
+            layout = [
+                [sg.Text("PEBUG", font="Arial 20")],
+                [sg.Text("By Pablo Niklas")],
+                [sg.Text("pablo.niklas@gmail.com")],
+                [sg.Button("Ok")]
+            ]
+
+            about_window = sg.Window("About PEBUG", layout)
+
+            while True:
+                about_event, about_values = about_window.read()
+
+                if about_event in (sg.WIN_CLOSED, 'Ok'):
+                    break
+
+            about_window.close()
+
+        elif event == "Send":
+            cmd = values[CMD_KEY]
+            if re.match(r"^[qQ]$", cmd):
+                return
+            if re.match(r"^[sS] [0-9a-f]{,4} .*$", cmd):
+                search(cpu, memory, cmd)
+            elif re.match(r"^[hH] [0-9a-f]{,4} [0-9a-f]{,4}$", cmd):
+                hex_cmd(cmd)
+            elif re.match(r"^[rR]$", cmd):
+                cpu.print_registers()
+                cpu.print_status_flags()
+            elif re.match(r"^[cC] [0-9a-f]{,4} [0-9a-f]{,4} [0-9a-f]{,4}$", cmd):
+                compare(cpu, memory, cmd)
+            elif re.match(r"^[cC][aA][tT] [0-9a-f]{,4} [0-9a-f]{,4}$", cmd):
+                cat(cpu, disk, cmd)
+            elif re.match(r"^[mM] [0-9a-f]{,4} [0-9a-f]{,4} [0-9a-f]{,4}$", cmd):
+                move(cpu, memory, cmd)
+            elif re.match(r"^[oO][vV]$", cmd):
+                cpu.OF = 0b1
+            elif re.match(r"^[nN][vV]$", cmd):
+                cpu.OF = 0b0
+            elif re.match(r"^[nN][gG]$", cmd):
+                cpu.SF = 0b1
+            elif re.match(r"^[pP][lL]$", cmd):
+                cpu.sh = 0b0
+            elif re.match(r"^[zZ][rR]$", cmd):
+                cpu.ZF = 0b1
+            elif re.match(r"^[nN][zZ]$", cmd):
+                cpu.ZF = 0b0
+            elif re.match(r"^[aA][cC]$", cmd):
+                cpu.AC = 0b1
+            elif re.match(r"^[nN][aA]$", cmd):
+                cpu.AC = 0b0
+            elif re.match(r"^[pP][eE]$", cmd):
+                cpu.OP = 0b1
+            elif re.match(r"^[pP][oO]$", cmd):
+                cpu.OP = 0b0
+            elif re.match(r"^[cC][yY]$", cmd):
+                cpu.CY = 0b1
+            elif re.match(r"^[nN][cC]$", cmd):
+                cpu.vy = 0b0
+            elif re.match(r"^[fF] [0-9a-f]{,4} [0-9a-f]{,4}$", cmd):
+                reset_memory_range(cpu, memory, cmd)
+            elif re.match(r"^[fF] [0-9a-f]{,4} [0-9a-f]{,4} .*$", cmd):
+                fill_memory_range(cpu, memory, cmd)
+            elif re.match(r"^[dD] [0-9a-f]{,4} [0-9a-f]{,4}$", cmd):
+                display(cpu, memory, cmd)
+            elif re.match(r"^[sS][pP] [0-9a-f]{,4}$", cmd):
+                setting_memory_page(memory, cmd)
+            elif re.match(r"^[eE] [0-9a-f]{,4} [0-9a-f]{,2}$", cmd):
+                byte_poke(memory, cmd)
+            elif re.match(r"^[eE] [0-9a-f]{,4} ['].*[']$", cmd):
+                string_poke(cpu, memory, cmd)
+            elif re.match(r"^[dD][eE][mM][oO]$", cmd):
+                demo(cpu, memory)
+            elif re.match(r"^[wW] [0-9a-f]{,4} [0-9a-f]{,4} [0-9a-f]{,4}$", cmd):
+                write(disk, memory, cpu, cmd)
+            elif re.match(r"^[lL] [0-9a-f]{,4} [0-9a-f]{,4} [0-9a-f]{,4}$", cmd):
+                read(disk, memory, cpu, cmd)
+            elif re.match(r"^[nN] ['].*[']$", cmd):
+                setname(disk, cmd)
+            elif re.match(r"^[aA]$", cmd):
+                assemble(cpu, memory)
+            elif re.match(r"^[pP] .*$", cmd):
+                parse(cpu, cmd)
+
+            # Arithmetic mode.
+            elif re.match(r"^[aA][lL][uU]$", cmd):
+                print("Welcome to the ALU mode. Enter 'q' to quit this mode.")
+                mode = "M"
+
+                while not re.match(r"^[qQ]$", cmd):
+                    if re.match(r"^[xX][oO][rR] [0-9a-f]{,2} [0-9a-f]{,2}$", cmd):
+                        asm_xor(cpu, cmd)
+                    elif re.match(r"^[oO][rR] [0-9a-f]{,2} [0-9a-f]{,2}$", cmd):
+                        asm_or(cpu, cmd)
+                    elif re.match(r"^[aA][nN][dD] [0-9a-f]{,2} [0-9a-f]{,2}$", cmd):
+                        asm_and(cpu, cmd)
+                    elif re.match(r"^[nN][oO][tT] [0-9a-f]{,2}$", cmd):
+                        asm_not(cpu, cmd)
+                    elif re.match(r"^[sS][hH][rR] [0-9a-f]{,2}$", cmd):
+                        asm_shr(cpu, cmd)
+                    elif re.match("^[sS][hH][lL] [0-9a-f]{,2}$", cmd):
+                        asm_shl(cpu, cmd)
+                    else:
+                        _error_msg
+
+                    cmd = prompt(mode)
+            else:
+                _error_msg
+
+        mode = "C"
+
+    disk.save()  # Save vdisk to a _real_ disk.
+    window.close()
+
+
+def _error_msg():
+    print("Input not recognized.")
+
+
+@dispatch(object, str, int, int)
+def _show_result(cpu: CpuX8086, oper: str, a: int, r: int):
+    oper = oper.upper()
+    bin_a = cpu.get_bin(a)
+    bin_r = cpu.get_bin(r)
+    print(f"{oper} {bin_a}({'%02X' % a}) => {bin_r}({'%02X' % r})")
+    cpu.print_status_flags()
+
+
+@dispatch(object, str, int, int, int)
+def _show_result(cpu: CpuX8086, oper: str, a: int, b: int, r: int):
+    oper = oper.upper()
+    bin_a = cpu.get_bin(a)
+    bin_b = cpu.get_bin(b)
+    bin_r = cpu.get_bin(r)
+    print(f"{oper} {bin_a}({'%02X' % a}) {bin_b}({'%02X' % b}) => {bin_r}({'%02X' % r})")
+    cpu.print_status_flags()
+
+
+def asm_shl(cpu: CpuX8086, cmd: str):
+    args = cmd.split(" ")
+    oper1 = int(args[1], 16)
+    result = cpu.asm_shl(oper1)
+    _show_result(cpu, "SHL", oper1, result)
+
+
+def asm_shr(cpu: CpuX8086, cmd: str):
+    args = cmd.split(" ")
+    oper1 = int(args[1], 16)
+    result = cpu.asm_shr(oper1)
+    _show_result(cpu, "SHR", oper1, result)
+
+
+def asm_not(cpu: CpuX8086, cmd: str):
+    args = cmd.split(" ")
+    oper1 = int(args[1], 16)
+    result = cpu.asm_not(oper1)
+    _show_result(cpu, "NOT", oper1, result)
+
+
+def asm_or(cpu: CpuX8086, cmd: str):
+    args = cmd.split(" ")
+    oper1 = int(args[1], 16)
+    oper2 = int(args[2], 16)
+    result = cpu.asm_or(oper1, oper2)
+    _show_result(cpu, "OR", oper1, oper2, result)
+
+
+def asm_and(cpu: CpuX8086, cmd: str):
+    args = cmd.split(" ")
+    oper1 = int(args[1], 16)
+    oper2 = int(args[2], 16)
+    result = cpu.asm_and(oper1, oper2)
+    _show_result(cpu, "AND", oper1, oper2, result)
+
+
+def asm_xor(cpu: CpuX8086, cmd: str):
+    args = cmd.split(" ")
+    oper1 = int(args[1], 16)
+    oper2 = int(args[2], 16)
+    result = cpu.asm_xor(oper1, oper2)
+    _show_result(cpu, "XOR", oper1, oper2, result)
+
+
+def setname(disk: Disk, cmd: str):
+    args = cmd.split(" ")
+    args[1] = args[1][1:]  # To strip the initial '
+    filename = " ".join(args[1:])
+    disk.filename(filename)
+
+
+def assemble(cpu: CpuX8086, memory: Memory):
+    print("Welcome to the Assemble mode. Enter twice to quit this mode.")
+    cpu.assemble(memory)
+
+
+def parse(cpu: CpuX8086, cmd: str):
+    args = cmd.split(" ")
+    line = args[1:]
+    cpu.parse_instruction(" ".join(line))
+
+
+def write(disk: Disk, memory: Memory, cpu: CpuX8086, cmd: str):
+    args = cmd.split(" ")
+    address = int(args[1], 16)
+    firstsector = int(args[2], 16)
+    number = int(args[3], 16)
+    cpu.write_to_vdisk(memory, disk, address, firstsector, number)
+
+
+def read(disk: Disk, memory: Memory, cpu: CpuX8086, cmd: str):
+    args = cmd.split(" ")
+    address = int(args[1], 16)
+    firstsector = int(args[2], 16)
+    number = int(args[3], 16)
+    cpu.read_from_vdisk(memory, disk, address, firstsector, number)
+
+
+def move(cpu: CpuX8086, memory: Memory, cmd: str):
+    args = cmd.split(" ")
+    oper1 = int(args[1], 16)
+    oper2 = int(args[2], 16)
+    oper3 = int(args[3], 16)
+    cpu.move(memory, oper1, oper2, oper3)
+
+
+def string_poke(cpu: CpuX8086, memory: Memory, cmd: str):
+    args = cmd.split(" ")
+    address = int(args[1], 16)
+    args[2] = args[2][1:]  # To strip the initial '
+    value = " ".join(args[2:])
+    cpu.load_into(memory, address, value)
+
+
+def byte_poke(memory: Memory, cmd: str):
+    args = cmd.split(" ")
+    address = int(args[1], 16)
+    value = int(args[2], 16)
+    memory.poke(memory.active_page, value, address)
+
+
+def compare(cpu: CpuX8086, memory: Memory, cmd: str):
+    args = cmd.split(" ")
+    oper1 = int(args[1], 16)
+    oper2 = int(args[2], 16)
+    oper3 = int(args[3], 16)
+    diff_list = cpu.compare(memory, oper1, oper2, oper3)
+    for aa in diff_list:
+        print(aa)
+
+
+def hex_cmd(cmd: str):
+    args = cmd.split(" ")
+    oper1 = int(args[1], 16)
+    oper2 = int(args[2], 16)
+    res_add = oper1 + oper2
+    res_sub = oper1 - oper2
+    print('%04X' % res_add, '%04X' % res_sub)
+
+
+def search(cpu: CpuX8086, memory: Memory, cmd: str):
+    args = cmd.split(" ")
+    start = int(args[1], 16)
+    pattern = args[2]
+    found_list = cpu.search(memory, start, pattern)
+    for aa in found_list:
+        print(aa)
+
+
+def reset_memory_range(cpu: CpuX8086, memory: Memory, cmd: str):
+    args = cmd.split(" ")
+    start = int(args[1], 16)
+    end = int(args[2], 16)
+    cpu.fill(memory, start, end, chr(0))
+
+
+def fill_memory_range(cpu: CpuX8086, memory: Memory, cmd: str):
+    args = cmd.split(" ")
+    start = int(args[1], 16)
+    end = int(args[2], 16)
+    pattern = args[3]
+    cpu.fill(memory, start, end, pattern)
+
+
+def setting_memory_page(memory: Memory, cmd: str):
+    arg = cmd.split(" ")
+    memory.active_page = int(arg[1], 16)
+
+
+def display(cpu: CpuX8086, memory: Memory, cmd: str):
+    args = cmd.split(" ")
+    a = int(args[1], 16)
+    b = int(args[2], 16)
+    cpu.display(memory, a, b)
+
+
+def cat(cpu: CpuX8086, disk: Disk, cmd: str):
+    args = cmd.split(" ")
+    a = int(args[1], 16)
+    b = int(args[2], 16)
+    cpu.cat(disk, a, b)
+
+
+def demo(cpu: CpuX8086, memory: Memory):
+    oldap = memory.active_page
+    memory.active_page = 49152
+    # TODO: Random text (like fortune)
+    cpu.load_into(memory, 0, "This is a demo. Welcome.")
+    print("The demo text was loaded into C000:0000, enter 'd 0 30' to read it.")
+    memory.active_page = oldap
+
+
+def prompt(mode: str = "-"):
+    cmd = input(f"[{mode}]=> ")
+    return cmd
+
+
+# Python's entry point
+if __name__ == '__main__':
+
+    # readline's history
+    histfile = os.path.join(os.path.expanduser("~"), ".pebughist")
+    try:
+        readline.read_history_file(histfile)
+        readline.set_history_length(1000)
+    except IOError:
+        pass
+
+    pebug_main()
+
+    readline.write_history_file(histfile)
+    print("")
+    print("Bye! =)")
+
+    sys.exit(0)
