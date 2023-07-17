@@ -209,6 +209,10 @@ class CpuX8086():
         # Define the grammar rules for decoding x86 instructions
         # https://pastraiser.com/cpu/i8088/i8088_opcodes.html
 
+
+    def get_bits(self):
+        return self._bits
+
     def parse_instruction(self, cmd):
         tokens = self.cpu_lexer.lex(cmd)
         parser = self.pg.build()

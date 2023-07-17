@@ -5,8 +5,6 @@ import re
 import readline
 import sys
 
-import PySimpleGUI
-
 from multipledispatch import dispatch
 
 from modules.Disk import Disk
@@ -25,21 +23,48 @@ ledON = '#ff0000'
 ledOFF = '#890000'
 
 
-def led_indicator(key=None, radius=30):
-    return sg.Graph(canvas_size=(radius, radius),
-                    graph_bottom_left=(-radius, -radius),
-                    graph_top_right=(radius, radius),
-                    pad=(0, 0), key=key)
+# def led_indicator(key=None, radius=30):
+#     return sg.Graph(canvas_size=(radius, radius),
+#                     graph_bottom_left=(-radius, -radius),
+#                     graph_top_right=(radius, radius),
+#                     pad=(0, 0), key=key)
+
+def led_indicator_panel(key=None):
+    height=20
+    width=18*8
+    return sg.Graph(
+        canvas_size=(width, height),
+        enable_events=True,
+        background_color="white",
+        graph_bottom_left=(0, 0),
+        graph_top_right=(width, height),
+        key=key)
 
 
-def set_led(window: PySimpleGUI.Window, key: str, color):
+def set_led(window: sg.Window, key: str, register: bytearray):
+    register=str(register)
     graph = window[key]
     graph.erase()
-    graph.draw_circle((0, 0), 12, fill_color=color, line_color=color)
+    led_width = 8
+    led_height = 20
+    ledON = '#ff0000'
+    ledOFF = '#890000'
+
+    for x in range(len(register)):
+        print(x)
+        b = register[x]
+        if b == 0b0:
+            color=ledOFF
+        else:
+            color=ledON
+
+        x_coor = x * (led_width + 2)
+        y_coor = 0
+        graph.draw_rectangle((x_coor, y_coor), (x_coor+led_width, y_coor+led_height), fill_color=color, line_color=color)
 
 ###### CONSOLE #######
 
-def console_output(w: PySimpleGUI.Window, text: str):
+def console_output(w: sg.Window, text: str):
     w[CONSOLE_KEY].update(f"\n{text}", append=True)
 
 ###### MAIN ######
@@ -57,11 +82,7 @@ def pebug_main(filename="pebug_disk.bin"):
 
     left_column = [
         [sg.Text("Registers")],
-        [sg.Graph(
-            canvas_size=(100, 20),
-            graph_bottom_left=(0, 0),
-            graph_top_right=(100, 20),
-            key="leds_ax")],
+        [led_indicator_panel("leds_ax")],
     ]
 
     right_column = [
@@ -104,8 +125,8 @@ def pebug_main(filename="pebug_disk.bin"):
 
     window = sg.Window("PEBUG", layout, finalize=True)
 
-    graph = window.Element("leds_ax")
-    graph.DrawRectangle((0, 0), (0, 18), line_color=ledOFF, fill_color=ledOFF)
+
+    set_led(window, "leds_ax", cpu.AX)
 
     console_output(window, """
                  _
