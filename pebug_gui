@@ -42,25 +42,26 @@ def led_indicator_panel(key=None):
 
 def set_led(window: sg.Window, key: str, register: int, bdw=16):
     register = str(bin(register))[:-2].zfill(bdw)
+
     graph = window[key]
     graph.erase()
+
     led_width = 8
     led_height = 20
+
     ledON = '#ff0000'
     ledOFF = '#890000'
 
     for x in range(0, len(register)):
+
         b = register[len(register) - x - 1]
-        print(x, b)
+
         if b == "0":
             color = ledOFF
         else:
             color = ledON
 
-        if x > 7:
-            offset = 4
-        else:
-            offset = 0
+        offset = 4 if x > 7 else 0
 
         x_coor = (x * (led_width + 2)) + offset
         y_coor = 0
@@ -93,8 +94,18 @@ def pebug_main(filename="pebug_disk.bin"):
     sg.theme("Gray Gray Gray")
 
     left_column = [
-        [sg.Text("Registers")],
-        [led_indicator_panel("leds_ax")],
+        [sg.Text("Data registers")],
+        [sg.Text("AX", font=('Monospace', 10)),led_indicator_panel("AX")],
+        [sg.Text("BX", font=('Monospace', 10)), led_indicator_panel("BX")],
+        [sg.Text("CX", font=('Monospace', 10)), led_indicator_panel("CX")],
+        [sg.Text("DX", font=('Monospace', 10)), led_indicator_panel("DX")],
+        [sg.Text("Pointer registers")],
+        [sg.Text("SP", font=('Monospace', 10)), led_indicator_panel("SP")],
+        [sg.Text("BP", font=('Monospace', 10)), led_indicator_panel("BP")],
+        [sg.Text("IP", font=('Monospace', 10)), led_indicator_panel("IP")],
+        [sg.Text("Index registers")],
+        [sg.Text("SI", font=('Monospace', 10)), led_indicator_panel("SI")],
+        [sg.Text("DI", font=('Monospace', 10)), led_indicator_panel("DI")],
     ]
 
     right_column = [
@@ -136,7 +147,17 @@ def pebug_main(filename="pebug_disk.bin"):
 
     window = sg.Window("PEBUG", layout, finalize=True)
 
-    set_led(window, "leds_ax", cpu.AX)
+    set_led(window, "AX", cpu.AX)
+    set_led(window, "BX", cpu.BX)
+    set_led(window, "CX", cpu.CX)
+    set_led(window, "DX", cpu.DX)
+
+    set_led(window, "SP", cpu.SP)
+    set_led(window, "BP", cpu.BP)
+    set_led(window, "IP", cpu.IP)
+
+    set_led(window, "SI", cpu.SI)
+    set_led(window, "DI", cpu.DI)
 
     console_output(window, """
                  _
