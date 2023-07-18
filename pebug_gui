@@ -16,7 +16,6 @@ import PySimpleGUI as sg
 CONSOLE_KEY = '-CONSOLE-' + sg.WRITE_ONLY_KEY
 CMD_KEY = '-CMD-'
 
-
 ###### LEDS ######
 
 ledON = '#ff0000'
@@ -30,8 +29,8 @@ ledOFF = '#890000'
 #                     pad=(0, 0), key=key)
 
 def led_indicator_panel(key=None):
-    height=20
-    width=18*8
+    height = 20
+    width = (16 * 10) + 4
     return sg.Graph(
         canvas_size=(width, height),
         enable_events=True,
@@ -41,8 +40,8 @@ def led_indicator_panel(key=None):
         key=key)
 
 
-def set_led(window: sg.Window, key: str, register: bytearray):
-    register=str(register)
+def set_led(window: sg.Window, key: str, register: int, bdw=16):
+    register = str(bin(register))[:-2].zfill(bdw)
     graph = window[key]
     graph.erase()
     led_width = 8
@@ -50,22 +49,35 @@ def set_led(window: sg.Window, key: str, register: bytearray):
     ledON = '#ff0000'
     ledOFF = '#890000'
 
-    for x in range(len(register)):
-        print(x)
-        b = register[x]
-        if b == 0b0:
-            color=ledOFF
+    for x in range(0, len(register)):
+        b = register[len(register) - x - 1]
+        print(x, b)
+        if b == "0":
+            color = ledOFF
         else:
-            color=ledON
+            color = ledON
 
-        x_coor = x * (led_width + 2)
+        if x > 7:
+            offset = 4
+        else:
+            offset = 0
+
+        x_coor = (x * (led_width + 2)) + offset
         y_coor = 0
-        graph.draw_rectangle((x_coor, y_coor), (x_coor+led_width, y_coor+led_height), fill_color=color, line_color=color)
+
+        graph.draw_rectangle(
+            (x_coor, y_coor),
+            (x_coor + led_width, y_coor + led_height),
+            fill_color=color,
+            line_color=color
+        )
+
 
 ###### CONSOLE #######
 
 def console_output(w: sg.Window, text: str):
     w[CONSOLE_KEY].update(f"\n{text}", append=True)
+
 
 ###### MAIN ######
 
@@ -122,9 +134,7 @@ def pebug_main(filename="pebug_disk.bin"):
 
     ]
 
-
     window = sg.Window("PEBUG", layout, finalize=True)
-
 
     set_led(window, "leds_ax", cpu.AX)
 
