@@ -34,13 +34,13 @@ def led_indicator_panel(key=None):
     return sg.Graph(
         canvas_size=(width, height),
         enable_events=True,
-        background_color="white",
+        background_color="light gray",
         graph_bottom_left=(0, 0),
         graph_top_right=(width, height),
         key=key)
 
 
-def set_led(window: sg.Window, key: str, register: int, bdw=16):
+def set_leds(window: sg.Window, key: str, register: int, bdw=16):
     register = str(bin(register))[:-2].zfill(bdw)
 
     graph = window[key]
@@ -66,12 +66,17 @@ def set_led(window: sg.Window, key: str, register: int, bdw=16):
         x_coor = (x * (led_width + 2)) + offset
         y_coor = 0
 
-        graph.draw_rectangle(
-            (x_coor, y_coor),
-            (x_coor + led_width, y_coor + led_height),
-            fill_color=color,
-            line_color=color
-        )
+        led_draw(graph,
+            x_coor, y_coor,
+            led_width, led_height, color)
+
+def led_draw(graph, x_coor, y_coor, led_width, led_height, color):
+    graph.draw_rectangle(
+        (x_coor, y_coor),
+        (x_coor + led_width, y_coor + led_height),
+        fill_color=color,
+        line_color=color
+    )
 
 
 ###### CONSOLE #######
@@ -93,6 +98,10 @@ def pebug_main(filename="pebug_disk.bin"):
 
     sg.theme("Gray Gray Gray")
 
+    flags_layout = [
+        [sg.Text("Flags registers")],
+    ]
+
     left_column = [
         [sg.Text("Data registers")],
         [sg.Text("AX", font=('Monospace', 10)),led_indicator_panel("AX")],
@@ -106,6 +115,13 @@ def pebug_main(filename="pebug_disk.bin"):
         [sg.Text("Index registers")],
         [sg.Text("SI", font=('Monospace', 10)), led_indicator_panel("SI")],
         [sg.Text("DI", font=('Monospace', 10)), led_indicator_panel("DI")],
+        [sg.Text("Segment registers")],
+        [sg.Text("CS", font=('Monospace', 10)), led_indicator_panel("CS")],
+        [sg.Text("DS", font=('Monospace', 10)), led_indicator_panel("DS")],
+        [sg.Text("ES", font=('Monospace', 10)), led_indicator_panel("ES")],
+        [sg.Text("FS", font=('Monospace', 10)), led_indicator_panel("FS")],
+        [sg.Text("GS", font=('Monospace', 10)), led_indicator_panel("GS")],
+        [sg.Text("SS", font=('Monospace', 10)), led_indicator_panel("SS")],
     ]
 
     right_column = [
@@ -147,17 +163,25 @@ def pebug_main(filename="pebug_disk.bin"):
 
     window = sg.Window("PEBUG", layout, finalize=True)
 
-    set_led(window, "AX", cpu.AX)
-    set_led(window, "BX", cpu.BX)
-    set_led(window, "CX", cpu.CX)
-    set_led(window, "DX", cpu.DX)
+    set_leds(window, "AX", cpu.AX)
+    set_leds(window, "BX", cpu.BX)
+    set_leds(window, "CX", cpu.CX)
+    set_leds(window, "DX", cpu.DX)
 
-    set_led(window, "SP", cpu.SP)
-    set_led(window, "BP", cpu.BP)
-    set_led(window, "IP", cpu.IP)
+    set_leds(window, "SP", cpu.SP)
+    set_leds(window, "BP", cpu.BP)
+    set_leds(window, "IP", cpu.IP)
 
-    set_led(window, "SI", cpu.SI)
-    set_led(window, "DI", cpu.DI)
+    set_leds(window, "SI", cpu.SI)
+    set_leds(window, "DI", cpu.DI)
+
+    set_leds(window, "CS", cpu.CS)
+    set_leds(window, "DS", cpu.DS)
+    set_leds(window, "ES", cpu.ES)
+    set_leds(window, "FS", cpu.FS)
+    set_leds(window, "GS", cpu.GS)
+
+    set_leds(window, "SS", cpu.SS)
 
     console_output(window, """
                  _
