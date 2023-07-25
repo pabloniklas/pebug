@@ -100,14 +100,14 @@ class CpuX8086():
         self._bits = 16
 
         # 8 bit X86 registers
-        self.AH = 0b0 * self._bits / 2
-        self.AL = 0b0 * self._bits / 2
-        self.BH = 0b0 * self._bits / 2
-        self.BL = 0b0 * self._bits / 2
-        self.CH = 0b0 * self._bits / 2
-        self.CL = 0b0 * self._bits / 2
-        self.DH = 0b0 * self._bits / 2
-        self.DL = 0b0 * self._bits / 2
+        # self.AH = 0b0 * self._bits / 2
+        # self.AL = 0b0 * self._bits / 2
+        # self.BH = 0b0 * self._bits / 2
+        # self.BL = 0b0 * self._bits / 2
+        # self.CH = 0b0 * self._bits / 2
+        # self.CL = 0b0 * self._bits / 2
+        # self.DH = 0b0 * self._bits / 2
+        # self.DL = 0b0 * self._bits / 2
 
         # 16 bit X86 registers
         # Data registers
@@ -118,7 +118,7 @@ class CpuX8086():
 
         # Pointer registers
         self.SP = 0b0 * self._bits  # Stack Pointer
-        self.BP = 0b0 * self._bits  # Base Pointer
+        self.BP = int('c000', 16)  # Base Pointer
         self.IP = 0b0 * self._bits  # Instruction Pointer
 
         # Index registers

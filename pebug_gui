@@ -41,7 +41,7 @@ def led_indicator_panel(key=None):
 
 
 def set_leds(window: sg.Window, key: str, register: int, bdw=16):
-    register = str(bin(register))[:-2].zfill(bdw)
+    register = str(bin(register))[2:].zfill(bdw)
 
     graph = window[key]
     graph.erase()
@@ -54,7 +54,7 @@ def set_leds(window: sg.Window, key: str, register: int, bdw=16):
 
     for x in range(0, len(register)):
 
-        b = register[len(register) - x - 1]
+        b = register[x]
 
         if b == "0":
             color = ledOFF
