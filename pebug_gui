@@ -6,6 +6,7 @@ import re
 import readline
 import sys
 
+import PySimpleGUI
 from multipledispatch import dispatch
 
 from modules.Disk import Disk
@@ -106,14 +107,7 @@ def pebug_main(filename="pebug_disk.bin"):
 
     sg.theme("Gray Gray Gray")
 
-    flags_layout = [
-        [sg.Text("Flags registers", font="Bold")],
-    ]
-
-    left_column = [
-        [
-            sg.Text("Data registers", font="Bold")
-        ],
+    data_registers = [
         [
             sg.Text("AX", font=(MFONT, 10)), led_indicator_panel("AX")
         ],
@@ -125,13 +119,9 @@ def pebug_main(filename="pebug_disk.bin"):
         ],
         [
             sg.Text("DX", font=(MFONT, 10)), led_indicator_panel("DX")
-        ],
-        [
-            sg.HSeparator()
-        ],
-        [
-            sg.Text("Pointer registers", font="Bold")
-        ],
+        ],]
+
+    pointer_registers = [
         [
             sg.Text("SP", font=(MFONT, 10)), led_indicator_panel("SP")
         ],
@@ -140,25 +130,18 @@ def pebug_main(filename="pebug_disk.bin"):
         ],
         [
             sg.Text("IP", font=(MFONT, 10)), led_indicator_panel("IP")
-        ],
-        [
-            sg.HSeparator()
-        ],
-        [
-            sg.Text("Index registers", font="Bold")
-        ],
+        ],]
+
+    index_registers = [
         [
             sg.Text("SI", font=(MFONT, 10)), led_indicator_panel("SI")
         ],
         [
             sg.Text("DI", font=(MFONT, 10)), led_indicator_panel("DI")
-        ],
-        [
-            sg.HSeparator()
-        ],
-        [
-            sg.Text("Segment registers", font="Bold")
-        ],
+        ],]
+
+
+    segment_registers = [
         [
             sg.Text("CS", font=(MFONT, 10)), led_indicator_panel("CS")
         ],
@@ -176,13 +159,9 @@ def pebug_main(filename="pebug_disk.bin"):
         ],
         [
             sg.Text("SS", font=(MFONT, 10)), led_indicator_panel("SS")
-        ],
-        [
-            sg.HSeparator()
-        ],
-        [
-            sg.Text("Flag registers", font="Bold")
-        ],
+        ],]
+
+    flag_registers = [
         [
             sg.Text("  SF", font=(MFONT, 10)), led_indicator_panel("SF", 1),
             sg.Text("  ZF", font=(MFONT, 10)), led_indicator_panel("ZF", 1),
@@ -201,10 +180,7 @@ def pebug_main(filename="pebug_disk.bin"):
 
     ]
 
-    right_column = [
-        [
-            sg.Text("Console", font="Bold"),
-        ],
+    right_column = sg.Frame("Console", [
         [
             sg.Multiline(size=(60, 40),
                          justification="left",
@@ -215,17 +191,27 @@ def pebug_main(filename="pebug_disk.bin"):
                          expand_x=True,
                          write_only=True)
         ]
-    ]
+    ])
+
+    left_column = sg.Column([
+        [sg.Frame("Data Registers", data_registers),],
+        [sg.Frame("Pointer Registers", pointer_registers),],
+        [sg.Frame("Index Registers", index_registers),],
+        [sg.Frame("Segment registers", segment_registers)],
+        [sg.Frame("Flags", flag_registers),]
+        ],
+    vertical_alignment="top")
+
 
     layout = [
         [
-            sg.Column(left_column),
+            left_column,
             sg.VSeperator(),
-            sg.Column(right_column),
+            right_column,
         ],
         [
-            sg.InputText(font=('Monospace', 10),
-                         size=(80),
+            sg.InputText(font=(MFONT, 10),
+                         size=(100),
                          key=CMD_KEY,
                          focus=True,
                          do_not_clear=False),
