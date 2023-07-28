@@ -17,7 +17,7 @@ import PySimpleGUI as sg
 
 CONSOLE_KEY = '-CONSOLE-' + sg.WRITE_ONLY_KEY
 CMD_KEY = '-CMD-'
-
+LENGTH_CONSOLE_TAPE = 60
 
 """
 LEDS COLOR
@@ -30,11 +30,11 @@ Choose the right font according to the OS
 """
 match platform.system():
     case "Linux":
-        MFONT="Monospace"
+        MFONT = "Monospace"
     case "Darwin":
-        MFONT="Monaco"
+        MFONT = "Monaco"
     case "Windows":
-        MFONT="FixedSys"
+        MFONT = "FixedSys"
 
 
 def led_indicator_panel(key=None, bdw=16):
@@ -59,7 +59,6 @@ def set_leds(window: sg.Window, key: str, register: int, bdw=16):
     led_height = 20
 
     for x in range(0, len(register)):
-
         b = register[x]
 
         offset = 4 if x > 7 else 0
@@ -73,7 +72,6 @@ def set_leds(window: sg.Window, key: str, register: int, bdw=16):
 
 
 def led_draw(graph, x_coor, y_coor, led_width, led_height, b: str):
-
     if b == "0":
         color = ledOFF
     else:
@@ -119,7 +117,7 @@ def pebug_main(filename="pebug_disk.bin"):
         ],
         [
             sg.Text("DX", font=(MFONT, 10)), led_indicator_panel("DX")
-        ],]
+        ], ]
 
     pointer_registers = [
         [
@@ -130,7 +128,7 @@ def pebug_main(filename="pebug_disk.bin"):
         ],
         [
             sg.Text("IP", font=(MFONT, 10)), led_indicator_panel("IP")
-        ],]
+        ], ]
 
     index_registers = [
         [
@@ -138,8 +136,7 @@ def pebug_main(filename="pebug_disk.bin"):
         ],
         [
             sg.Text("DI", font=(MFONT, 10)), led_indicator_panel("DI")
-        ],]
-
+        ], ]
 
     segment_registers = [
         [
@@ -159,7 +156,7 @@ def pebug_main(filename="pebug_disk.bin"):
         ],
         [
             sg.Text("SS", font=(MFONT, 10)), led_indicator_panel("SS")
-        ],]
+        ], ]
 
     flag_registers = [
         [
@@ -194,14 +191,23 @@ def pebug_main(filename="pebug_disk.bin"):
     ])
 
     left_column = sg.Column([
-        [sg.Frame("Data Registers", data_registers),],
-        [sg.Frame("Pointer Registers", pointer_registers),],
-        [sg.Frame("Index Registers", index_registers),],
-        [sg.Frame("Segment registers", segment_registers)],
-        [sg.Frame("Flags", flag_registers),]
+        [
+            sg.Frame("Data Registers", data_registers),
         ],
-    vertical_alignment="top")
-
+        [
+            sg.Frame("Pointer Registers", pointer_registers),
+        ],
+        [
+            sg.Frame("Index Registers", index_registers),
+        ],
+        [
+            sg.Frame("Segment registers", segment_registers)
+        ],
+        [
+            sg.Frame("Flags", flag_registers),
+        ]
+    ],
+        vertical_alignment="top")
 
     layout = [
         [
@@ -211,7 +217,7 @@ def pebug_main(filename="pebug_disk.bin"):
         ],
         [
             sg.InputText(font=(MFONT, 10),
-                         size=(100),
+                         size=(LENGTH_CONSOLE_TAPE),
                          key=CMD_KEY,
                          focus=True,
                          do_not_clear=False),
