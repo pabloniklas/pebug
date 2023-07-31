@@ -13,6 +13,8 @@ from modules.Disk import Disk
 from modules.Memory import Memory
 from modules.CpuX8086 import CpuX8086
 
+from modules.AppRes import AppIcon
+
 import PySimpleGUI as sg
 
 CONSOLE_KEY = '-CONSOLE-' + sg.WRITE_ONLY_KEY
@@ -26,15 +28,25 @@ ledON = '#ff0000'
 ledOFF = '#890000'
 
 """
+ICON
+"""
+
+iconapp = AppIcon()
+ICON = iconapp.getBase64()
+
+"""
 Choose the right font according to the OS
 """
 match platform.system():
     case "Linux":
         MFONT = "Monospace"
+        CFONT = "Monospace"
     case "Darwin":
         MFONT = "Monaco"
+        CFONT = "Dot Matrix"
     case "Windows":
         MFONT = "FixedSys"
+        CFONT = "Dot Matrix"
 
 
 def led_indicator_panel(key=None, bdw=16):
@@ -89,7 +101,7 @@ def led_draw(graph, x_coor, y_coor, led_width, led_height, b: str):
 ###### CONSOLE #######
 
 def console_output(w: sg.Window, text: str):
-    w[CONSOLE_KEY].update(f"\n{text}", append=True)
+    w[CONSOLE_KEY].update(f"\n{text.upper()}", append=True)
 
 
 ###### MAIN ######
@@ -179,11 +191,11 @@ def pebug_main(filename="pebug_disk.bin"):
 
     right_column = sg.Frame("Console", [
         [
-            sg.Multiline(size=(60, 40),
+            sg.Multiline(size=(80, 40),
                          justification="left",
                          key=CONSOLE_KEY,
                          autoscroll=True,
-                         font=(MFONT, 10),
+                         font=(CFONT, 10),
                          auto_refresh=True,
                          expand_x=True,
                          write_only=True)
@@ -212,12 +224,11 @@ def pebug_main(filename="pebug_disk.bin"):
     layout = [
         [
             left_column,
-            sg.VSeperator(),
             right_column,
         ],
         [
             sg.InputText(font=(MFONT, 10),
-                         size=(LENGTH_CONSOLE_TAPE),
+                         size=LENGTH_CONSOLE_TAPE,
                          key=CMD_KEY,
                          focus=True,
                          do_not_clear=False),
@@ -230,7 +241,7 @@ def pebug_main(filename="pebug_disk.bin"):
 
     ]
 
-    window = sg.Window("PEBUG", layout, finalize=True)
+    window = sg.Window("PEBUG", layout, icon=ICON, finalize=True)
 
     set_leds(window, "AX", cpu.AX)
     set_leds(window, "BX", cpu.BX)
@@ -264,16 +275,7 @@ def pebug_main(filename="pebug_disk.bin"):
 
     set_leds(window, "TF", cpu.TF, 1)
 
-    console_output(window, """
-                 _
-                | |
-     ____  _____| |__  _   _  ____
-    |  _ \| ___ |  _ \| | | |/ _  |
-    | |_| | ____| |_) ) |_| ( (_| |
-    |  __/|_____)____/|____/ \___ |
-    |_|                     (_____|
-    """)
-
+    console_output(window, "====== PEBUG ======")
     console_output(window, "An x86 old-debug-like program written in Python.")
     console_output(window, "By Pablo Niklas <pablo.niklas@gmail.com>.")
     console_output(window, "Online manual at https://pebug.readthedocs.io")
@@ -314,6 +316,7 @@ def pebug_main(filename="pebug_disk.bin"):
 
         elif event == "Send":
             cmd = values[CMD_KEY]
+            print(f"CMD => {cmd}")
             if re.match(r"^[qQ]$", cmd):
                 return
             if re.match(r"^[sS] [0-9a-f]{,4} .*$", cmd):
@@ -358,7 +361,7 @@ def pebug_main(filename="pebug_disk.bin"):
             elif re.match(r"^[fF] [0-9a-f]{,4} [0-9a-f]{,4} .*$", cmd):
                 fill_memory_range(cpu, memory, cmd)
             elif re.match(r"^[dD] [0-9a-f]{,4} [0-9a-f]{,4}$", cmd):
-                display(cpu, memory, cmd)
+                display(window, cpu, memory, cmd)
             elif re.match(r"^[sS][pP] [0-9a-f]{,4}$", cmd):
                 setting_memory_page(memory, cmd)
             elif re.match(r"^[eE] [0-9a-f]{,4} [0-9a-f]{,2}$", cmd):
@@ -380,7 +383,8 @@ def pebug_main(filename="pebug_disk.bin"):
 
             # Arithmetic mode.
             elif re.match(r"^[aA][lL][uU]$", cmd):
-                print("Welcome to the ALU mode. Enter 'q' to quit this mode.")
+                console_output(window,
+                               "Welcome to the ALU mode. Enter 'q' to quit this mode.")
                 mode = "M"
 
                 while not re.match(r"^[qQ]$", cmd):
@@ -397,11 +401,11 @@ def pebug_main(filename="pebug_disk.bin"):
                     elif re.match("^[sS][hH][lL] [0-9a-f]{,2}$", cmd):
                         asm_shl(cpu, cmd)
                     else:
-                        _error_msg
+                        _error_msg(window)
 
                     cmd = prompt(mode)
             else:
-                _error_msg
+                _error_msg(window, f"ERROR. Input not recognized => '{cmd}'")
 
         mode = "C"
 
@@ -409,8 +413,8 @@ def pebug_main(filename="pebug_disk.bin"):
     window.close()
 
 
-def _error_msg():
-    print("Input not recognized.")
+def _error_msg(w: sg.Window, txt: str):
+    console_output(w, txt)
 
 
 @dispatch(object, str, int, int)
@@ -484,8 +488,8 @@ def setname(disk: Disk, cmd: str):
     disk.filename(filename)
 
 
-def assemble(cpu: CpuX8086, memory: Memory):
-    print("Welcome to the Assemble mode. Enter twice to quit this mode.")
+def assemble(window: sg.Window, cpu: CpuX8086, memory: Memory):
+    console_output(window, "Welcome to the Assemble mode. Enter twice to quit this mode.")
     cpu.assemble(memory)
 
 
@@ -553,13 +557,13 @@ def hex_cmd(cmd: str):
     print('%04X' % res_add, '%04X' % res_sub)
 
 
-def search(cpu: CpuX8086, memory: Memory, cmd: str):
+def search(window: sg.Window, cpu: CpuX8086, memory: Memory, cmd: str):
     args = cmd.split(" ")
     start = int(args[1], 16)
     pattern = args[2]
     found_list = cpu.search(memory, start, pattern)
     for aa in found_list:
-        print(aa)
+        console_output(window, aa)
 
 
 def reset_memory_range(cpu: CpuX8086, memory: Memory, cmd: str):
@@ -582,12 +586,17 @@ def setting_memory_page(memory: Memory, cmd: str):
     memory.active_page = int(arg[1], 16)
 
 
-def display(cpu: CpuX8086, memory: Memory, cmd: str):
+def display(window: sg.Window, cpu: CpuX8086, memory: Memory, cmd: str):
     args = cmd.split(" ")
     a = int(args[1], 16)
     b = int(args[2], 16)
-    cpu.display(memory, a, b)
 
+    # I don't like tighly coupled things, but couldn't find a more suitable aproach
+    # to resolve interdependencies.
+    for line in cpu.display(memory, a, b):
+        console_output(window, line)
+
+    set_leds(window, "BP", cpu.BP)
 
 def cat(cpu: CpuX8086, disk: Disk, cmd: str):
     args = cmd.split(" ")

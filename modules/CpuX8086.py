@@ -20,8 +20,9 @@ else:
     from Memory import Memory
     from Disk import Disk
 
-# https://joshsharp.com.au/blog/rpython-rply-interpreter-1.html
+import PySimpleGUI as sg
 
+# https://joshsharp.com.au/blog/rpython-rply-interpreter-1.html
 
 class CpuX8086():
     """
@@ -29,6 +30,7 @@ class CpuX8086():
     """
 
     def __init__(self):
+
         self.lexer = LexerGenerator()
 
         # Opcodes
@@ -208,7 +210,6 @@ class CpuX8086():
 
         # Define the grammar rules for decoding x86 instructions
         # https://pastraiser.com/cpu/i8088/i8088_opcodes.html
-
 
     def get_bits(self):
         return self._bits
@@ -581,7 +582,7 @@ class CpuX8086():
 
         print("")
 
-    def display(self, memory: Memory, addrb: int, addrn: int) -> None:
+    def display(self,  memory: Memory, addrb: int, addrn: int) -> List[str]:
         """
         Displays a memory region.
 
@@ -591,38 +592,43 @@ class CpuX8086():
             addrn: End address.
 
         Returns:
-            None.
+            output: List of lines to be displayed.
         """
         page = memory.active_page
         bytes_per_row = int("F", 16)
         pointer = 0
         ascvisual = ""
+        output = []
+        line = ""
 
         if addrn - addrb < bytes_per_row:  # One single row
-            print(
-                f"{'%04X' % memory.active_page}:{'%04X' % (pointer + addrb)} ", end="", flush=True)
+            line += f"{'%04X' % memory.active_page}:{'%04X' % (pointer + addrb)} "
             for address in range(addrb, addrn):
                 byte = memory.peek(page, pointer + addrb)
                 peek = "%02X" % byte
                 ascvisual += chr(byte) if chr(byte).isprintable() else "."
-                print(f"{peek} ", end="", flush=True)
+                line += f"{peek} "
 
-            print(" " * ((bytes_per_row - pointer) * 3) + ascvisual)
+            output.append(line + " " * ((bytes_per_row - pointer) * 3) + ascvisual)
         else:  # two or more rows
             while pointer + addrb < addrn:
                 if pointer % bytes_per_row == 0:
-                    print(" " * ((bytes_per_row - pointer) * 3) + ascvisual)
+                    output.append(" " * ((bytes_per_row - pointer) * 3) + ascvisual)
                     ascvisual = ""
-                    print(
-                        f"{'%04X' % memory.active_page}:{'%04X' % (pointer + addrb)} ", end="", flush=True)
+                    line += f"{'%04X' % memory.active_page}:{'%04X' % (pointer + addrb)} "
 
                 byte = memory.peek(page, pointer + addrb)
                 peek = "%02X" % byte
                 ascvisual += chr(byte) if chr(byte).isprintable() else "."
-                print(f"{peek} ", end="", flush=True)
+                line += f"{peek} "
                 pointer += 1
 
-        print("")
+        output.append(line)
+        output.append("")
+
+        self.BP += addrn - addrb
+
+        return output
 
     def write_to_vdisk(self, memory: Memory, disk: Disk, address: int, firstsector: int, number: int) -> None:
         """
