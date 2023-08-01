@@ -113,45 +113,45 @@ class CpuX8086():
 
         # 16 bit X86 registers
         # Data registers
-        self.AX = 0b0 * self._bits  # Accumulator
-        self.BX = 0b0 * self._bits  # Base
-        self.CX = 0b0 * self._bits  # Counter
-        self.DX = 0b0 * self._bits  # Data
+        self.AX = 0b0 # Accumulator
+        self.BX = 0b0 # Base
+        self.CX = 0b0 # Counter
+        self.DX = 0b0 # Data
 
         # Pointer registers
-        self.SP = 0b0 * self._bits  # Stack Pointer
-        self.BP = int('c000', 16)  # Base Pointer
-        self.IP = 0b0 * self._bits  # Instruction Pointer
+        self.SP = 0b0 # Stack Pointer
+        self.BP = 0b0 # Base Pointer
+        self.IP = 0b0 # Instruction Pointer
 
         # Index registers
-        self.SI = 0b0 * self._bits  # Source Index
-        self.DI = 0b0 * self._bits  # Destination Index
+        self.SI = 0b0 # Source Index
+        self.DI = 0b0 # Destination Index
 
         # Segment registers
 
         # Code Segment − It contains all the instructions to be executed.
         # A 16-bit Code Segment register or CS register stores the starting
         # address of the code segment.
-        self.CS = 0b0 * self._bits
+        self.CS = 0xC000
 
         # Data Segment − It contains data, constants and work areas.
         # A 16-bit Data Segment register or DS register stores the starting address
         # of the data segment
-        self.DS = 0b0 * self._bits
+        self.DS = 0b0
 
         # Stack Segment − It contains data and return addresses of procedures or
         # subroutines. It is implemented as a 'stack' data structure.
         # The Stack Segment register or SS register stores the starting address
         # of the stack.
-        self.SS = 0b0 * self._bits
+        self.SS = 0b0
 
         # Apart from the DS, CS and SS registers,
         # there are other extra segment registers -
         # ES (extra segment), FS and GS, which provide additional segments
         # for storing data.
-        self.ES = 0b0 * self._bits
-        self.FS = 0b0 * self._bits
-        self.GS = 0b0 * self._bits
+        self.ES = 0b0
+        self.FS = 0b0
+        self.GS = 0b0
 
         # Register Flags
         # https://www.tutorialspoint.com/flag-register-of-8086-microprocessor

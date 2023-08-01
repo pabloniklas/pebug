@@ -227,11 +227,11 @@ def pebug_main(filename="pebug_disk.bin"):
             right_column,
         ],
         [
-            sg.InputText(font=(MFONT, 10),
-                         size=LENGTH_CONSOLE_TAPE,
+            sg.Frame("Input", [[sg.InputText(font=(MFONT, 10),
+                         size=110,
                          key=CMD_KEY,
                          focus=True,
-                         do_not_clear=False),
+                         do_not_clear=False),]])
         ],
         [
             sg.Button("Send", bind_return_key=True),
