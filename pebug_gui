@@ -322,9 +322,15 @@ def pebug_main(filename="pebug_disk.bin"):
                     ),
                     sg.Column(
                         [
-                            [sg.Text("PEBUG", font="Arial 20")],
-                            [sg.Text("By Pablo Niklas")],
-                            [sg.Text("pablo.niklas@gmail.com")],
+                            [
+                                sg.Text("PEBUG", font="Arial 20")
+                            ],
+                            [
+                                sg.Text("By Pablo Niklas")
+                            ],
+                            [
+                                sg.Text("pablo.niklas@gmail.com")
+                            ],
                         ]
                     )
                 ],
