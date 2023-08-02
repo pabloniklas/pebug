@@ -594,7 +594,7 @@ class CpuX8086():
         Returns:
             output: List of lines to be displayed.
         """
-        page = memory.active_page
+        memory.active_page = self.CS
         bytes_per_row = int("F", 16)
         pointer = 0
         ascvisual = ""
@@ -604,12 +604,15 @@ class CpuX8086():
         if addrn - addrb < bytes_per_row:  # One single row
             line += f"{'%04X' % memory.active_page}:{'%04X' % (pointer + addrb)} "
             for address in range(addrb, addrn):
-                byte = memory.peek(page, pointer + addrb)
+                byte = memory.peek(memory.active_page, pointer + addrb)
                 peek = "%02X" % byte
                 ascvisual += chr(byte) if chr(byte).isprintable() else "."
                 line += f"{peek} "
+                pointer += 1
 
-            output.append(line + " " * ((bytes_per_row - pointer) * 3) + ascvisual)
+            line += (" " * ((bytes_per_row - pointer) * 3)) + ascvisual
+            output.append(line)
+
         else:  # two or more rows
             while pointer + addrb < addrn:
                 if pointer % bytes_per_row == 0:
@@ -617,16 +620,16 @@ class CpuX8086():
                     ascvisual = ""
                     line += f"{'%04X' % memory.active_page}:{'%04X' % (pointer + addrb)} "
 
-                byte = memory.peek(page, pointer + addrb)
+                byte = memory.peek(memory.active_page, pointer + addrb)
                 peek = "%02X" % byte
                 ascvisual += chr(byte) if chr(byte).isprintable() else "."
                 line += f"{peek} "
                 pointer += 1
 
-        output.append(line)
-        output.append("")
+            output.append(line)
 
         self.BP += addrn - addrb
+        self.CS = memory.active_page
 
         return output
 

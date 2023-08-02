@@ -20,6 +20,7 @@ import PySimpleGUI as sg
 CONSOLE_KEY = '-CONSOLE-' + sg.WRITE_ONLY_KEY
 CMD_KEY = '-CMD-'
 LENGTH_CONSOLE_TAPE = 60
+RESOURCES_DIR="resources"
 
 """
 LEDS COLOR
@@ -227,11 +228,17 @@ def pebug_main(filename="pebug_disk.bin"):
             right_column,
         ],
         [
-            sg.Frame("Input", [[sg.InputText(font=(MFONT, 10),
-                         size=110,
-                         key=CMD_KEY,
-                         focus=True,
-                         do_not_clear=False),]])
+            sg.Frame("Input",
+                     [
+                         [sg.InputText(
+                             font=(MFONT, 10),
+                            size=110,
+                            key=CMD_KEY,
+                            focus=True,
+                            do_not_clear=False),
+                         ]
+                     ]
+                     )
         ],
         [
             sg.Button("Send", bind_return_key=True),
@@ -241,7 +248,7 @@ def pebug_main(filename="pebug_disk.bin"):
 
     ]
 
-    window = sg.Window("PEBUG", layout, icon=ICON, finalize=True)
+    window = sg.Window("PEBUG", layout, icon=f"{RESOURCES_DIR}/pebug.png", finalize=True)
 
     set_leds(window, "AX", cpu.AX)
     set_leds(window, "BX", cpu.BX)
@@ -298,10 +305,32 @@ def pebug_main(filename="pebug_disk.bin"):
             break
         elif event == "About":
             layout = [
-                [sg.Text("PEBUG", font="Arial 20")],
-                [sg.Text("By Pablo Niklas")],
-                [sg.Text("pablo.niklas@gmail.com")],
-                [sg.Button("Ok")]
+                [
+                    sg.Column(
+                        [
+                            [
+                                sg.Frame("",
+                                      [
+                                          [
+                                              sg.Image(f"{RESOURCES_DIR}/pebug.png")
+                                          ]
+
+                                      ]
+                                          )
+                            ]
+                        ]
+                    ),
+                    sg.Column(
+                        [
+                            [sg.Text("PEBUG", font="Arial 20")],
+                            [sg.Text("By Pablo Niklas")],
+                            [sg.Text("pablo.niklas@gmail.com")],
+                        ]
+                    )
+                ],
+                [
+                    sg.Button("Ok"),
+                ],
             ]
 
             about_window = sg.Window("About PEBUG", layout)
@@ -316,7 +345,10 @@ def pebug_main(filename="pebug_disk.bin"):
 
         elif event == "Send":
             cmd = values[CMD_KEY]
-            print(f"CMD => {cmd}")
+
+            console_output(window, f"\nINPUT => {cmd}")
+
+            print(f"INPUT => {cmd}")
             if re.match(r"^[qQ]$", cmd):
                 return
             if re.match(r"^[sS] [0-9a-f]{,4} .*$", cmd):
@@ -369,7 +401,7 @@ def pebug_main(filename="pebug_disk.bin"):
             elif re.match(r"^[eE] [0-9a-f]{,4} ['].*[']$", cmd):
                 string_poke(cpu, memory, cmd)
             elif re.match(r"^[dD][eE][mM][oO]$", cmd):
-                demo(cpu, memory)
+                demo(window, cpu, memory)
             elif re.match(r"^[wW] [0-9a-f]{,4} [0-9a-f]{,4} [0-9a-f]{,4}$", cmd):
                 write(disk, memory, cpu, cmd)
             elif re.match(r"^[lL] [0-9a-f]{,4} [0-9a-f]{,4} [0-9a-f]{,4}$", cmd):
@@ -605,12 +637,12 @@ def cat(cpu: CpuX8086, disk: Disk, cmd: str):
     cpu.cat(disk, a, b)
 
 
-def demo(cpu: CpuX8086, memory: Memory):
+def demo(window: sg.Window, cpu: CpuX8086, memory: Memory):
     oldap = memory.active_page
     memory.active_page = 49152
     # TODO: Random text (like fortune)
     cpu.load_into(memory, 0, "This is a demo. Welcome.")
-    print("The demo text was loaded into C000:0000, enter 'd 0 30' to read it.")
+    console_output(window, "The demo text was loaded into C000:0000, enter 'd 0 30' to read it.")
     memory.active_page = oldap
 
 
