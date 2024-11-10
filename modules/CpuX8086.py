@@ -22,6 +22,290 @@ else:
 
 # https://joshsharp.com.au/blog/rpython-rply-interpreter-1.html
 
+class RegisterSet:
+    def __init__(self):
+        self.registers = {
+            'AX': 0, 'BX': 0, 'CX': 0, 'DX': 0,
+            'SP': 0, 'BP': 0, 'SI': 0, 'DI': 0,
+            'CS': 0, 'DS': 0, 'SS': 0, 'ES': 0, 'FS': 0, 'GS': 0
+        }
+        # Flags: Zero (ZF), Sign (SF), Parity (PF), and Carry (CF)
+        self.flags = {'ZF': 0, 'SF': 0, 'PF': 0, 'CF': 0}
+        
+        # Diccionario para rastrear los valores anteriores de los registros
+        self.last_values = self.registers.copy()
+
+    def get(self, reg):
+        return self.registers.get(reg.upper(), None)
+
+    def set(self, reg, value):
+        reg = reg.upper()
+        if reg in self.registers:
+            # Guarda el valor actual en last_values antes de actualizar
+            self.last_values[reg] = self.registers[reg]
+            self.registers[reg] = value & 0xFFFF
+
+    def update_flags(self, result, operation=None, carry=None):
+        # Zero Flag: Set if the result is zero
+        self.flags['ZF'] = 1 if result == 0 else 0
+        # Sign Flag: Set if the most significant bit is set (negative in signed interpretation)
+        self.flags['SF'] = 1 if (result & 0x8000) != 0 else 0
+        # Parity Flag: Set if the number of bits set in result is even
+        self.flags['PF'] = 1 if bin(result).count("1") % 2 == 0 else 0
+        # Carry Flag: Used in ADD and SUB operations
+        if operation == 'ADD':
+            self.flags['CF'] = 1 if carry else 0
+        elif operation == 'SUB':
+            self.flags['CF'] = 1 if result < 0 else 0
+
+    def print_changed_registers(self):
+        print(f"{'Register':<8} {'Decimal':<10} {'Hexadecimal':<12} {'Binary':<18}")
+        print("-" * 50)
+        for reg, value in self.registers.items():
+            if value != self.last_values[reg]:  # Comparar con el valor anterior
+                dec_value = value
+                hex_value = f"0x{value:04X}"
+                bin_value = f"{value:016b}"
+                print(f"{reg:<8} {dec_value:<10} {hex_value:<12} {bin_value:<18}")
+        print("-" * 50)
+        
+    def print_registers(self):
+        print(f"{'Register':<8} {'Decimal':<10} {'Hexadecimal':<12} {'Binary':<18}")
+        print("-" * 50)
+        for reg, value in self.registers.items():
+            dec_value = value
+            hex_value = f"0x{value:04X}"
+            bin_value = f"{value:016b}"
+            print(f"{reg:<8} {dec_value:<10} {hex_value:<12} {bin_value:<18}")
+        
+        # Print the flags below the registers
+        print("\nStatus Flags:")
+        print(f"Zero Flag (ZF): {self.flags['ZF']}")
+        print(f"Sign Flag (SF): {self.flags['SF']}")
+        print(f"Parity Flag (PF): {self.flags['PF']}")
+        print(f"Carry Flag (CF): {self.flags['CF']}")
+
+
+class InstructionParser:
+    def __init__(self):
+        # Configuración de lexer y parser
+        self.lexer = LexerGenerator()
+        self.lexer.add("OPCODE", r"(?i)mov|add|sub|and|or|xor|not|neg|inc|dec|shl|shr|rol|ror")
+        self.lexer.add("REGISTER", r"(?i)AX|BX|CX|DX|SP|BP|SI|DI|CS|DS|SS|ES|FS|GS")
+        self.lexer.add("NUMBER", r"0b[01]+|0x[0-9a-fA-F]+|\d+")
+        self.lexer.add("COMMA", r",")
+        self.lexer.ignore(r"\s+")
+        self.lexer = self.lexer.build()
+
+        self.pg = ParserGenerator(["OPCODE", "REGISTER", "NUMBER", "COMMA"])
+        self.pg.production("instruction : OPCODE operands")(self.handle_instruction)
+        self.pg.production("operands : operand COMMA operand")(self.operands_multiple)
+        self.pg.production("operand : REGISTER")(self.operand_register)
+        self.pg.production("operand : NUMBER")(self.operand_number)
+        self.pg.error(self.handle_error)
+        self.parser = self.pg.build()
+
+        # Mapa de instrucciones a métodos de ejecución
+        self.opcode_methods = {
+            'MOV': self.asm_mov,
+            'ADD': self.asm_add,
+            'SUB': self.asm_sub,
+            'AND': self.asm_and,
+            'OR': self.asm_or,
+            'XOR': self.asm_xor,
+            'NOT': self.asm_not,
+            'NEG': self.asm_neg,
+            'INC': self.asm_inc,
+            'DEC': self.asm_dec,
+            'SHL': self.asm_shl,
+            'SHR': self.asm_shr,
+            'ROL': self.asm_rol,
+            'ROR': self.asm_ror,
+        }
+        
+        # Mapa de instrucciones a códigos máquina
+        self.opcode_map = {
+            'MOV': "B8",  # MOV reg, imm16 (using AX as example)
+            'ADD': "05",  # ADD reg, imm16 (using AX as example)
+            'SUB': "2D",  # SUB reg, imm16 (using AX as example)
+            'AND': "25",  # AND reg, imm16
+            'OR': "0D",   # OR reg, imm16
+            'XOR': "35",  # XOR reg, imm16
+            'NOT': "F7D0",  # NOT AX
+            'NEG': "F7D8",  # NEG AX
+            'INC': "40",  # INC reg
+            'DEC': "48",  # DEC reg
+            'SHL': "D0E0",  # SHL AX, 1
+            'SHR': "D0E8",  # SHR AX, 1
+            'ROL': "D0C0",  # ROL AX, 1
+            'ROR': "D0C8",  # ROR AX, 1
+        }
+
+        # Instancia de RegisterSet
+        self.register_set = RegisterSet()
+
+    def handle_instruction(self, p):
+        opcode = p[0].getstr().upper()
+        operands = p[1]
+        method = self.opcode_methods.get(opcode)
+        if method:
+            method(operands)
+        else:
+            print(f"WARNING: Unsupported instruction '{opcode}'.")
+
+    def operands_multiple(self, p):
+        return [p[0], p[2]]
+
+    def operand_register(self, p):
+        return p[0].getstr().upper()
+
+    def operand_number(self, p):
+        value = p[0].getstr()
+        # Detecta el formato y convierte el valor
+        if value.startswith("0b"):
+            return int(value, 2)  # Binario
+        elif value.startswith("0x"):
+            return int(value, 16)  # Hexadecimal
+        else:
+            return int(value)  # Decimal
+
+    def handle_error(self, token):
+        print(f"ERROR: Invalid token '{token.getstr()}' at position {token.getsourcepos().idx}. Ignoring and continuing...")
+
+    def parse(self, instruction):
+        # Tokeniza e interpreta la instrucción
+        tokens = self.lexer.lex(instruction)
+        try:
+            self.parser.parse(tokens)
+        except Exception as e:
+            print(f"ERROR: {e}. Continuing with the next instruction.")
+
+    # Operaciones de ensamblador
+    def asm_mov(self, operands):
+        dest, src = operands
+        if isinstance(src, int):
+            self.register_set.set(dest, src)
+        else:
+            self.register_set.set(dest, self.register_set.get(src))
+
+    def asm_add(self, operands):
+        dest, src = operands
+        result = self.register_set.get(dest) + (src if isinstance(src, int) else self.register_set.get(src))
+        self.register_set.set(dest, result & 0xFFFF)
+        self.register_set.update_flags(result, operation='ADD')
+
+    def asm_sub(self, operands):
+        dest, src = operands
+        result = self.register_set.get(dest) - (src if isinstance(src, int) else self.register_set.get(src))
+        self.register_set.set(dest, result & 0xFFFF)
+        self.register_set.update_flags(result, operation='SUB')
+
+    def asm_and(self, operands):
+        dest, src = operands
+        result = self.register_set.get(dest) & (src if isinstance(src, int) else self.register_set.get(src))
+        self.register_set.set(dest, result)
+        self.register_set.update_flags(result)
+
+    def asm_or(self, operands):
+        dest, src = operands
+        result = self.register_set.get(dest) | (src if isinstance(src, int) else self.register_set.get(src))
+        self.register_set.set(dest, result)
+        self.register_set.update_flags(result)
+
+    def asm_xor(self, operands):
+        dest, src = operands
+        result = self.register_set.get(dest) ^ (src if isinstance(src, int) else self.register_set.get(src))
+        self.register_set.set(dest, result)
+        self.register_set.update_flags(result)
+
+    def asm_not(self, operands):
+        dest = operands[0]
+        result = ~self.register_set.get(dest) & 0xFFFF
+        self.register_set.set(dest, result)
+        self.register_set.update_flags(result)
+
+    def asm_neg(self, operands):
+        dest = operands[0]
+        result = -self.register_set.get(dest) & 0xFFFF
+        self.register_set.set(dest, result)
+        self.register_set.update_flags(result, operation='SUB')
+
+    def asm_inc(self, operands):
+        dest = operands[0]
+        result = self.register_set.get(dest) + 1
+        self.register_set.set(dest, result & 0xFFFF)
+        self.register_set.update_flags(result)
+
+    def asm_dec(self, operands):
+        dest = operands[0]
+        result = self.register_set.get(dest) - 1
+        self.register_set.set(dest, result & 0xFFFF)
+        self.register_set.update_flags(result, operation='SUB')
+
+    def asm_shl(self, operands):
+        dest = operands[0]
+        result = self.register_set.get(dest) << 1
+        self.register_set.set(dest, result & 0xFFFF)
+        self.register_set.update_flags(result)
+
+    def asm_shr(self, operands):
+        dest = operands[0]
+        result = self.register_set.get(dest) >> 1
+        self.register_set.set(dest, result)
+        self.register_set.update_flags(result)
+
+    def asm_rol(self, operands):
+        dest = operands[0]
+        value = self.register_set.get(dest)
+        result = ((value << 1) | (value >> 15)) & 0xFFFF
+        self.register_set.set(dest, result)
+        self.register_set.update_flags(result)
+
+    def asm_ror(self, operands):
+        dest = operands[0]
+        value = self.register_set.get(dest)
+        result = ((value >> 1) | (value << 15)) & 0xFFFF
+        self.register_set.set(dest, result)
+        self.register_set.update_flags(result)
+
+    def assemble(self, asm_code):
+        machine_code = []
+        lines = asm_code.strip().splitlines()
+
+        for line in lines:
+            line = line.strip()
+            if not line:
+                continue
+            tokens = self.lexer.lex(line)
+            try:
+                opcode_token = next(tokens)
+                opcode = opcode_token.getstr().upper()
+
+                if opcode in self.opcode_map:
+                    opcode_hex = self.opcode_map[opcode]
+                    operand_tokens = list(tokens)
+                    if len(operand_tokens) == 1 and operand_tokens[0].name == "NUMBER":
+                        imm = self.operand_number(operand_tokens[0])  # Convert based on format
+                        imm_hex = f"{imm:04X}"
+                        machine_code.append(f"{opcode_hex}{imm_hex}")
+                    elif len(operand_tokens) == 3 and operand_tokens[1].name == "COMMA":
+                        imm = self.operand_number(operand_tokens[2])
+                        imm_hex = f"{imm:04X}"
+                        machine_code.append(f"{opcode_hex}{imm_hex}")
+                    else:
+                        print(f"WARNING: Unsupported operand format in '{line}'")
+                else:
+                    print(f"WARNING: Unsupported opcode '{opcode}' in '{line}'")
+            except Exception as e:
+                print(f"ERROR: Could not parse line '{line}': {e}")
+
+        return " ".join(machine_code)
+
+    def execute_and_print(self, instruction):
+        # Ejecuta la instrucción
+        self.parse(instruction)
+        # Imprime solo los registros cambiados
+        self.register_set.print_changed_registers()
 
 class CpuX8086():
     """
@@ -29,199 +313,10 @@ class CpuX8086():
     """
 
     def __init__(self):
-        self.lexer = LexerGenerator()
-
-        # Opcodes
-        self.lexer.add('OPCODE',
-                       r'(aaa|aad|aam|aas|adc|add|and|call|cbw|cdq|clc|cld|cmc|cmp|cmpsb|cmpsd|cmpsw|cwd|cwde|daa|das|dec|div|idiv|imul|inc|ja|jae|jb|jbe|jc|je|jecxz|jg|jge|jl|jle|jmp|jna|jnae|jnb|jnbe|jnc|jne|jng|jnge|jnl|jnle|jno|jnp|jns|jnz|jo|jp|jpe|jpo|js|jz|lodsb|lodsd|lodsw|loop|loope|loopne|loopnz|loopz|mov|movsb|movsd|movsw|movsx|movzx|mul|neg|not|or|pop|popa|popad|popf|popfd|push|pusha|pushad|pushf|pushfd|rep|repe|repne|repne|repnz|repz|ret|rol|ror|sar|sbb|scasb|scasd|scasw|shl|shld|shr|shrd|stc|std|stosb|stosb|stosd|stosw|stosw|sub|test|xchg|xlat|xor)')
-
-        # Registers
-        self.lexer.add(
-            'REG8', r'(af|ah|al|ax|bh|bl|bp|bp|bx|cl|cs|cx|ch|dh|di|dl|ds|dx|es|fs|gs|si|sp|ss)')
-        self.lexer.add('REG16', r'(eax|eax|ebp|ebx|ecx|edi|edx|esi|esp)')
-
-        # Signs and operators
-        self.lexer.add('COMMA', r',')
-        # self.lexer.add('PLUS', r'\+')
-
-        # Integers
-        self.lexer.add('IMM8', r'[0-9a-f]{2}')
-        self.lexer.add('IMM16', r'[0-9a-f]{4}')
-
-        # Memory
-        self.lexer.add('MEMORY', r'\[.*?\]')
-
-        self.lexer.ignore('\s+')
-
-        self.cpu_lexer = self.lexer.build()
-
-        self.pg = ParserGenerator(
-            ["OPCODE", "REG8", "REG16", "IMM8", "IMM16", "MEMORY",
-             "COMMA"],
-            precedence=[
-                ('left', ['OPCODE']),
-                ('left', ['REG8', 'REG16']),
-                ('left', ['COMMA']),
-            ],
-            cache_id="my_parser"
-        )
-
-        @self.pg.production('instruction : OPCODE operands')
-        def expression(p):
-            opcode = p[0].getstr()
-            operands = p[1]  # ALL the operands (is a list).
-
-            if opcode == "xor":
-                arg1 = operands[0].getstr()
-                arg2 = operands[2].getstr()
-
-                setattr(self, arg1.upper(), self.asm_xor(getattr(self, arg1.upper()),
-                                                         getattr(self, arg2.upper())))
-
-        # @self.pg.production('mem8 : MLEFT_BRACKET REG8 RIGHT_BRACKET')
-        # @self.pg.production('mem8 : LEFT_BRACKET REG8 PLUS REG8 RIGHT_BRACKET')
-        @self.pg.production('operand : operand COMMA operand')
-        def multiple_operands(p):
-            return p
-
-        @self.pg.production('operand : REG8')
-        @self.pg.production('operand : REG16')
-        @self.pg.production('operand : IMM8')
-        @self.pg.production('operand : IMM16')
-        @self.pg.production('operand : MEMORY')
-        @self.pg.production('operands : operand')
-        def operands_single(p):
-            return p[0]
-
-        @self.pg.error
-        def error_handle(token):
-            raise ValueError(f"ERROR: Invalid token '{token.getstr()}'.")
-
-        self._bits = 16
-
-        # 8 bit X86 registers
-        self.AH = 0b0 * self._bits / 2
-        self.AL = 0b0 * self._bits / 2
-        self.BH = 0b0 * self._bits / 2
-        self.BL = 0b0 * self._bits / 2
-        self.CH = 0b0 * self._bits / 2
-        self.CL = 0b0 * self._bits / 2
-        self.DH = 0b0 * self._bits / 2
-        self.DL = 0b0 * self._bits / 2
-
-        # 16 bit X86 registers
-        # Data registers
-        self.AX = 0b0 * self._bits  # Accumulator
-        self.BX = 0b0 * self._bits  # Base
-        self.CX = 0b0 * self._bits  # Counter
-        self.DX = 0b0 * self._bits  # Data
-
-        # Pointer registers
-        self.SP = 0b0 * self._bits  # Stack Pointer
-        self.BP = 0b0 * self._bits  # Base Pointer
-        self.IP = 0b0 * self._bits  # Instruction Pointer
-
-        # Index registers
-        self.SI = 0b0 * self._bits  # Source Index
-        self.DI = 0b0 * self._bits  # Destination Index
-
-        # Segment registers
-
-        # Code Segment − It contains all the instructions to be executed.
-        # A 16-bit Code Segment register or CS register stores the starting
-        # address of the code segment.
-        self.CS = 0b0 * self._bits
-
-        # Data Segment − It contains data, constants and work areas.
-        # A 16-bit Data Segment register or DS register stores the starting address
-        # of the data segment
-        self.DS = 0b0 * self._bits
-
-        # Stack Segment − It contains data and return addresses of procedures or
-        # subroutines. It is implemented as a 'stack' data structure.
-        # The Stack Segment register or SS register stores the starting address
-        # of the stack.
-        self.SS = 0b0 * self._bits
-
-        # Apart from the DS, CS and SS registers,
-        # there are other extra segment registers -
-        # ES (extra segment), FS and GS, which provide additional segments
-        # for storing data.
-        self.ES = 0b0 * self._bits
-        self.FS = 0b0 * self._bits
-        self.GS = 0b0 * self._bits
-
-        # Register Flags
-        # https://www.tutorialspoint.com/flag-register-of-8086-microprocessor
-        # https://www.tutorialspoint.com/assembly_programming/assembly_registers.htm
-
-        # Sign Flag (SF) − It shows the sign of the result of an arithmetic
-        # operation. This flag is set according to the sign of a data item following
-        # the arithmetic operation. The sign is indicated by the high-order of
-        # leftmost bit. A positive result clears the value of SF to 0 and negative
-        # result sets it to 1.
-        self.SF = 0b0  # Sign (D7)
-
-        # Zero Flag (ZF) − It indicates the result of an arithmetic or comparison
-        # operation. A nonzero result clears the zero flag to 0, and a zero result
-        # sets it to 1.
-        self.ZF = 0b0  # Zero (D6)
-
-        # Carry Flag (CF) − It contains the carry of 0 or 1 from a high-order bit
-        # (leftmost) after an arithmetic operation. It also stores the contents of
-        # last bit of a shift or rotate operation.
-        self.CF = 0b0  # Carry bit (D0)
-
-        # Parity Flag (PF) − It indicates the total number of 1-bits in the result
-        # obtained from an arithmetic operation. An even number of 1-bits clears
-        # the parity flag to 0 and an odd number of 1-bits sets the parity flag to 1.
-        self.PF = 0b0  # Parity (D2)
-
-        # Direction Flag (DF) − It determines left or right direction for moving
-        # or comparing string data. When the DF value is 0, the string operation
-        # takes left-to-right direction and when the value is set to 1,
-        # the string operation takes right-to-left direction.
-        self.DF = 0b0
-
-        # Overflow Flag (D11) - It indicates the overflow of a high-order bit
-        # (leftmost bit) of data after a signed arithmetic operation.
-        self.OF = 0b0
-
-        # Auxiliary Carry Flag (AF) − It contains the carry from bit 3 to bit 4
-        # following an arithmetic operation; used for specialized arithmetic.
-        # The AF is set when a 1-byte arithmetic operation causes a carry from
-        # bit 3 into bit 4.
-        self.AF = 0b0
-
-        # Interrupt Flag (IF) − It determines whether the external interrupts
-        # like keyboard entry, etc., are to be ignored or processed.
-        # It disables the external interrupt when the value is 0 and enables
-        # interrupts when set to 1
-        self.IF = 0b1
-
-        #  Trap Flag (TF) − It allows setting the operation of the processor in
-        #  single-step mode. The DEBUG program we used sets the trap flag,
-        #  so we could step through the execution one instruction at a time.
-        self.TF = 0b0
-
-        # Control flags not implemented
-
-        # Define the grammar rules for decoding x86 instructions
-        # https://pastraiser.com/cpu/i8088/i8088_opcodes.html
-
+        self.parser = InstructionParser()
+        
     def parse_instruction(self, cmd):
-        tokens = self.cpu_lexer.lex(cmd)
-        parser = self.pg.build()
-
-        try:
-            parser.parse(tokens)
-        except errors.LexingError as e:
-            error = e.args[1]
-            idx = error.idx
-            lineno = error.lineno
-            colno = error.colno
-            print(" " * (cmd.count(" ") + idx + 7) + "^")
-            print("ERROR: Invalid token.")
+        self.parser.execute_and_print(cmd)
 
     def set_register_upper(self, reg: int, value: int) -> int:
         reg = (reg & 0x00ff) | (value << 8)
@@ -274,93 +369,6 @@ class CpuX8086():
     def bits(self):
         return self._bits
 
-    def asm_shr(self, x: int):
-        rest, self.CY = x >> 1, x & 1
-        return rest
-
-    def asm_shl(self, x):
-        rest, self.CY = x << 1, x & 1
-        return rest
-
-    def asm_not(self, a):
-        return ~a
-
-    def asm_or(self, a, b):
-        return a | b
-
-    def asm_xor(self, a, b):
-        return a ^ b
-
-    def asm_and(self, a, b):
-        return a & b
-
-    def asm_add(self, a, b):
-        """Addition between two numbers.
-
-        Parameters:
-            a (int): first number.
-            b (int): second number.
-
-        Returns:
-            int: a+b
-        """
-
-        result = a + b
-
-        # Update the carry flag
-        self.CF = 1 if result > 0xFFFF else 0
-
-        # Update the zero flag
-        self.ZF = 1 if result == 0 else 0
-
-        # Update the sign flag
-        self.SF = 1 if result & 0x8000 else 0
-
-        # Update the overflow flag
-        self.OF = 1 if ((a ^ b) & 0x8000 == 0 and (a ^ b) & 0x8000) else 0
-
-        # Update the auxiliary carry flag
-        self.AC = 1 if ((a & 0x0F) + (b & 0x0F) > 0x0F) else 0
-
-        # Update the parity flag
-        self.PF = 1 if bin(result).count("1") % 2 == 0 else 0
-
-        print(result.zfill(self.max_len))
-
-        return result
-
-    def asm_sub(self, a, b):
-        """Substraction between two numbers.
-
-        Parameters:
-            a (int): first number.
-            b (int): second number.
-
-        Returns:
-            int: a-b
-        """
-
-        result = a - b
-
-        # Update the zero flag
-        self.ZF = 1 if result == 0 else 0
-
-        # Update the sign flag
-        self.SF = 1 if result & 0x8000 else 0
-
-        # Update the parity flag
-        self.PF = 1 if bin(result).count("1") % 2 == 0 else 0
-
-        # Update the carry flag
-        self.CF = 1 if result > 0xFFFF else 0
-
-        # Update the auxiliary carry flag
-        self.AC = 1 if ((a & 0x0F) + (b & 0x0F) > 0x0F) else 0
-
-        print(result.zfill(self.max_len))
-
-        return result
-
     @staticmethod
     def _not_yet():
         print("This part of the CPU hasn't been implemented yet. =)")
@@ -402,20 +410,10 @@ class CpuX8086():
         """
 
         return format(x, '04X')
-
-    def print_status_flags(self) -> None:
-        """ Print the status of the flags. """
-        print(
-            f"SF={self.SF} ZF={self.ZF} CY={self.CY} PF={self.PF} OF={self.OF} CY={self.CY}")
-
+    
     def print_registers(self) -> None:
         """ Print the CPU registers and it's value."""
-        print(
-            f"AX={self.get_bin(self.AX)} BX={self.get_bin(self.BX)}"
-            f"CX={self.get_bin(self.CX)} DX={self.get_bin(self.DX)}")
-        print(
-            f"SP={self.get_bin(self.SP)} BP={self.get_bin(self.BP)}  "
-            f"SI={self.get_bin(self.SI)} DI={self.get_bin(self.DI)}")
+        self.parser.register_set.print_registers()
 
     def move(self, memory: Memory, from_begin: int, from_end: int, destination: int) -> bool:
         """Copy a memory region to other memory region.

@@ -24,13 +24,19 @@ def pebug_main(filename="pebug_disk.bin"):
     cpu = CpuX8086()
 
     print("""
-                 _
-                | |
-     ____  _____| |__  _   _  ____
-    |  _ \| ___ |  _ \| | | |/ _  |
-    | |_| | ____| |_) ) |_| ( (_| |
-    |  __/|_____)____/|____/ \___ |
-    |_|                     (_____|
+
+ ██▓███  ▓█████  ▄▄▄▄    █    ██   ▄████ 
+▓██░  ██▒▓█   ▀ ▓█████▄  ██  ▓██▒ ██▒ ▀█▒
+▓██░ ██▓▒▒███   ▒██▒ ▄██▓██  ▒██░▒██░▄▄▄░
+▒██▄█▓▒ ▒▒▓█  ▄ ▒██░█▀  ▓▓█  ░██░░▓█  ██▓
+▒██▒ ░  ░░▒████▒░▓█  ▀█▓▒▒█████▓ ░▒▓███▀▒
+▒▓▒░ ░  ░░░ ▒░ ░░▒▓███▀▒░▒▓▒ ▒ ▒  ░▒   ▒ 
+░▒ ░      ░ ░  ░▒░▒   ░ ░░▒░ ░ ░   ░   ░ 
+░░          ░    ░    ░  ░░░ ░ ░ ░ ░   ░ 
+            ░  ░ ░         ░           ░ 
+                      ░                  
+
+
     """)
     print("An x86 old-debug-like program written in Python.")
     print("By Pablo Niklas <pablo.niklas@gmail.com>.")
@@ -53,7 +59,6 @@ def pebug_main(filename="pebug_disk.bin"):
             hex_cmd(cmd)
         elif re.match(r"^[rR]$", cmd):
             cpu.print_registers()
-            cpu.print_status_flags()
         elif re.match(r"^[cC] [0-9a-f]{,4} [0-9a-f]{,4} [0-9a-f]{,4}$", cmd):
             compare(cpu, memory, cmd)
         elif re.match(r"^[cC][aA][tT] [0-9a-f]{,4} [0-9a-f]{,4}$", cmd):
@@ -128,11 +133,11 @@ def pebug_main(filename="pebug_disk.bin"):
                 elif re.match("^[sS][hH][lL] [0-9a-f]{,2}$", cmd):
                     asm_shl(cpu, cmd)
                 else:
-                    _error_msg
+                    _error_msg()
 
                 cmd = prompt(mode)
         else:
-            _error_msg
+            _error_msg()
 
         mode = "C"
         cmd = prompt(mode)
