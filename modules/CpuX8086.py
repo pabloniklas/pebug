@@ -23,7 +23,16 @@ else:
 # https://joshsharp.com.au/blog/rpython-rply-interpreter-1.html
 
 class RegisterSet:
-    def __init__(self):
+    """
+    Represents a set of processor registers and flags.
+    Provides methods to get, set, and display registers, as well as update
+    flag values based on assembly operations.
+    """
+    def __init__(self)  -> None:
+        """
+        Initializes processor registers and flags.
+        Sets up a dictionary to track the previous values of registers before any changes.
+        """
         self.registers = {
             'AX': 0, 'BX': 0, 'CX': 0, 'DX': 0,
             'SP': 0, 'BP': 0, 'SI': 0, 'DI': 0,
@@ -35,17 +44,49 @@ class RegisterSet:
         # Diccionario para rastrear los valores anteriores de los registros
         self.last_values = self.registers.copy()
 
-    def get(self, reg):
+    @dispatch(str)
+    def get(self, reg: str) -> int:
+        """
+        Retrieves the value of the specified register.
+
+        Args:
+            reg (str): Name of the register.
+
+        Returns:
+            int: Current value of the specified register.
+        """
         return self.registers.get(reg.upper(), None)
 
-    def set(self, reg, value):
+    @dispatch(str, int)
+    def set(self, reg: str, value: int) -> None:
+        """
+        Sets a value in the specified register and updates the previous value.
+
+        Args:
+            reg (str): Name of the register.
+            value (int): Value to set in the register.
+
+        Returns:
+            None
+        """
         reg = reg.upper()
         if reg in self.registers:
             # Guarda el valor actual en last_values antes de actualizar
             self.last_values[reg] = self.registers[reg]
             self.registers[reg] = value & 0xFFFF
 
-    def update_flags(self, result, operation=None, carry=None):
+    def update_flags(self, result: int, operation: Optional[str] = None, carry: Optional[bool] = None) -> None:
+        """
+        Updates flags (ZF, SF, PF, CF) based on the result of an operation.
+
+        Args:
+            result (int): Result of the performed operation.
+            operation (str, optional): Type of operation ('ADD' or 'SUB') to update CF.
+            carry (bool, optional): Indicates if there was a carry for CF in ADD operations.
+
+        Returns:
+            None
+        """
         # Zero Flag: Set if the result is zero
         self.flags['ZF'] = 1 if result == 0 else 0
         # Sign Flag: Set if the most significant bit is set (negative in signed interpretation)
@@ -58,7 +99,13 @@ class RegisterSet:
         elif operation == 'SUB':
             self.flags['CF'] = 1 if result < 0 else 0
 
-    def print_changed_registers(self):
+    def print_changed_registers(self) -> None:
+        """
+        Prints only the registers whose value has changed in the last executed operation.
+
+        Returns:
+            None
+        """
         print(f"{'Register':<8} {'Decimal':<10} {'Hexadecimal':<12} {'Binary':<18}")
         print("-" * 50)
         for reg, value in self.registers.items():
@@ -69,7 +116,13 @@ class RegisterSet:
                 print(f"{reg:<8} {dec_value:<10} {hex_value:<12} {bin_value:<18}")
         print("-" * 50)
         
-    def print_registers(self):
+    def print_registers(self) -> None:
+        """
+        Prints all registers and flags in decimal, hexadecimal, and binary formats.
+
+        Returns:
+            None
+        """
         print(f"{'Register':<8} {'Decimal':<10} {'Hexadecimal':<12} {'Binary':<18}")
         print("-" * 50)
         for reg, value in self.registers.items():
@@ -87,7 +140,15 @@ class RegisterSet:
 
 
 class InstructionParser:
-    def __init__(self):
+    """
+    Parses and executes assembly instructions, handling arithmetic and bitwise operations
+    on registers, and providing detailed error messages.
+    """
+    def __init__(self) -> None:
+        """
+        Configures the lexer and parser to analyze assembly instructions.
+        Initializes the maps of instruction methods and machine codes.
+        """
         # Configuración de lexer y parser
         self.lexer = LexerGenerator()
         self.lexer.add("OPCODE", r"(?i)mov|add|sub|and|or|xor|not|neg|inc|dec|shl|shr|rol|ror")
@@ -102,7 +163,7 @@ class InstructionParser:
         self.pg.production("operands : operand COMMA operand")(self.operands_multiple)
         self.pg.production("operand : REGISTER")(self.operand_register)
         self.pg.production("operand : NUMBER")(self.operand_number)
-        self.pg.error(self.handle_error)
+        self.pg.error(self.handle_parse_error)
         self.parser = self.pg.build()
 
         # Mapa de instrucciones a métodos de ejecución
@@ -144,135 +205,403 @@ class InstructionParser:
         # Instancia de RegisterSet
         self.register_set = RegisterSet()
 
-    def handle_instruction(self, p):
+    def handle_instruction(self, p: list) -> None:
+        """
+        Calls the appropriate operation method based on the opcode.
+
+        Args:
+            p (list): List of instruction tokens.
+
+        Returns:
+            None
+        """
         opcode = p[0].getstr().upper()
         operands = p[1]
         method = self.opcode_methods.get(opcode)
         if method:
-            method(operands)
+            try:
+                method(operands)
+            except Exception as e:
+                print(f"ERROR: Execution error in '{opcode} {operands}': {e}")
         else:
-            print(f"WARNING: Unsupported instruction '{opcode}'.")
+            print(f"ERROR: Unsupported instruction '{opcode}'.")
 
-    def operands_multiple(self, p):
+    def operands_multiple(self, p: list) -> list:
+        """
+        Converts a list of operands into a manageable list of two elements.
+
+        Args:
+            p (list): List of operand tokens.
+
+        Returns:
+            list: List containing the first and third tokens.
+        """
         return [p[0], p[2]]
 
-    def operand_register(self, p):
+    def operand_register(self, p: list) -> str:
+        """
+        Gets the register name in uppercase.
+
+        Args:
+            p (list): Register token.
+
+        Returns:
+            str: Register name in uppercase.
+        """
         return p[0].getstr().upper()
 
-    def operand_number(self, p):
+    def operand_number(self, p: list) -> Optional[int]:
+        """
+        Converts a number from binary, hexadecimal, or decimal to decimal format.
+
+        Args:
+            p (list): Number token in binary, hexadecimal, or decimal format.
+
+        Returns:
+            int: Decimal value of the number.
+        """
         value = p[0].getstr()
         # Detecta el formato y convierte el valor
-        if value.startswith("0b"):
-            return int(value, 2)  # Binario
-        elif value.startswith("0x"):
-            return int(value, 16)  # Hexadecimal
-        else:
-            return int(value)  # Decimal
-
-    def handle_error(self, token):
-        print(f"ERROR: Invalid token '{token.getstr()}' at position {token.getsourcepos().idx}. Ignoring and continuing...")
-
-    def parse(self, instruction):
-        # Tokeniza e interpreta la instrucción
-        tokens = self.lexer.lex(instruction)
         try:
+            if value.startswith("0b"):
+                return int(value, 2)  # Binario
+            elif value.startswith("0x"):
+                return int(value, 16)  # Hexadecimal
+            else:
+                return int(value)  # Decimal
+        except ValueError:
+            print(f"ERROR: Invalid number format '{value}'. Expected binary (0b), hex (0x), or decimal.")
+            return None
+
+    def handle_parse_error(self, token) -> None:
+        """
+        Displays an error message when a syntax error occurs in the parser.
+
+        Args:
+            token (Token): Token that caused the syntax error.
+
+        Returns:
+            None
+        """
+        print(f"SYNTAX ERROR: Unexpected token '{token.getstr()}' at position {token.getsourcepos().idx}.")
+        print("TIP: Check the instruction format. An instruction should follow 'OPCODE REGISTER, NUMBER' or 'OPCODE REGISTER, REGISTER'.")
+
+    def parse(self, instruction: str) -> None:
+        """
+        Parses an assembly instruction.
+
+        Args:
+            instruction (str): Assembly instruction as a text string.
+
+        Returns:
+            None
+        """
+        # Tokeniza e interpreta la instrucción
+        try:
+            tokens = self.lexer.lex(instruction)
             self.parser.parse(tokens)
         except Exception as e:
-            print(f"ERROR: {e}. Continuing with the next instruction.")
+            print(f"ERROR: Failed to parse instruction '{instruction}'. Error: {e}")
+            print("TIP: Verify the syntax and ensure the correct format is used.")
 
     # Operaciones de ensamblador
-    def asm_mov(self, operands):
-        dest, src = operands
-        if isinstance(src, int):
-            self.register_set.set(dest, src)
-        else:
-            self.register_set.set(dest, self.register_set.get(src))
+    @dispatch(list)
+    def asm_mov(self, operands: list) -> None:
+        """
+        Executes the MOV instruction, moving a value to a register.
 
-    def asm_add(self, operands):
-        dest, src = operands
-        result = self.register_set.get(dest) + (src if isinstance(src, int) else self.register_set.get(src))
-        self.register_set.set(dest, result & 0xFFFF)
-        self.register_set.update_flags(result, operation='ADD')
+        Args:
+            operands (list): List of operands (destination and source).
 
-    def asm_sub(self, operands):
-        dest, src = operands
-        result = self.register_set.get(dest) - (src if isinstance(src, int) else self.register_set.get(src))
-        self.register_set.set(dest, result & 0xFFFF)
-        self.register_set.update_flags(result, operation='SUB')
+        Returns:
+            None
+        """
+        try:
+            dest, src = operands
+            if isinstance(src, int):
+                self.register_set.set(dest, src)
+            else:
+                self.register_set.set(dest, self.register_set.get(src))
+        except KeyError:
+            print(f"ERROR: Invalid register '{dest}' or '{src}' in MOV operation.")
+            print("TIP: Ensure that both operands are valid registers or an immediate value.")
 
-    def asm_and(self, operands):
-        dest, src = operands
-        result = self.register_set.get(dest) & (src if isinstance(src, int) else self.register_set.get(src))
-        self.register_set.set(dest, result)
-        self.register_set.update_flags(result)
+    @dispatch(list)
+    def asm_add(self, operands: list) -> None:
+        """
+        Executes the ADD instruction, adding a value to a register.
 
-    def asm_or(self, operands):
-        dest, src = operands
-        result = self.register_set.get(dest) | (src if isinstance(src, int) else self.register_set.get(src))
-        self.register_set.set(dest, result)
-        self.register_set.update_flags(result)
+        Args:
+            operands (list): List of operands (destination and source).
 
-    def asm_xor(self, operands):
-        dest, src = operands
-        result = self.register_set.get(dest) ^ (src if isinstance(src, int) else self.register_set.get(src))
-        self.register_set.set(dest, result)
-        self.register_set.update_flags(result)
+        Returns:
+            None
+        """
+        try:
+            dest, src = operands
+            result = self.register_set.get(dest) + (src if isinstance(src, int) else self.register_set.get(src))
+            self.register_set.set(dest, result & 0xFFFF)
+            self.register_set.update_flags(result, operation='ADD')
+        except KeyError:
+            print(f"ERROR: Invalid register '{dest}' or '{src}' in ADD operation.")
+            print("TIP: Both operands must be valid registers or an immediate value.")
 
-    def asm_not(self, operands):
-        dest = operands[0]
-        result = ~self.register_set.get(dest) & 0xFFFF
-        self.register_set.set(dest, result)
-        self.register_set.update_flags(result)
+    @dispatch(list)
+    def asm_sub(self, operands: list) -> None:
+        """
+        Executes the SUB instruction, subtracting a value from a register.
 
-    def asm_neg(self, operands):
-        dest = operands[0]
-        result = -self.register_set.get(dest) & 0xFFFF
-        self.register_set.set(dest, result)
-        self.register_set.update_flags(result, operation='SUB')
+        Args:
+            operands (list): List of operands (destination and source).
 
-    def asm_inc(self, operands):
-        dest = operands[0]
-        result = self.register_set.get(dest) + 1
-        self.register_set.set(dest, result & 0xFFFF)
-        self.register_set.update_flags(result)
+        Returns:
+            None
+        """
+        try:
+            dest, src = operands
+            result = self.register_set.get(dest) - (src if isinstance(src, int) else self.register_set.get(src))
+            self.register_set.set(dest, result & 0xFFFF)
+            self.register_set.update_flags(result, operation='SUB')
+        except KeyError:
+            print(f"ERROR: Invalid register '{dest}' or '{src}' in SUB operation.")
+            print("TIP: Both operands must be valid registers or an immediate value.")
 
-    def asm_dec(self, operands):
-        dest = operands[0]
-        result = self.register_set.get(dest) - 1
-        self.register_set.set(dest, result & 0xFFFF)
-        self.register_set.update_flags(result, operation='SUB')
+    @dispatch(list)
+    def asm_and(self, operands: list) -> None:
+        """
+        Executes the AND instruction, performing a bitwise AND on a register.
 
-    def asm_shl(self, operands):
-        dest = operands[0]
-        result = self.register_set.get(dest) << 1
-        self.register_set.set(dest, result & 0xFFFF)
-        self.register_set.update_flags(result)
+        Args:
+            operands (list): List of operands (destination and source).
 
-    def asm_shr(self, operands):
-        dest = operands[0]
-        result = self.register_set.get(dest) >> 1
-        self.register_set.set(dest, result)
-        self.register_set.update_flags(result)
+        Returns:
+            None
+        """
+        try:
+            dest, src = operands
+            result = self.register_set.get(dest) & (src if isinstance(src, int) else self.register_set.get(src))
+            self.register_set.set(dest, result)
+            self.register_set.update_flags(result)
+        except KeyError:
+            print(f"ERROR: Invalid register '{dest}' or '{src}' in AND operation.")
+            print("TIP: Both operands must be valid registers or an immediate value.")
 
-    def asm_rol(self, operands):
-        dest = operands[0]
-        value = self.register_set.get(dest)
-        result = ((value << 1) | (value >> 15)) & 0xFFFF
-        self.register_set.set(dest, result)
-        self.register_set.update_flags(result)
+    @dispatch(list)
+    def asm_or(self, operands: list) -> None:
+        """
+        Executes the OR instruction, performing a bitwise OR on a register.
 
-    def asm_ror(self, operands):
-        dest = operands[0]
-        value = self.register_set.get(dest)
-        result = ((value >> 1) | (value << 15)) & 0xFFFF
-        self.register_set.set(dest, result)
-        self.register_set.update_flags(result)
+        Args:
+            operands (list): List of operands (destination and source).
 
-    def assemble(self, asm_code):
+        Returns:
+            None
+        """
+        try:
+            dest, src = operands
+            result = self.register_set.get(dest) | (src if isinstance(src, int) else self.register_set.get(src))
+            self.register_set.set(dest, result)
+            self.register_set.update_flags(result)
+        except KeyError:
+            print(f"ERROR: Invalid register '{dest}' or '{src}' in OR operation.")
+            print("TIP: Both operands must be valid registers or an immediate value.")
+
+    @dispatch(list)
+    def asm_xor(self, operands: list) -> None:
+        """
+        Executes the XOR instruction, performing a bitwise XOR on a register.
+
+        Args:
+            operands (list): List of operands (destination and source).
+
+        Returns:
+            None
+        """
+        try:
+            dest, src = operands
+            result = self.register_set.get(dest) ^ (src if isinstance(src, int) else self.register_set.get(src))
+            self.register_set.set(dest, result)
+            self.register_set.update_flags(result)
+        except KeyError:
+            print(f"ERROR: Invalid register '{dest}' or '{src}' in XOR operation.")
+            print("TIP: Both operands must be valid registers or an immediate value.")
+
+    @dispatch(list)
+    def asm_not(self, operands: list) -> None:
+        """
+        Executes the NOT instruction, performing a bitwise NOT on a register.
+
+        Args:
+            operands (list): List of operands (destination).
+
+        Returns:
+            None
+        """
+        try:
+            dest = operands[0]
+            result = ~self.register_set.get(dest) & 0xFFFF
+            self.register_set.set(dest, result)
+            self.register_set.update_flags(result)
+        except KeyError:
+            print(f"ERROR: Invalid register '{dest}' in NOT operation.")
+            print("TIP: Ensure the operand is a valid register.")
+
+    @dispatch(list)
+    def asm_neg(self, operands: list) -> None:
+        """
+        Executes the NEG instruction, negating the value of a register.
+
+        Args:
+            operands (list): List of operands (destination).
+
+        Returns:
+            None
+        """
+        try:
+            dest = operands[0]
+            result = -self.register_set.get(dest) & 0xFFFF
+            self.register_set.set(dest, result)
+            self.register_set.update_flags(result, operation='SUB')
+        except KeyError:
+            print(f"ERROR: Invalid register '{dest}' in NEG operation.")
+            print("TIP: Ensure the operand is a valid register.")
+
+    @dispatch(list)
+    def asm_inc(self, operands: list) -> None:
+        """
+        Executes the INC instruction, incrementing the value of a register by one.
+
+        Args:
+            operands (list): List of operands (destination).
+
+        Returns:
+            None
+        """
+        try:
+            dest = operands[0]
+            result = self.register_set.get(dest) + 1
+            self.register_set.set(dest, result & 0xFFFF)
+            self.register_set.update_flags(result)
+        except KeyError:
+            print(f"ERROR: Invalid register '{dest}' in INC operation.")
+            print("TIP: Ensure the operand is a valid register.")
+
+    @dispatch(list)
+    def asm_dec(self, operands: list) -> None:
+        """
+        Executes the DEC instruction, decrementing the value of a register by one.
+
+        Args:
+            operands (list): List of operands (destination).
+
+        Returns:
+            None
+        """
+        try:
+            dest = operands[0]
+            result = self.register_set.get(dest) - 1
+            self.register_set.set(dest, result & 0xFFFF)
+            self.register_set.update_flags(result, operation='SUB')
+        except KeyError:
+            print(f"ERROR: Invalid register '{dest}' in DEC operation.")
+            print("TIP: Ensure the operand is a valid register.")
+
+    @dispatch(list)
+    def asm_shl(self, operands: list) -> None:
+        """
+        Executes the SHL instruction, performing a bitwise shift left on a register.
+
+        Args:
+            operands (list): List of operands (destination).
+
+        Returns:
+            None
+        """
+        try:
+            dest = operands[0]
+            result = self.register_set.get(dest) << 1
+            self.register_set.set(dest, result & 0xFFFF)
+            self.register_set.update_flags(result)
+        except KeyError:
+            print(f"ERROR: Invalid register '{dest}' in SHL operation.")
+            print("TIP: Ensure the operand is a valid register.")
+
+    @dispatch(list)
+    def asm_shr(self, operands: list) -> None:
+        """
+        Executes the SHR instruction, performing a bitwise shift right on a register.
+
+        Args:
+            operands (list): List of operands (destination).
+
+        Returns:
+            None
+        """
+        try:
+            dest = operands[0]
+            result = self.register_set.get(dest) >> 1
+            self.register_set.set(dest, result)
+            self.register_set.update_flags(result)
+        except KeyError:
+            print(f"ERROR: Invalid register '{dest}' in SHR operation.")
+            print("TIP: Ensure the operand is a valid register.")
+
+    @dispatch(list)
+    def asm_rol(self, operands: list) -> None:
+        """
+        Executes the ROL instruction, performing a bitwise rotate left on a register.
+
+        Args:
+            operands (list): List of operands (destination).
+
+        Returns:
+            None
+        """
+        try:
+            dest = operands[0]
+            value = self.register_set.get(dest)
+            result = ((value << 1) | (value >> 15)) & 0xFFFF
+            self.register_set.set(dest, result)
+            self.register_set.update_flags(result)
+        except KeyError:
+            print(f"ERROR: Invalid register '{dest}' in ROL operation.")
+            print("TIP: Ensure the operand is a valid register.")
+
+    @dispatch(list)
+    def asm_ror(self, operands: list) -> None:
+        """
+        Executes the ROR instruction, performing a bitwise rotate right on a register.
+
+        Args:
+            operands (list): List of operands (destination).
+
+        Returns:
+            None
+        """
+        try:
+            dest = operands[0]
+            value = self.register_set.get(dest)
+            result = ((value >> 1) | (value << 15)) & 0xFFFF
+            self.register_set.set(dest, result)
+            self.register_set.update_flags(result)
+        except KeyError:
+            print(f"ERROR: Invalid register '{dest}' in ROR operation.")
+            print("TIP: Ensure the operand is a valid register.")
+                                    
+    def assemble(self, asm_code: str) -> str:
+        """
+        Converts assembly code into machine code for each line.
+        
+        Args:
+            asm_code (str): Multiline string of assembly code instructions.
+            
+        Returns:
+            str: Machine code as a concatenated string of hexadecimal values.
+        """
         machine_code = []
         lines = asm_code.strip().splitlines()
 
-        for line in lines:
+        for line_num, line in enumerate(lines, 1):
             line = line.strip()
             if not line:
                 continue
@@ -285,27 +614,78 @@ class InstructionParser:
                     opcode_hex = self.opcode_map[opcode]
                     operand_tokens = list(tokens)
                     if len(operand_tokens) == 1 and operand_tokens[0].name == "NUMBER":
-                        imm = self.operand_number(operand_tokens[0])  # Convert based on format
-                        imm_hex = f"{imm:04X}"
+                        imm = self.operand_number(operand_tokens[0])
+                        imm_hex = f"{imm:04X}" if imm is not None else "0000"
                         machine_code.append(f"{opcode_hex}{imm_hex}")
                     elif len(operand_tokens) == 3 and operand_tokens[1].name == "COMMA":
                         imm = self.operand_number(operand_tokens[2])
-                        imm_hex = f"{imm:04X}"
+                        imm_hex = f"{imm:04X}" if imm is not None else "0000"
                         machine_code.append(f"{opcode_hex}{imm_hex}")
                     else:
-                        print(f"WARNING: Unsupported operand format in '{line}'")
+                        print(f"ERROR: Unsupported operand format in '{line}' (line {line_num}).")
                 else:
-                    print(f"WARNING: Unsupported opcode '{opcode}' in '{line}'")
+                    print(f"ERROR: Unsupported opcode '{opcode}' in line {line_num}: '{line}'")
             except Exception as e:
-                print(f"ERROR: Could not parse line '{line}': {e}")
+                print(f"ERROR: Could not parse line {line_num} ('{line}'): {e}")
+                print("TIP: Ensure proper format: OPCODE REGISTER, IMMEDIATE/REGISTER")
 
         return " ".join(machine_code)
+    
+    def disassemble(self, machine_code: str) -> str:
+        """
+        Converts machine code into assembly instructions.
 
-    def execute_and_print(self, instruction):
-        # Ejecuta la instrucción
-        self.parse(instruction)
-        # Imprime solo los registros cambiados
-        self.register_set.print_changed_registers()
+        Args:
+            machine_code (str): Hexadecimal machine code as a string.
+
+        Returns:
+            str: Assembly code as a multiline string.
+        """
+        lines = machine_code.strip().split()
+        assembly_code = []
+
+        i = 0
+        while i < len(lines):
+            opcode = lines[i]
+            instruction = self.opcode_map.get(opcode, None)
+
+            # If the instruction uses an immediate value, handle it
+            if instruction in ['MOV', 'ADD', 'SUB', 'AND', 'OR', 'XOR']:
+                # Ensure there is a following immediate value
+                if i + 1 < len(lines):
+                    imm = lines[i + 1]
+                    # Using AX as the default register for simplicity
+                    assembly_code.append(f"{instruction} AX, {int(imm, 16)}")
+                    i += 2  # Move to the next opcode after immediate
+                else:
+                    print(f"ERROR: Missing operand for {instruction} at position {i}")
+                    break
+            elif instruction in ['INC', 'DEC', 'NOT', 'NEG', 'SHL', 'SHR', 'ROL', 'ROR']:
+                # Single register instruction, assuming AX
+                assembly_code.append(f"{instruction} AX")
+                i += 1  # Move to the next opcode
+            else:
+                # Unsupported or unknown opcode
+                print(f"ERROR: Unknown opcode '{opcode}' at position {i}")
+                break
+
+        return "\n".join(assembly_code)
+
+    def execute_and_print(self, instruction: str) -> None:
+        """
+        Executes an assembly instruction and shows only the registers that changed.
+
+        Args:
+            instruction (str): Assembly instruction as a text string.
+
+        Returns:
+            None
+        """        # Ejecuta la instrucción y maneja errores
+        try:
+            self.parse(instruction)
+            self.register_set.print_changed_registers()
+        except Exception as e:
+            print(f"ERROR: Execution failed for instruction '{instruction}'. Details: {e}")
 
 class CpuX8086():
     """

@@ -23,30 +23,25 @@ def pebug_main(filename="pebug_disk.bin"):
 
     cpu = CpuX8086()
 
+    # From https://patorjk.com/software/taag/#p=testall&f=Graffiti&t=PEBUG
+
     print("""
-
- ██▓███  ▓█████  ▄▄▄▄    █    ██   ▄████ 
-▓██░  ██▒▓█   ▀ ▓█████▄  ██  ▓██▒ ██▒ ▀█▒
-▓██░ ██▓▒▒███   ▒██▒ ▄██▓██  ▒██░▒██░▄▄▄░
-▒██▄█▓▒ ▒▒▓█  ▄ ▒██░█▀  ▓▓█  ░██░░▓█  ██▓
-▒██▒ ░  ░░▒████▒░▓█  ▀█▓▒▒█████▓ ░▒▓███▀▒
-▒▓▒░ ░  ░░░ ▒░ ░░▒▓███▀▒░▒▓▒ ▒ ▒  ░▒   ▒ 
-░▒ ░      ░ ░  ░▒░▒   ░ ░░▒░ ░ ░   ░   ░ 
-░░          ░    ░    ░  ░░░ ░ ░ ░ ░   ░ 
-            ░  ░ ░         ░           ░ 
-                      ░                  
-
-
+░       ░░░        ░░       ░░░  ░░░░  ░░░      ░░
+▒  ▒▒▒▒  ▒▒  ▒▒▒▒▒▒▒▒  ▒▒▒▒  ▒▒  ▒▒▒▒  ▒▒  ▒▒▒▒▒▒▒
+▓       ▓▓▓      ▓▓▓▓       ▓▓▓  ▓▓▓▓  ▓▓  ▓▓▓   ▓
+█  ████████  ████████  ████  ██  ████  ██  ████  █
+█  ████████        ██       ████      ████      ██
+                                                   v1.1
     """)
-    print("An x86 old-debug-like program written in Python.")
-    print("By Pablo Niklas <pablo.niklas@gmail.com>.")
-    print("Online manual at https://pebug.readthedocs.io")
-    print(f"History file: {readline.get_history_length()} lines loaded.")
-    print(f"Main memory size: {memory.pages} pages.")
-    print(f"Stack size: {stack.pages} page/s.")
-    print(f"Virtual disk size: {disk.size} bytes.")
+    print("> An x86 old-debug-like program written in Python.")
+    print("> By Pablo Niklas <pablo.niklas@gmail.com>.")
+    print("> Online manual at https://pebug.readthedocs.io")
+    print(f"> History file: {readline.get_history_length()} lines loaded.")
+    print(f"> Main memory size: {memory.pages} pages.")
+    print(f"> Stack size: {stack.pages} page/s.")
+    print(f"> Virtual disk size: {disk.size} bytes.")
     print("")
-    print("Type 'q' to quit the program.")
+    print("> Type 'q' to quit the program.")
 
     """https://montcs.bloomu.edu/Information/LowLevel/DOS-Debug.html"""
     mode = "C"
