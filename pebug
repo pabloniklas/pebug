@@ -4,7 +4,7 @@ import os
 import re
 import readline
 import sys
-import curses
+import random
 
 from multipledispatch import dispatch
 
@@ -104,33 +104,17 @@ def pebug_main(filename="pebug_disk.bin"):
             read(disk, memory, cpu, cmd)
         elif re.match(r"^[nN] ['].*[']$", cmd):
             setname(disk, cmd)
-        elif re.match(r"^[aA]$", cmd):
-            assemble(cpu, memory)
         elif re.match(r"^[pP] .*$", cmd):
             parse(cpu, cmd)
 
         # Arithmetic mode.
-        elif re.match(r"^[aA][lL][uU]$", cmd):
-            print("Welcome to the ALU mode. Enter 'q' to quit this mode.")
-            mode = "M"
-            cmd = prompt(mode)
+        elif re.match(r"^[aA]$", cmd):
+            print("Welcome to the Assemble mode. Enter 'q' to quit this mode.")
+            cmd = prompt(f"{'%04X' % memory.active_page}:{'%04X' % memory.offset_cursor}")
             while not re.match(r"^[qQ]$", cmd):
-                if re.match(r"^[xX][oO][rR] [0-9a-f]{,2} [0-9a-f]{,2}$", cmd):
-                    asm_xor(cpu, cmd)
-                elif re.match(r"^[oO][rR] [0-9a-f]{,2} [0-9a-f]{,2}$", cmd):
-                    asm_or(cpu, cmd)
-                elif re.match(r"^[aA][nN][dD] [0-9a-f]{,2} [0-9a-f]{,2}$", cmd):
-                    asm_and(cpu, cmd)
-                elif re.match(r"^[nN][oO][tT] [0-9a-f]{,2}$", cmd):
-                    asm_not(cpu, cmd)
-                elif re.match(r"^[sS][hH][rR] [0-9a-f]{,2}$", cmd):
-                    asm_shr(cpu, cmd)
-                elif re.match("^[sS][hH][lL] [0-9a-f]{,2}$", cmd):
-                    asm_shl(cpu, cmd)
-                else:
-                    _error_msg()
+                cpu.assemble(memory, cmd)
 
-                cmd = prompt(mode)
+                cmd = prompt(f"{'%04X' % memory.active_page}:{'%04X' % memory.offset_cursor}")
         else:
             _error_msg()
 
@@ -162,63 +146,11 @@ def _show_result(cpu: CpuX8086, oper: str, a: int, b: int, r: int):
     print(f"{oper} {bin_a}({'%02X' % a}) {bin_b}({'%02X' % b}) => {bin_r}({'%02X' % r})")
     cpu.print_status_flags()
 
-
-def asm_shl(cpu: CpuX8086, cmd: str):
-    args = cmd.split(" ")
-    oper1 = int(args[1], 16)
-    result = cpu.asm_shl(oper1)
-    _show_result(cpu, "SHL", oper1, result)
-
-
-def asm_shr(cpu: CpuX8086, cmd: str):
-    args = cmd.split(" ")
-    oper1 = int(args[1], 16)
-    result = cpu.asm_shr(oper1)
-    _show_result(cpu, "SHR", oper1, result)
-
-
-def asm_not(cpu: CpuX8086, cmd: str):
-    args = cmd.split(" ")
-    oper1 = int(args[1], 16)
-    result = cpu.asm_not(oper1)
-    _show_result(cpu, "NOT", oper1, result)
-
-
-def asm_or(cpu: CpuX8086, cmd: str):
-    args = cmd.split(" ")
-    oper1 = int(args[1], 16)
-    oper2 = int(args[2], 16)
-    result = cpu.asm_or(oper1, oper2)
-    _show_result(cpu, "OR", oper1, oper2, result)
-
-
-def asm_and(cpu: CpuX8086, cmd: str):
-    args = cmd.split(" ")
-    oper1 = int(args[1], 16)
-    oper2 = int(args[2], 16)
-    result = cpu.asm_and(oper1, oper2)
-    _show_result(cpu, "AND", oper1, oper2, result)
-
-
-def asm_xor(cpu: CpuX8086, cmd: str):
-    args = cmd.split(" ")
-    oper1 = int(args[1], 16)
-    oper2 = int(args[2], 16)
-    result = cpu.asm_xor(oper1, oper2)
-    _show_result(cpu, "XOR", oper1, oper2, result)
-
-
 def setname(disk: Disk, cmd: str):
     args = cmd.split(" ")
     args[1] = args[1][1:]  # To strip the initial '
     filename = " ".join(args[1:])
     disk.filename(filename)
-
-
-def assemble(cpu: CpuX8086, memory: Memory):
-    print("Welcome to the Assemble mode. Enter twice to quit this mode.")
-    cpu.assemble(memory)
-
 
 def parse(cpu: CpuX8086, cmd: str):
     args = cmd.split(" ")
@@ -328,11 +260,27 @@ def cat(cpu: CpuX8086, disk: Disk, cmd: str):
 
 
 def demo(cpu: CpuX8086, memory: Memory):
+
+    def fortune_cookie():
+        fortunes = [
+            "You will find great success in your future endeavors.",
+            "An unexpected opportunity will bring you joy.",
+            "New adventures are on the horizon.",
+            "Good things are coming your way.",
+            "Happiness is not a destination, it's a way of life.",
+            "Today is a good day to be kind to yourself.",
+            "You will achieve your goals with patience and persistence.",
+            "Someone close to you has an important message for you.",
+            "A small act of kindness will bring great joy.",
+            "Your creativity will lead you to wonderful places."
+        ]
+        return random.choice(fortunes)
+
     oldap = memory.active_page
     memory.active_page = 49152
-    # TODO: Random text (like fortune)
-    cpu.load_into(memory, 0, "This is a demo. Welcome.")
-    print("The demo text was loaded into C000:0000, enter 'd 0 30' to read it.")
+
+    cpu.load_into(memory, 0, fortune_cookie())
+    print("The demo text was loaded into C000:0000, enter 'd 0 60' to read it.")
     memory.active_page = oldap
 
 

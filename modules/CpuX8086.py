@@ -629,7 +629,7 @@ class InstructionParser:
                 print(f"ERROR: Could not parse line {line_num} ('{line}'): {e}")
                 print("TIP: Ensure proper format: OPCODE REGISTER, IMMEDIATE/REGISTER")
 
-        return " ".join(machine_code)
+        return machine_code
     
     def disassemble(self, machine_code: str) -> str:
         """
@@ -790,6 +790,25 @@ class CpuX8086():
         """
 
         return format(x, '04X')
+    
+    def assemble(self, memory: Memory, code: str) -> str:
+        """
+        Assemble the code into machine code.
+
+        Args:
+            memory (Memory): Memory object class.
+            code (str): Code to be assembled.
+
+        Returns:
+            str: Machine code.
+        """
+        
+        machine_code = self.parser.assemble(code)
+        if len(machine_code)>0:
+            print("Machine code:", machine_code)
+            memory.offset_cursor+len(machine_code)
+            
+        return machine_code
     
     def print_registers(self) -> None:
         """ Print the CPU registers and it's value."""
@@ -1031,54 +1050,4 @@ class CpuX8086():
         """
         for i in range(0, number - 1):
             memory.poke(address, disk.read(firstsector + i))
-
-    # https://github.com/Maratyszcza/Opcodes
-    def assemble(self, memory: Memory) -> None:
-        prompt = f"{self.get_hex(memory.active_page)}:{self.get_hex(memory.offset_cursor)}"
-
-        # TODO: Start assembling (OMG)
-        # http://www.c-jump.com/CIS77/CPU/x86/lecture.html
-        # The Koky's way of NOT doing things.
-        while True:
-            op = input(f"{prompt} ")
-
-            if re.match(r"^$", op) or re.match(r"^q$", op):
-                break
-
-            opcode = self._find_matches(self._opcode, op)
-
-            if opcode is None:
-                print("Invalid opcode.")
-            else:
-                value = opcode.get("opcode")
-
-                if opcode.get("mnemonic") == "add oper,int":
-                    args = op.split(" ")
-                    oper1 = int(args[1], 16)
-                    oper2 = int(args[2], 16)
-
-                    memory.poke(memory.active_page,
-                                memory.offset_cursor, value)
-                    memory.offset_cursor += 1
-                    memory.poke(memory.active_page,
-                                memory.offset_cursor, oper1)
-                    memory.offset_cursor += 1
-                    memory.poke(memory.active_page,
-                                memory.offset_cursor, oper2)
-                    memory.offset_cursor += 1
-                elif opcode.get('mnemonic') == "ret":
-                    memory.poke(memory.active_page,
-                                memory.offset_cursor, value)
-                    memory.offset_cursor += 1
-                elif opcode.get('mnemonic') == "push es":
-                    memory.poke(memory.active_page,
-                                memory.offset_cursor, value)
-                    memory.offset_cursor += 1
-                elif opcode.get('mnemonic') == "nop":
-                    memory.poke(memory.active_page,
-                                memory.offset_cursor, value)
-                    memory.offset_cursor += 1
-                else:
-                    print("Internal Error.")
-
-            prompt = f"{self.get_hex(memory.active_page)}:{self.get_hex(memory.offset_cursor)}"
+ 
