@@ -185,21 +185,32 @@ class InstructionParser:
         }
         
         # Mapa de instrucciones a códigos máquina
+        # Extended opcode map to cover more 8086 instructions
         self.opcode_map = {
-            'MOV': "B8",  # MOV reg, imm16 (using AX as example)
-            'ADD': "05",  # ADD reg, imm16 (using AX as example)
-            'SUB': "2D",  # SUB reg, imm16 (using AX as example)
-            'AND': "25",  # AND reg, imm16
-            'OR': "0D",   # OR reg, imm16
-            'XOR': "35",  # XOR reg, imm16
-            'NOT': "F7D0",  # NOT AX
-            'NEG': "F7D8",  # NEG AX
-            'INC': "40",  # INC reg
-            'DEC': "48",  # DEC reg
-            'SHL': "D0E0",  # SHL AX, 1
-            'SHR': "D0E8",  # SHR AX, 1
-            'ROL': "D0C0",  # ROL AX, 1
-            'ROR': "D0C8",  # ROR AX, 1
+            'B8': 'MOV AX',  # MOV AX, imm16
+            'B9': 'MOV CX',  # MOV CX, imm16
+            'BA': 'MOV DX',  # MOV DX, imm16
+            'BB': 'MOV BX',  # MOV BX, imm16
+            '05': 'ADD AX',  # ADD AX, imm16
+            '2D': 'SUB AX',  # SUB AX, imm16
+            '35': 'XOR AX',  # XOR AX, imm16
+            '25': 'AND AX',  # AND AX, imm16
+            '0D': 'OR AX',   # OR AX, imm16
+            '40': 'INC AX',  # INC AX
+            '41': 'INC CX',  # INC CX
+            '42': 'INC DX',  # INC DX
+            '43': 'INC BX',  # INC BX
+            '48': 'DEC AX',  # DEC AX
+            '49': 'DEC CX',  # DEC CX
+            '4A': 'DEC DX',  # DEC DX
+            '4B': 'DEC BX',  # DEC BX
+            'F7D0': 'NOT AX', # NOT AX
+            'F7D8': 'NEG AX', # NEG AX
+            'D0E0': 'SHL AX, 1', # SHL AX, 1
+            'D0E8': 'SHR AX, 1', # SHR AX, 1
+            'D0C0': 'ROL AX, 1', # ROL AX, 1
+            'D0C8': 'ROR AX, 1', # ROR AX, 1
+            # Add other opcodes as necessary for 8086
         }
 
         # Instancia de RegisterSet
@@ -649,21 +660,19 @@ class InstructionParser:
             opcode = lines[i]
             instruction = self.opcode_map.get(opcode, None)
 
-            # If the instruction uses an immediate value, handle it
-            if instruction in ['MOV', 'ADD', 'SUB', 'AND', 'OR', 'XOR']:
-                # Ensure there is a following immediate value
+            # If opcode requires an immediate value, check for next token
+            if instruction and 'imm16' in instruction:
                 if i + 1 < len(lines):
                     imm = lines[i + 1]
-                    # Using AX as the default register for simplicity
-                    assembly_code.append(f"{instruction} AX, {int(imm, 16)}")
+                    assembly_code.append(f"{instruction.replace('imm16', '')} {int(imm, 16)}")
                     i += 2  # Move to the next opcode after immediate
                 else:
-                    print(f"ERROR: Missing operand for {instruction} at position {i}")
+                    print(f"ERROR: Missing immediate value for {instruction} at position {i}")
                     break
-            elif instruction in ['INC', 'DEC', 'NOT', 'NEG', 'SHL', 'SHR', 'ROL', 'ROR']:
-                # Single register instruction, assuming AX
-                assembly_code.append(f"{instruction} AX")
-                i += 1  # Move to the next opcode
+            elif instruction:
+                # For single-register instructions without an immediate value
+                assembly_code.append(instruction)
+                i += 1
             else:
                 # Unsupported or unknown opcode
                 print(f"ERROR: Unknown opcode '{opcode}' at position {i}")
