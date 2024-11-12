@@ -107,13 +107,17 @@ def pebug_main(filename="pebug_disk.bin"):
         elif re.match(r"^[pP] .*$", cmd):
             parse(cpu, cmd)
 
-        # Arithmetic mode.
+        # Assemble mode.
         elif re.match(r"^[aA]$", cmd):
             print("Welcome to the Assemble mode. Enter 'q' to quit this mode.")
+            print("Numbers must be in hexadecimal (0x), Decimal, or Binary (0b) format.")
             cmd = prompt(f"{'%04X' % memory.active_page}:{'%04X' % memory.offset_cursor}")
             while not re.match(r"^[qQ]$", cmd):
-                cpu.assemble(memory, cmd)
-
+                machine_code = cpu.assemble(memory, cmd)
+                for mc in machine_code:
+                    memory.poke(memory.active_page, memory.offset_cursor, mc)
+                    memory.offset_cursor += 1
+                    
                 cmd = prompt(f"{'%04X' % memory.active_page}:{'%04X' % memory.offset_cursor}")
         else:
             _error_msg()

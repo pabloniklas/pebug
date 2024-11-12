@@ -166,7 +166,36 @@ class InstructionParser:
         self.pg.error(self.handle_parse_error)
         self.parser = self.pg.build()
 
-        # Mapa de instrucciones a métodos de ejecución
+        self.opcode_map = {
+            'MOV': {'reg, imm16': 'B8', 'reg, reg': '89', 'mem, reg': '8B', 'reg, mem': '8A'},
+            'ADD': {'reg, imm16': '05', 'reg, reg': '01'},
+            'SUB': {'reg, imm16': '2D', 'reg, reg': '29'},
+            'AND': {'reg, imm16': '25', 'reg, reg': '21'},
+            'OR': {'reg, imm16': '0D', 'reg, reg': '09'},
+            'XOR': {'reg, imm16': '35', 'reg, reg': '31'},
+            'INC': {'reg': '40'},
+            'DEC': {'reg': '48'},
+            'SHL': {'reg': 'D0E0'},
+            'SHR': {'reg': 'D0E8'},
+            'ROL': {'reg': 'D0C0'},
+            'ROR': {'reg': 'D0C8'},
+            'NOT': {'reg': 'F7D0'},
+            'NEG': {'reg': 'F7D8'},
+        }
+
+        self.mnemonic_map = {
+            'B8': 'MOV reg, imm16', '89': 'MOV reg, reg', '8B': 'MOV mem, reg', '8A': 'MOV reg, mem',
+            '05': 'ADD reg, imm16', '01': 'ADD reg, reg',
+            '2D': 'SUB reg, imm16', '29': 'SUB reg, reg',
+            '25': 'AND reg, imm16', '21': 'AND reg, reg',
+            '0D': 'OR reg, imm16',  '09': 'OR reg, reg',
+            '35': 'XOR reg, imm16', '31': 'XOR reg, reg',
+            '40': 'INC reg', '48': 'DEC reg',
+            'D0E0': 'SHL reg', 'D0E8': 'SHR reg',
+            'D0C0': 'ROL reg', 'D0C8': 'ROR reg',
+            'F7D0': 'NOT reg', 'F7D8': 'NEG reg',
+        }
+
         self.opcode_methods = {
             'MOV': self.asm_mov,
             'ADD': self.asm_add,
@@ -184,35 +213,9 @@ class InstructionParser:
             'ROR': self.asm_ror,
         }
         
-        # Mapa de instrucciones a códigos máquina
-        # Extended opcode map to cover more 8086 instructions
-        self.opcode_map = {
-            'B8': 'MOV AX',  # MOV AX, imm16
-            'B9': 'MOV CX',  # MOV CX, imm16
-            'BA': 'MOV DX',  # MOV DX, imm16
-            'BB': 'MOV BX',  # MOV BX, imm16
-            '05': 'ADD AX',  # ADD AX, imm16
-            '2D': 'SUB AX',  # SUB AX, imm16
-            '35': 'XOR AX',  # XOR AX, imm16
-            '25': 'AND AX',  # AND AX, imm16
-            '0D': 'OR AX',   # OR AX, imm16
-            '40': 'INC AX',  # INC AX
-            '41': 'INC CX',  # INC CX
-            '42': 'INC DX',  # INC DX
-            '43': 'INC BX',  # INC BX
-            '48': 'DEC AX',  # DEC AX
-            '49': 'DEC CX',  # DEC CX
-            '4A': 'DEC DX',  # DEC DX
-            '4B': 'DEC BX',  # DEC BX
-            'F7D0': 'NOT AX', # NOT AX
-            'F7D8': 'NEG AX', # NEG AX
-            'D0E0': 'SHL AX, 1', # SHL AX, 1
-            'D0E8': 'SHR AX, 1', # SHR AX, 1
-            'D0C0': 'ROL AX, 1', # ROL AX, 1
-            'D0C8': 'ROR AX, 1', # ROR AX, 1
-            # Add other opcodes as necessary for 8086
-        }
-
+        # Mapeo de registros a sus correspondientes códigos binarios
+        self.register_codes = {'AX': '000', 'CX': '001', 'DX': '010', 'BX': '011'}
+        
         # Instancia de RegisterSet
         self.register_set = RegisterSet()
 
@@ -599,21 +602,21 @@ class InstructionParser:
             print(f"ERROR: Invalid register '{dest}' in ROR operation.")
             print("TIP: Ensure the operand is a valid register.")
                                     
-    def assemble(self, asm_code: str) -> str:
+    def assemble(self, asm_code: str) -> List[int]:
         """
-        Converts assembly code into machine code for each line.
+        Converts assembly code into machine code as a list of byte integers.
         
         Args:
             asm_code (str): Multiline string of assembly code instructions.
             
         Returns:
-            str: Machine code as a concatenated string of hexadecimal values.
+            List[int]: Machine code as an array of integer bytes.
         """
         machine_code = []
         lines = asm_code.strip().splitlines()
 
         for line_num, line in enumerate(lines, 1):
-            line = line.strip()
+            line = line.strip().upper()  # Convert entire line to uppercase
             if not line:
                 continue
             tokens = self.lexer.lex(line)
@@ -622,16 +625,32 @@ class InstructionParser:
                 opcode = opcode_token.getstr().upper()
 
                 if opcode in self.opcode_map:
-                    opcode_hex = self.opcode_map[opcode]
                     operand_tokens = list(tokens)
-                    if len(operand_tokens) == 1 and operand_tokens[0].name == "NUMBER":
-                        imm = self.operand_number(operand_tokens[0])
-                        imm_hex = f"{imm:04X}" if imm is not None else "0000"
-                        machine_code.append(f"{opcode_hex}{imm_hex}")
-                    elif len(operand_tokens) == 3 and operand_tokens[1].name == "COMMA":
-                        imm = self.operand_number(operand_tokens[2])
-                        imm_hex = f"{imm:04X}" if imm is not None else "0000"
-                        machine_code.append(f"{opcode_hex}{imm_hex}")
+                    
+                    # Procesar instrucciones `reg, imm16` y `reg, reg`
+                    if len(operand_tokens) == 3 and operand_tokens[1].name == "COMMA":
+                        dest = operand_tokens[0].getstr().upper()
+                        src = operand_tokens[2].getstr().upper()
+                        
+                        # Detectar `reg, imm16`
+                        if src.startswith("0X") or src.isdigit():
+                            op_key = 'reg, imm16'
+                            imm = int(src, 16) if src.startswith("0X") else int(src)
+                            opcode_hex = self.opcode_map[opcode][op_key]
+                            # Convertir el prefijo del opcode según el registro destino
+                            opcode_hex = f"{int(opcode_hex, 16) + int(self.register_codes[dest], 2):02X}"
+                            imm_hex = f"{imm:04X}"
+                            machine_code.extend([int(opcode_hex, 16)] + [int(imm_hex[i:i+2], 16) for i in range(0, 4, 2)])
+                        
+                        # Detectar `reg, reg`
+                        elif dest in self.register_codes and src in self.register_codes:
+                            op_key = 'reg, reg'
+                            opcode_hex = self.opcode_map[opcode][op_key]
+                            # Generar el byte de operación para `reg, reg`
+                            mod_reg_rm = f"{int(self.register_codes[dest] + self.register_codes[src], 2):02X}"
+                            machine_code.extend([int(opcode_hex, 16), int(mod_reg_rm, 16)])
+                        else:
+                            print(f"ERROR: Unsupported operand format '{line}' at line {line_num}")
                     else:
                         print(f"ERROR: Unsupported operand format in '{line}' (line {line_num}).")
                 else:
@@ -641,45 +660,7 @@ class InstructionParser:
                 print("TIP: Ensure proper format: OPCODE REGISTER, IMMEDIATE/REGISTER")
 
         return machine_code
-    
-    def disassemble(self, machine_code: str) -> str:
-        """
-        Converts machine code into assembly instructions.
-
-        Args:
-            machine_code (str): Hexadecimal machine code as a string.
-
-        Returns:
-            str: Assembly code as a multiline string.
-        """
-        lines = machine_code.strip().split()
-        assembly_code = []
-
-        i = 0
-        while i < len(lines):
-            opcode = lines[i]
-            instruction = self.opcode_map.get(opcode, None)
-
-            # If opcode requires an immediate value, check for next token
-            if instruction and 'imm16' in instruction:
-                if i + 1 < len(lines):
-                    imm = lines[i + 1]
-                    assembly_code.append(f"{instruction.replace('imm16', '')} {int(imm, 16)}")
-                    i += 2  # Move to the next opcode after immediate
-                else:
-                    print(f"ERROR: Missing immediate value for {instruction} at position {i}")
-                    break
-            elif instruction:
-                # For single-register instructions without an immediate value
-                assembly_code.append(instruction)
-                i += 1
-            else:
-                # Unsupported or unknown opcode
-                print(f"ERROR: Unknown opcode '{opcode}' at position {i}")
-                break
-
-        return "\n".join(assembly_code)
-
+        
     def execute_and_print(self, instruction: str) -> None:
         """
         Executes an assembly instruction and shows only the registers that changed.
