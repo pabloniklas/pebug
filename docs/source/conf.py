@@ -27,7 +27,7 @@ sys.path.insert(0, os.path.abspath('../../modules'))
 # -- Project information -----------------------------------------------------
 
 project = 'PEBUG'
-copyright = '2022,3, Pablo Niklas'
+copyright = '2022,3,4 Pablo Niklas'
 author = 'Pablo Niklas'
 
 source_suffix = ['.rst', '.md']
