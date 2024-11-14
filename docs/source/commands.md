@@ -9,6 +9,8 @@
 This is Work in Progress
 :::
 
+```A```
+
 Interactive assemble. 
 
 ### Example
@@ -33,6 +35,8 @@ C000:000F 00
 ```
 
 ## Quit: Q
+
+```Q```
 
 Immediately quits (exits) the PEBUG program! No questions ever asked...
 should be the first command you remember along with the "?" command.
@@ -168,6 +172,8 @@ PEBUG has protections to avoid overwritting the source bytes.
 :::
 
 ## Parse: P [opcode]
+
+```p mox ax,1974```
 
 Allow an interactive way of executing assembler instructions, and allows you to see how this instruction impacts the CPU registers.
 
