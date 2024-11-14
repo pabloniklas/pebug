@@ -149,7 +149,7 @@ The WRITE (W) command is often used to save a program to the vdisk.
 
 | Command Name | Parameters      | Description                                                  |
 |--------------|-----------------|--------------------------------------------------------------|
-| ```alu```    |                 | Enter the ALU mode.                                          |
+| ```a```    |                   | Enter the assemble mode.                                          |
 | ```demo```   |                 | Load a predefined string into the first bytes of its memory. |
  | ```cat```    | ```cat aa bb``` | Visualize virtual disk content from _aa_, _bb_ bytes.        |
  | ```sp```     | ```sp xx```     | Set default memory page to _sp_.                             |

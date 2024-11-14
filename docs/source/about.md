@@ -56,5 +56,5 @@ This simulator aims to provide an interactive learning tool for students of 8086
  | Dissassembly | To Do         |
 
 :::{note}
-The memory model es similar to the DOS (pages of 64Kb).
+The memory model is similar to DOS's (pages of 64Kb).
 :::
