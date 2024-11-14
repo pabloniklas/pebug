@@ -137,6 +137,35 @@ the Move command.
 PEBUG has protections to avoid overwritting the source bytes.
 :::
 
+## Parse: P [opcode]
+
+Allow an interactive way of executing assembler instructions, and allows you to see how this instruction impacts the CPU registers.
+
+### Example:
+
+```
+> Type 'q' to quit the program.
+[C]=> p mov ax,200
+Register Decimal    Hexadecimal  Binary            
+--------------------------------------------------
+AX       200        0x00C8       0000000011001000  
+--------------------------------------------------
+[C]=> p mov cx,100
+Register Decimal    Hexadecimal  Binary            
+--------------------------------------------------
+AX       200        0x00C8       0000000011001000  
+CX       100        0x0064       0000000001100100  
+--------------------------------------------------
+[C]=> p add ax,cx
+Register Decimal    Hexadecimal  Binary            
+--------------------------------------------------
+AX       300        0x012C       0000000100101100  
+CX       100        0x0064       0000000001100100  
+--------------------------------------------------
+[C]=> 
+```
+
+
 ## Register: R [register]
 
 Entering ```r``` all by itself will display all of the 8086 register's contents
