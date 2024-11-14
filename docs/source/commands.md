@@ -166,12 +166,15 @@ The WRITE (W) command is often used to save a program to the vdisk.
 | Parity(even/odd)        | ```pe``` | ```po``` |
 | Carry(yes/no)           | ```cy``` | ```nc``` |
 
-## ALU Mode
+## Parse Mode
 
 The following operators are available (more are coming):
 
 | Command Name | Parameters    | Description                        |
 |--------------|---------------|------------------------------------|
+| ```mov```    | ```mov a, b``` | Move (assign) operation between _a_ and _b_ |
+| ```add```    | ```add a, b``` | Add operation between _a_ and _b_ |
+| ```sub```    | ```sub a, b``` | Substract operation between _a_ and _b_ |
 | ```xor```    | ```xor a b``` | "Exclusive OR" between _a_ and _b_ |
 | ```or```     | ```or a b```  | OR between _a_ and _b_             |
 | ```and```    | ```and a b``` | AND between _a_ and _b_            |
@@ -179,88 +182,17 @@ The following operators are available (more are coming):
 | ```shl```    | ```shl a```   | Shift to the left of _a_           |
 | ```shr```    | ```shr a```   | Shift to the right of _a_          |
 
-# Commands I'm working on
+# Work In Progress
 
 ## Assemble: A [address]
 
-Creates machine executable code in memory beginning at CS:0100 (or the specified address) from the 8086/8088
-(and 8087) Assembly Language instructions which are entered.
-Although no Macro instructions nor labels are recognized, you can use the pseudo-instructions 'DB' and 'DW'
-(so you can use the DB opcode to enter ASCII data like this: DB 'This is a string',0D,0A ).
-The 'A' command remembers the last location where any data was assembled, so successive 'A' commands
-(when no address is specified) will always begin at the next address in the chain of assembled instructions.
-This aspect of the command is similar to the Dump command which remembers the location of its last dump
-(if no new address is specified).
-
-The assembly process will stop after you ENTER an empty line.
-
-### Example
-
-```
-A
-xxxx:0100 jmp 126
-xxxx:0102 db 0d,0a,'This is my first PEBUG program!'
-xxxx:0123 db 0d,0a,'$'
-xxxx:0126 xor ax,ax
-xxxx:0128 mov ah,9
-xxxx:012A mov dx,102
-xxxx:012D int 21
-xxxx:012F mov ax,4c
-xxxx:0132 int 21
-xxxx:0134
-```
-
-## Unassemble: U [range]
-
-Disassembles machine instructions into 8086 Assembly code.
-Without the optional [range], it uses Offset 100 as its starting point,
-disassembles about 32 bytes and then remembers the next byte it should start with if the command is used again.
-( The word 'about' was used above, because it may be necessary to finish with an odd-number
-of bytes greater than 32, depending upon the last type of instruction PEBUG has to disassemble.
-
-:::{warning}
-The user must decide whether the bytes that PEBUG disassembles are all 8086 instructions,
-just data or any of the newer x86 instructions which are all beyond the ability of PEBUG to understand!
-:::
-
-### Example
-
-```
-u 126 133
-xxxx:0126 31C0 XOR AX,AX
-xxxx:0128 B409 MOV AH,09
-xxxx:012A BA0201 MOV DX,0102
-xxxx:012D CD21 INT 21
-xxxx:012F B84C00 MOV AX,004C
-xxxx:0132 CD21 INT 21
-```
+Enter in interactive assemble mode (IAM). Exit with "q"
 
 ## Go: G [=address] [addresses]
 
 Go is used to run a program and set breakpoints in the program's code.
-As we saw in an Example for the ENTER command, the '=address' option is used to tell PEBUG a starting location.
-If you use 'g' all by itself, execution will begin at whatever location is pointed to by the CS:IP registers.
-Optional breakpoints ( meaning the program will HALT before executing the code at any of these locations)
-of up to any ten addresses may be set by simply listing them on the command line.
 
-# Commands in the original DEBUG but not in PEBUG
+:::{note}
+Input / Output commands (regarding ports), are not available.
+:::
 
-## Input: I port
-
-The use of I/O commands while running Windows™9x/Me is just plain unreliable! This is especially true when trying to directly access hard disks! Under Win NT/2000/XP, the I/O commands are only an emulation; so don't trust them. Though the example below still works under Win2000/XP, it's most likely using some WinAPI code to show what's in the Windows clock area; not directly from an RTC chip.
-
-Long ago (when DOS was the only OS for PCs), there were dozens of BASIC programs that used I/O commands for handling tasks through parallel and serial ports (e.g., to change the font used by a printer or values in a modem's control registers). Under real DOS, they can still be used for direct communications with keyboards or a floppy drive's control chips along with many other hardware devices.
-Here's an example of how to read the hours and minutes from a computer's "real time clock" (RTC):
-
-```
--o 70 04 <-- Check the hours.
--i 71
-18 <----- 18 hours (or 6 p.m.)
--o 70 02 <-- Check the minutes.
--i 71
-52 <----- 52 minutes
-```
-
-## Output: O port byte
-
-See comments under the Input command.
