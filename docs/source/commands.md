@@ -2,6 +2,36 @@
 
 [Source](https://montcs.bloomu.edu/Information/LowLevel/DOS-Debug.html)
 
+
+## Assemble: A
+
+:::{note}
+This is Work in Progress
+:::
+
+Interactive assemble. 
+
+### Example
+
+```
+[C]=> a
+Welcome to the Assemble mode. Enter 'q' to quit this mode.
+Numbers must be in hexadecimal (0x), Decimal, or Binary (0b) format.
+[C000:0000]=> mov ax,200
+Machine code: [184, 0, 200]
+[C000:0003]=> mov cx,10
+Machine code: [185, 0, 10]
+[C000:0006]=> sub ax,cx
+Machine code: [41, 1]
+[C000:0008]=> q
+[C]=> d 0 10
+                                             
+C000:0000 B8 00 C8 B9 00 0A 29 01 00 00 00 00 00 00 00 ¸.È¹..)........
+C000:000F 00 
+[C]=> 
+
+```
+
 ## Quit: Q
 
 Immediately quits (exits) the PEBUG program! No questions ever asked...
