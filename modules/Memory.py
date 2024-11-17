@@ -1,5 +1,8 @@
 from multipledispatch import dispatch
 
+import logging
+
+logging.basicConfig(level=logging.WARNING)
 
 class Memory:
     """
@@ -10,15 +13,15 @@ class Memory:
         poke: Write a value to a memory address.
     """
 
-    def __init__(self, pages=1):
+    def __init__(self, pages: int = 1):
         self.pages = pages
         self.offset_cursor = 0
-        self.active_page = 49152  # Like the old one C000
-        self._offsets = 65536  # 64K for page.
-        self._memory = [[0b00000000] * self._offsets] * self.pages
+        self.active_page = 49152  # Like the old C000
+        self._offsets = 65536  # 64K per page
+        self._memory = [[0b00000000] * self._offsets for _ in range(self.pages)]
 
-    def __str__(self):
-        return str(self.pages) + " * " + str(self._offsets)
+    def __str__(self) -> str: 
+        return f"{self.pages} * {self._offsets}"
 
     @dispatch(int)
     def peek(self, address: int) -> int:
@@ -32,9 +35,8 @@ class Memory:
         Returns:
             int: Pointed address value.
         """
-        page = self.active_page
-        return self.peek(page, address)
-
+        return self.peek(self.active_page, address)
+    
     @dispatch(int, int)
     def peek(self, page: int, address: int) -> int:
         """
@@ -48,14 +50,12 @@ class Memory:
         Returns:
             int: Pointed address value.
         """
-        if int(page) < 0 or int(page) >= len(self._memory) or \
-                int(address) < 0 or int(page) >= self._offsets:
-            print("Memory.peek(): Invalid address.")
+        try:
+            return self.peek(int(page, 16), int(address, 16))
+        except ValueError:
+            logging.warning("Memory.peek(): Invalid hexadecimal address or page.")
             return -1
-        else:
-            self.active_page = page
-            return self._memory[int(page)][int(address)]
-
+    
     @dispatch(str, str)
     def peek(self, page: str, address: str) -> int:
         """
@@ -85,12 +85,8 @@ class Memory:
         Returns:
             bool: Operation result.
         """
-        if value < 0 or value > 255 or \
-                page < 0 or page >= len(self._memory) or \
-                address > self._offsets or address < 0:
-            print("Memory.poke(): Invalid address or value.")
+        if not (0 <= value <= 255) or not (0 <= page < len(self._memory)) or not (0 <= address < self._offsets):
+            logging.warning("Memory.poke(): Invalid address or value.")
             return False
-        else:
-            self.active_page = page
-            self._memory[page][address] = value
-            return True
+        self._memory[page][address] = value
+        return True

@@ -15,7 +15,7 @@ from modules.CpuX8086 import CpuX8086
 
 def pebug_main(filename="pebug_disk.bin"):
 
-    memory = Memory(65536)
+    memory = Memory(10) # 640 Kb
     stack = Memory(1)
 
     disk = Disk(65536, filename)  # 64Kb
@@ -102,8 +102,8 @@ def pebug_main(filename="pebug_disk.bin"):
             write(disk, memory, cpu, cmd)
         elif re.match(r"^[lL] [0-9a-f]{,4} [0-9a-f]{,4} [0-9a-f]{,4}$", cmd):
             read(disk, memory, cpu, cmd)
-        elif re.match(r"^[nN] ['].*[']$", cmd):
-            setname(disk, cmd)
+        #elif re.match(r"^[nN] ['].*[']$", cmd): # To be used in the future
+        #    setname(disk, cmd)
         elif re.match(r"^[pP] .*$", cmd):
             parse(cpu, cmd)
 
@@ -124,8 +124,9 @@ def pebug_main(filename="pebug_disk.bin"):
 
         mode = "C"
         cmd = prompt(mode)
-
-    disk.save()  # Save vdisk to a _real_ disk.
+        
+    # Save the virtual disk to a real disk.        
+    disk.save()
 
 
 def _error_msg():
@@ -150,6 +151,7 @@ def _show_result(cpu: CpuX8086, oper: str, a: int, b: int, r: int):
     print(f"{oper} {bin_a}({'%02X' % a}) {bin_b}({'%02X' % b}) => {bin_r}({'%02X' % r})")
     cpu.print_status_flags()
 
+## To be used in the future
 def setname(disk: Disk, cmd: str):
     args = cmd.split(" ")
     args[1] = args[1][1:]  # To strip the initial '
@@ -160,7 +162,6 @@ def parse(cpu: CpuX8086, cmd: str):
     args = cmd.split(" ")
     line = args[1:]
     cpu.parse_instruction(" ".join(line))
-
 
 def write(disk: Disk, memory: Memory, cpu: CpuX8086, cmd: str):
     args = cmd.split(" ")

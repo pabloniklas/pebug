@@ -1009,7 +1009,7 @@ class CpuX8086():
 
     def write_to_vdisk(self, memory: Memory, disk: Disk, address: int, firstsector: int, number: int) -> None:
         """
-        Writes to vdisk a memory block.
+        Writes onto vdisk a memory block.
 
         Args:
             memory (Memory): A Memory type class object.
@@ -1022,11 +1022,12 @@ class CpuX8086():
             None.
         """
         for i in range(0, number - 1):
-            disk.write(firstsector, memory.peek(address + i))
+            print("Writing to vdisk...", firstsector + i, memory.peek(address + i))
+            disk.write(firstsector+i, memory.peek(address + i))
 
     def read_from_vdisk(self, memory: Memory, disk: Disk, address: int, firstsector: int, number: int) -> None:
         """
-        Writes to memory a vdisk block.
+        Loads into memory a vdisk block.
 
         Args:
             memory (Memory): A Memory type class object.
@@ -1039,5 +1040,5 @@ class CpuX8086():
             None.
         """
         for i in range(0, number - 1):
-            memory.poke(address, disk.read(firstsector + i))
+            memory.poke(memory.active_page, address, disk.read(firstsector + i))
  

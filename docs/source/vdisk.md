@@ -17,7 +17,23 @@ disk in real mode.
 
 ## Relevants Commands
 
-* ```w```
-* ```n```
-* ```l```
+### Write
+
+Writes onto vdisk a memory block.
+
+Usage: ```w <source> <first sector> <number of bytes>```
+
+* address (int): Source memory address.
+* firstsector (int): Destination sector address.
+* number (int): Number of bytes to be copied.
+
+### Load
+
+Loads into memory a vdisk block.
+
+Usage: ```w <source> <first sector> <number of bytes>```
+
+* address (int): Source memory address.
+* firstsector (int): Destination sector address.
+* number (int): Number of bytes to be copied.
 
