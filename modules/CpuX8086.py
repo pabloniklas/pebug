@@ -300,23 +300,53 @@ class InstructionParser:
         print(f"SYNTAX ERROR: Unexpected token '{token.getstr()}' at position {token.getsourcepos().idx}.")
         print("TIP: Check the instruction format. An instruction should follow 'OPCODE REGISTER, NUMBER' or 'OPCODE REGISTER, REGISTER'.")
 
-    def parse(self, instruction: str) -> None:
+    def parse(self, instruction: str) -> dict:
         """
-        Parses an assembly instruction.
+        Parses a single assembly instruction, executes it, and returns its details.
 
         Args:
             instruction (str): Assembly instruction as a text string.
 
         Returns:
-            None
+            dict: Parsed tokens including opcode and operands.
+
+        Raises:
+            ValueError: If the instruction format is invalid.
+            KeyError: If the opcode is not supported.
         """
-        # Tokeniza e interpreta la instrucción
+        instruction = instruction.strip().upper()
+        tokens = instruction.split()
+        #print(f"DEBUG: Tokens from instruction: {tokens}")  # Debugging line
+
+        if len(tokens) < 2:
+            raise ValueError(f"Invalid instruction format: '{instruction}'")
+
         try:
-            tokens = self.lexer.lex(instruction)
-            self.parser.parse(tokens)
+            opcode = tokens[0]
+            if opcode not in self.opcode_methods:
+                raise KeyError(f"Unsupported opcode '{opcode}' in instruction: '{instruction}'")
+
+            # Split operands by comma and strip spaces
+            operands = [op.strip() for op in ' '.join(tokens[1:]).split(',')]
+            #print(f"DEBUG: Parsed operands: {operands}")  # Debugging line
+
+            if len(operands) < 1:
+                raise ValueError(f"No operands found in instruction: '{instruction}'")
+
+            # Convert immediate values to integers
+            for i, operand in enumerate(operands):
+                if operand.isdigit() or operand.startswith("0X"):
+                    operands[i] = int(operand, 16) if operand.startswith("0X") else int(operand)
+
+            # Invoke the method corresponding to the opcode
+            method = self.opcode_methods[opcode]
+            method(operands)
+
+            return {'opcode': opcode, 'operands': operands}
+
         except Exception as e:
-            print(f"ERROR: Failed to parse instruction '{instruction}'. Error: {e}")
-            print("TIP: Verify the syntax and ensure the correct format is used.")
+            raise ValueError(f"Error parsing instruction: '{instruction}' -> {e}")
+
 
     # Operaciones de ensamblador
     @dispatch(list)
@@ -601,14 +631,15 @@ class InstructionParser:
         except KeyError:
             print(f"ERROR: Invalid register '{dest}' in ROR operation.")
             print("TIP: Ensure the operand is a valid register.")
-                                    
+
+            
     def assemble(self, asm_code: str) -> List[int]:
         """
         Converts assembly code into machine code as a list of byte integers.
-        
+
         Args:
             asm_code (str): Multiline string of assembly code instructions.
-            
+
         Returns:
             List[int]: Machine code as an array of integer bytes.
         """
@@ -616,51 +647,44 @@ class InstructionParser:
         lines = asm_code.strip().splitlines()
 
         for line_num, line in enumerate(lines, 1):
-            line = line.strip().upper()  # Convert entire line to uppercase
-            if not line:
+            if not line.strip():
                 continue
-            tokens = self.lexer.lex(line)
-            try:
-                opcode_token = next(tokens)
-                opcode = opcode_token.getstr().upper()
 
-                if opcode in self.opcode_map:
-                    operand_tokens = list(tokens)
-                    
-                    # Procesar instrucciones `reg, imm16` y `reg, reg`
-                    if len(operand_tokens) == 3 and operand_tokens[1].name == "COMMA":
-                        dest = operand_tokens[0].getstr().upper()
-                        src = operand_tokens[2].getstr().upper()
-                        
-                        # Detectar `reg, imm16`
-                        if src.startswith("0X") or src.isdigit():
-                            op_key = 'reg, imm16'
-                            imm = int(src, 16) if src.startswith("0X") else int(src)
-                            opcode_hex = self.opcode_map[opcode][op_key]
-                            # Convertir el prefijo del opcode según el registro destino
-                            opcode_hex = f"{int(opcode_hex, 16) + int(self.register_codes[dest], 2):02X}"
-                            imm_hex = f"{imm:04X}"
-                            machine_code.extend([int(opcode_hex, 16)] + [int(imm_hex[i:i+2], 16) for i in range(0, 4, 2)])
-                        
-                        # Detectar `reg, reg`
-                        elif dest in self.register_codes and src in self.register_codes:
-                            op_key = 'reg, reg'
-                            opcode_hex = self.opcode_map[opcode][op_key]
-                            # Generar el byte de operación para `reg, reg`
-                            mod_reg_rm = f"{int(self.register_codes[dest] + self.register_codes[src], 2):02X}"
-                            machine_code.extend([int(opcode_hex, 16), int(mod_reg_rm, 16)])
-                        else:
-                            print(f"ERROR: Unsupported operand format '{line}' at line {line_num}")
+            try:
+                # Use parse() to validate and extract the instruction details
+                parsed = self.parse(line)
+                opcode = parsed['opcode']
+                operands = parsed['operands']
+
+                # Generate machine code based on operands
+                if len(operands) == 2:
+                    dest, src = operands
+
+                    # reg, imm16
+                    if src.isdigit() or src.startswith("0X"):
+                        op_key = 'reg, imm16'
+                        opcode_hex = self.opcode_map[opcode][op_key]
+                        opcode_hex = f"{int(opcode_hex, 16) + int(self.register_codes[dest], 2):02X}"
+                        imm_value = int(src, 16) if src.startswith("0X") else int(src)
+                        imm_hex = f"{imm_value:04X}"
+                        machine_code.extend([int(opcode_hex, 16)] + [int(imm_hex[i:i+2], 16) for i in range(0, 4, 2)])
+
+                    # reg, reg
+                    elif dest in self.register_codes and src in self.register_codes:
+                        op_key = 'reg, reg'
+                        opcode_hex = self.opcode_map[opcode][op_key]
+                        mod_reg_rm = f"{int(self.register_codes[src] + self.register_codes[dest], 2):02X}"
+                        machine_code.extend([int(opcode_hex, 16), int(mod_reg_rm, 16)])
+
                     else:
-                        print(f"ERROR: Unsupported operand format in '{line}' (line {line_num}).")
-                else:
-                    print(f"ERROR: Unsupported opcode '{opcode}' in line {line_num}: '{line}'")
-            except Exception as e:
-                print(f"ERROR: Could not parse line {line_num} ('{line}'): {e}")
-                print("TIP: Ensure proper format: OPCODE REGISTER, IMMEDIATE/REGISTER")
+                        raise ValueError(f"Unsupported operand format in line {line_num}: '{line}'")
+
+            except (ValueError, KeyError) as e:
+                print(f"ERROR: {e}")
+                continue
 
         return machine_code
-        
+                
     def execute_and_print(self, instruction: str) -> None:
         """
         Executes an assembly instruction and shows only the registers that changed.
