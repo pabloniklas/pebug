@@ -43,6 +43,8 @@ class RegisterSet:
         
         # Diccionario para rastrear los valores anteriores de los registros
         self.last_values = self.registers.copy()
+        self.registers_supported = list(self.registers.keys())        
+
 
     @dispatch(str)
     def get(self, reg: str) -> int:
@@ -139,6 +141,20 @@ class RegisterSet:
         print(f"Carry Flag (CF): {self.flags['CF']}")
 
 
+    def set_register_upper(self, reg: int, value: int) -> int:
+        reg = (reg & 0x00ff) | (value << 8)
+        return reg
+
+    def set_register_lower(self, reg: int, value: int) -> int:
+
+        # Clear the lower 8 bits of the register
+        reg &= 0xFF00
+
+        # Set the lower 8 bits of the register to the new value
+        reg |= value
+
+        return reg
+
 class InstructionParser:
     """
     Parses and executes assembly instructions, handling arithmetic and bitwise operations
@@ -213,11 +229,14 @@ class InstructionParser:
             'ROR': self.asm_ror,
         }
         
+        self.supported_instructions = list(self.opcode_methods.keys())  # Lista de instrucciones soportadas
+        
         # Mapeo de registros a sus correspondientes códigos binarios
         self.register_codes = {'AX': '000', 'CX': '001', 'DX': '010', 'BX': '011'}
         
         # Instancia de RegisterSet
         self.register_set = RegisterSet()
+        self.supported_registers = self.register_set.registers_supported
 
     def handle_instruction(self, p: list) -> None:
         """
@@ -723,25 +742,13 @@ class CpuX8086():
     Class emulating a 8086 CPU.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.parser = InstructionParser()
+        self.instructions_set = self.parser.supported_instructions
+        self.register_set = self.parser.supported_registers
         
-    def parse_instruction(self, cmd):
+    def parse_instruction(self, cmd) -> None:
         self.parser.execute_and_print(cmd)
-
-    def set_register_upper(self, reg: int, value: int) -> int:
-        reg = (reg & 0x00ff) | (value << 8)
-        return reg
-
-    def set_register_lower(self, reg: int, value: int) -> int:
-
-        # Clear the lower 8 bits of the register
-        reg &= 0xFF00
-
-        # Set the lower 8 bits of the register to the new value
-        reg |= value
-
-        return reg
 
     #  https://www.geeksforgeeks.org/python-program-to-add-two-binary-numbers/
     def _find_matches(self, d: Dict[str, str], item: str) -> str:

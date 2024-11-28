@@ -33,13 +33,15 @@ def pebug_main(filename="pebug_disk.bin"):
 █  ████████        ██       ████      ████      ██
                                                    v1.1
     """)
-    print("> An x86 old-debug-like program written in Python.")
+    print("> An x86 DOS-debug-inspired program written in Python.")
     print("> By Pablo Niklas <pablo.niklas@gmail.com>.")
     print("> Online manual at https://pebug.readthedocs.io")
     print(f"> History file: {readline.get_history_length()} lines loaded.")
     print(f"> Main memory size: {memory.pages} pages.")
     print(f"> Stack size: {stack.pages} page/s.")
     print(f"> Virtual disk size: {disk.size} bytes.")
+    print(f"> Supported instructions: {len(cpu.instructions_set)} ({', '.join(sorted(cpu.instructions_set) ) })")
+    print(f"> Supported registers: {len(cpu.register_set)} ({', '.join(sorted(cpu.register_set))})")
     print("")
     print("> Type 'q' to quit the program.")
 
