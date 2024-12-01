@@ -1,17 +1,18 @@
-from multipledispatch import dispatch
-from rply import (
-    ParserGenerator,
-    LexerGenerator,
-    errors
-)
 from typing import (
     List,
-    Set,
     Dict,
     Tuple,
     Optional
 )
+
 import re
+
+from multipledispatch import dispatch
+
+from rply import (
+    ParserGenerator,
+    LexerGenerator
+)
 
 if __name__ is not None and "." in __name__:
     from .Memory import Memory
@@ -40,7 +41,7 @@ class RegisterSet:
         }
         # Flags: Zero (ZF), Sign (SF), Parity (PF), and Carry (CF)
         self.flags = {'ZF': 0, 'SF': 0, 'PF': 0, 'CF': 0}
-        
+
         # Diccionario para rastrear los valores anteriores de los registros
         self.last_values = self.registers.copy()
         self.registers_supported = list(self.registers.keys())        
@@ -117,7 +118,7 @@ class RegisterSet:
                 bin_value = f"{value:016b}"
                 print(f"{reg:<8} {dec_value:<10} {hex_value:<12} {bin_value:<18}")
         print("-" * 50)
-        
+
     def print_registers(self) -> None:
         """
         Prints all registers and flags in decimal, hexadecimal, and binary formats.
@@ -132,7 +133,7 @@ class RegisterSet:
             hex_value = f"0x{value:04X}"
             bin_value = f"{value:016b}"
             print(f"{reg:<8} {dec_value:<10} {hex_value:<12} {bin_value:<18}")
-        
+
         # Print the flags below the registers
         print("\nStatus Flags:")
         print(f"Zero Flag (ZF): {self.flags['ZF']}")
@@ -142,10 +143,28 @@ class RegisterSet:
 
 
     def set_register_upper(self, reg: int, value: int) -> int:
+        """Set the upper 8 bits of a 16-bit register to a new value.
+
+        Args:
+            reg (int): 16bit value
+            value (int): 8bit value
+
+        Returns:
+            int: 16bit value with the upper 8 bits set to the new value.
+        """
         reg = (reg & 0x00ff) | (value << 8)
         return reg
 
     def set_register_lower(self, reg: int, value: int) -> int:
+        """Set the lower 8 bits of a 16-bit register to a new value.
+
+        Args:
+            reg (int): 16bit value
+            value (int): 8bit value
+
+        Returns:
+            int: 16bit value with the lower 8 bits set to the new value.
+        """
 
         # Clear the lower 8 bits of the register
         reg &= 0xFF00
@@ -228,12 +247,12 @@ class InstructionParser:
             'ROL': self.asm_rol,
             'ROR': self.asm_ror,
         }
-        
+
         self.supported_instructions = list(self.opcode_methods.keys())  # Lista de instrucciones soportadas
-        
+
         # Mapeo de registros a sus correspondientes códigos binarios
         self.register_codes = {'AX': '000', 'CX': '001', 'DX': '010', 'BX': '011'}
-        
+
         # Instancia de RegisterSet
         self.register_set = RegisterSet()
         self.supported_registers = self.register_set.registers_supported
@@ -668,7 +687,7 @@ class InstructionParser:
             print(f"ERROR: Invalid register '{dest}' in ROR operation.")
             print("TIP: Ensure the operand is a valid register.")
 
-            
+
     def assemble(self, asm_code: str) -> List[int]:
         """
         Converts assembly code into machine code as a list of byte integers.
@@ -720,7 +739,7 @@ class InstructionParser:
                 continue
 
         return machine_code
-                
+
     def execute_and_print(self, instruction: str) -> None:
         """
         Executes an assembly instruction and shows only the registers that changed.
@@ -746,12 +765,23 @@ class CpuX8086():
         self.parser = InstructionParser()
         self.instructions_set = self.parser.supported_instructions
         self.register_set = self.parser.supported_registers
-        
+
     def parse_instruction(self, cmd) -> None:
+        """Parse the assembler instructions affecting the registers if necesary.
+        
+
+        Parameters:
+            cmd {str}: Assembler instruction.
+
+
+        Returns:
+            None.
+
+        """       
         self.parser.execute_and_print(cmd)
 
     #  https://www.geeksforgeeks.org/python-program-to-add-two-binary-numbers/
-    def _find_matches(self, d: Dict[str, str], item: str) -> str:
+    def _find_matches(self, d: Dict[str, str], item: str):
         """
 
         Parameters:
@@ -768,7 +798,7 @@ class CpuX8086():
 
         return None
 
-    def _16to8(self, hl: int) -> List[int]:
+    def _16to8(self, hl: int) -> Tuple[int]:
         """Decode a 16-bit number in 2 8-bit numbers
 
         Parameters:
@@ -783,26 +813,9 @@ class CpuX8086():
 
         return h, l
 
-    @property
-    def bits(self):
-        return self._bits
-
     @staticmethod
     def _not_yet():
         print("This part of the CPU hasn't been implemented yet. =)")
-
-    @dispatch(int)
-    def get_bin(x: int) -> str:
-        """Convert any integer into 8 bit binary format.
-
-        Parameters:
-            x (int): The integer to be converted.
-
-        Returns:
-            str: 8 bit binary as string.
-        """
-
-        return format(int(x, 2), '08b')
 
     @dispatch(int)
     def get_bin(self, x: int) -> str:
@@ -814,7 +827,7 @@ class CpuX8086():
         Returns:
             str: 16 bit binary as string.
         """
-        return format(x, '0' + str(self._bits) + 'b')
+        return format(x, '016b')
 
     @dispatch(int)
     def get_hex(self, x: int) -> str:
@@ -828,7 +841,7 @@ class CpuX8086():
         """
 
         return format(x, '04X')
-    
+
     def assemble(self, memory: Memory, code: str) -> str:
         """
         Assemble the code into machine code.
@@ -840,14 +853,14 @@ class CpuX8086():
         Returns:
             str: Machine code.
         """
-        
+
         machine_code = self.parser.assemble(code)
         if len(machine_code)>0:
             print("Machine code:", machine_code)
-            memory.offset_cursor+len(machine_code)
-            
+            memory.offset_cursor+=len(machine_code)
+
         return machine_code
-    
+
     def print_registers(self) -> None:
         """ Print the CPU registers and it's value."""
         self.parser.register_set.print_registers()
@@ -873,9 +886,9 @@ class CpuX8086():
                             memory.peek(memory.active_page, source))
             print(f"{from_end - from_begin} byte/s copied.")
             return True
-        else:
-            print("Invalid value.")
-            return False
+
+        print("Invalid value.")
+        return False
 
     def fill(self, memory: Memory, start: int, end: int, pattern: str) -> bool:
         """Fill a memory region with a specified pattern.
@@ -1089,4 +1102,4 @@ class CpuX8086():
         """
         for i in range(0, number - 1):
             memory.poke(memory.active_page, address, disk.read(firstsector + i))
- 
+
