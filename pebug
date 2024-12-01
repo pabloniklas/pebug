@@ -17,6 +17,10 @@ def pebug_main(filename="pebug_disk.bin"):
     
     Keyword arguments:
     filename: the filename of the virtual disk (default is pebug_disk.bin)
+    
+    References:
+       https://montcs.bloomu.edu/Information/LowLevel/DOS-Debug.html
+
     """
 
     memory = Memory(10) # 640 Kb
@@ -49,8 +53,7 @@ def pebug_main(filename="pebug_disk.bin"):
     print("")
     print("> Type 'q' to quit the program.")
 
-    """https://montcs.bloomu.edu/Information/LowLevel/DOS-Debug.html"""
-    mode = "■"
+    mode = "C"
     cmd = prompt(mode)
     while not re.match(r"^[qQ]", cmd):
 
