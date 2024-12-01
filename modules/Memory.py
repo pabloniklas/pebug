@@ -20,7 +20,12 @@ class Memory:
         self._offsets = 65536  # 64K per page
         self._memory = [[0b00000000] * self._offsets for _ in range(self.pages)]
 
-    def __str__(self) -> str: 
+    def __str__(self) -> str:
+        """Overload of the str() function.
+
+        Returns:
+            str: A string with the memory pages and offsets.
+        """
         return f"{self.pages} * {self._offsets}"
 
     @dispatch(int)
