@@ -17,19 +17,30 @@ class Disk:
         self._size = size
         self._disk = [0b00000000] * self._size
 
-    @property
-    def __str__(self):
-        """ Diskinfo """
+
+    def __str__(self) -> str:
+        """Overload of the str() function.
+
+        Returns:
+            str: A string with the filename and size of the disk.
+        """
         return f"Filename: {self._filename} // Size: {self._size} bytes."
 
-    @property
-    def size(self):
-        """ Disk size """
+    def size(self) -> int:
+        """Size of the virtual disk.
+
+        Returns:
+            int: Size in bytes of the virtual disk.
+        """
         return self._size
 
-    @property
-    def filename(self, name):
-        """ Filename of the real disk """
+    def filename(self, name: str) -> None:
+        """Set the filename of the virtual disk.
+
+        Args:
+            name (str): Name of the file.
+        """
+        
         self._filename = name
 
     def write(self, sector: int, value: int) -> bool:
@@ -76,16 +87,16 @@ class Disk:
             bool: True if was successful, False if not,
         """
         try:
-            f = open(self._filename, 'rb')
+            with open(self._filename, 'rb') as f:
+                content = f.read()
         except IOError:
             print(f"Disk.load(): Problem accessing {self._filename}")
             return False
-        else:
-            content = f.read()
-            f.close()
-            for i in range(0, len(content)):
-                self._disk[i] = content[i]
-            return True
+
+        for i, value in enumerate(content):
+            self._disk[i] = value
+        return True
+
 
     def save(self) -> bool:
         """Save the virtual disk to a real file.
