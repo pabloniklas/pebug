@@ -12,8 +12,12 @@ from modules.Disk import Disk
 from modules.Memory import Memory
 from modules.CpuX8086 import CpuX8086
 
-
 def pebug_main(filename="pebug_disk.bin"):
+    """Main method
+    
+    Keyword arguments:
+    filename: the filename of the virtual disk (default is pebug_disk.bin)
+    """
 
     memory = Memory(10) # 640 Kb
     stack = Memory(1)
@@ -46,7 +50,7 @@ def pebug_main(filename="pebug_disk.bin"):
     print("> Type 'q' to quit the program.")
 
     """https://montcs.bloomu.edu/Information/LowLevel/DOS-Debug.html"""
-    mode = "C"
+    mode = "■"
     cmd = prompt(mode)
     while not re.match(r"^[qQ]", cmd):
 
@@ -119,15 +123,15 @@ def pebug_main(filename="pebug_disk.bin"):
                 for mc in machine_code:
                     memory.poke(memory.active_page, memory.offset_cursor, mc)
                     memory.offset_cursor += 1
-                    
+
                 cmd = prompt(f"{'%04X' % memory.active_page}:{'%04X' % memory.offset_cursor}")
         else:
             _error_msg()
 
         mode = "C"
         cmd = prompt(mode)
-        
-    # Save the virtual disk to a real disk.        
+
+    # Save the virtual disk to a real disk.
     disk.save()
 
 
@@ -155,17 +159,37 @@ def _show_result(cpu: CpuX8086, oper: str, a: int, b: int, r: int):
 
 ## To be used in the future
 def setname(disk: Disk, cmd: str):
+    """Set the name of the virtual disk
+
+    Args:
+        disk (Disk): Disk object.
+        cmd (str): Command string to be parsed.
+    """
     args = cmd.split(" ")
     args[1] = args[1][1:]  # To strip the initial '
     filename = " ".join(args[1:])
     disk.filename(filename)
 
 def parse(cpu: CpuX8086, cmd: str):
+    """Parse the assembler instruction
+
+    Args:
+        cpu (CpuX8086): CPU Object.
+        cmd (str): Command string to be parsed.
+    """
     args = cmd.split(" ")
     line = args[1:]
     cpu.parse_instruction(" ".join(line))
 
 def write(disk: Disk, memory: Memory, cpu: CpuX8086, cmd: str):
+    """Write to vdisk the Memory object.
+
+    Args:
+        disk (Disk): Disk object.
+        memory (Memory): Memory object.
+        cpu (CpuX8086): CPU Object.
+        cmd (str): Command string to be parsed.
+    """
     args = cmd.split(" ")
     address = int(args[1], 16)
     firstsector = int(args[2], 16)
@@ -174,6 +198,14 @@ def write(disk: Disk, memory: Memory, cpu: CpuX8086, cmd: str):
 
 
 def read(disk: Disk, memory: Memory, cpu: CpuX8086, cmd: str):
+    """Read from vdisk to the Memory object.
+
+    Args:
+        disk (Disk): Disk object.
+        memory (Memory): Memory object.
+        cpu (CpuX8086): CPU Object.
+        cmd (str): Command string to be parsed.
+    """
     args = cmd.split(" ")
     address = int(args[1], 16)
     firstsector = int(args[2], 16)
@@ -182,6 +214,13 @@ def read(disk: Disk, memory: Memory, cpu: CpuX8086, cmd: str):
 
 
 def move(cpu: CpuX8086, memory: Memory, cmd: str):
+    """Move data from one memory location to another.
+
+    Args:
+        cpu (CpuX8086): CPU Object.
+        memory (Memory): Memory object.
+        cmd (str): Command string to be parsed.
+    """
     args = cmd.split(" ")
     oper1 = int(args[1], 16)
     oper2 = int(args[2], 16)
@@ -190,6 +229,13 @@ def move(cpu: CpuX8086, memory: Memory, cmd: str):
 
 
 def string_poke(cpu: CpuX8086, memory: Memory, cmd: str):
+    """Load a string into memory.
+
+    Args:
+        cpu (CpuX8086): CPU Object.
+        memory (Memory): Memory object.
+        cmd (str): Command string to be parsed.
+    """
     args = cmd.split(" ")
     address = int(args[1], 16)
     args[2] = args[2][1:]  # To strip the initial '
@@ -198,6 +244,12 @@ def string_poke(cpu: CpuX8086, memory: Memory, cmd: str):
 
 
 def byte_poke(memory: Memory, cmd: str):
+    """Poke a byte into memory.
+
+    Args:
+        memory (Memory): Memory object.
+        cmd (str): Command string to be parsed.
+    """
     args = cmd.split(" ")
     address = int(args[1], 16)
     value = int(args[2], 16)
@@ -205,6 +257,13 @@ def byte_poke(memory: Memory, cmd: str):
 
 
 def compare(cpu: CpuX8086, memory: Memory, cmd: str):
+    """Compare two memory locations.
+
+    Args:
+        cpu (CpuX8086): CPU Object.
+        memory (Memory): Memory object.
+        cmd (str): Command string to be parsed.
+    """
     args = cmd.split(" ")
     oper1 = int(args[1], 16)
     oper2 = int(args[2], 16)
@@ -215,6 +274,11 @@ def compare(cpu: CpuX8086, memory: Memory, cmd: str):
 
 
 def hex_cmd(cmd: str):
+    """Returns the sum and subtraction of two hexadecimal numbers.
+
+    Args:
+        cmd (str): Command string to be parsed.
+    """
     args = cmd.split(" ")
     oper1 = int(args[1], 16)
     oper2 = int(args[2], 16)
@@ -224,6 +288,13 @@ def hex_cmd(cmd: str):
 
 
 def search(cpu: CpuX8086, memory: Memory, cmd: str):
+    """Search for a pattern in memory. And print the results.
+
+    Args:
+        cpu (CpuX8086): CPU Object.
+        memory (Memory): Memory object.
+        cmd (str): Command string to be parsed.
+    """
     args = cmd.split(" ")
     start = int(args[1], 16)
     pattern = args[2]
@@ -233,6 +304,13 @@ def search(cpu: CpuX8086, memory: Memory, cmd: str):
 
 
 def reset_memory_range(cpu: CpuX8086, memory: Memory, cmd: str):
+    """Reset a memory range to 0.
+
+    Args:
+        cpu (CpuX8086): CPU Object.
+        memory (Memory): MNemory object.
+        cmd (str): Command string to be parsed.
+    """
     args = cmd.split(" ")
     start = int(args[1], 16)
     end = int(args[2], 16)
@@ -240,6 +318,13 @@ def reset_memory_range(cpu: CpuX8086, memory: Memory, cmd: str):
 
 
 def fill_memory_range(cpu: CpuX8086, memory: Memory, cmd: str):
+    """Fill a memory range with a pattern.
+
+    Args:
+        cpu (CpuX8086): CPU Object.
+        memory (Memory): Memory object.
+        cmd (str): Command line to be parsed.
+    """
     args = cmd.split(" ")
     start = int(args[1], 16)
     end = int(args[2], 16)
@@ -248,11 +333,24 @@ def fill_memory_range(cpu: CpuX8086, memory: Memory, cmd: str):
 
 
 def setting_memory_page(memory: Memory, cmd: str):
+    """Set the active memory page.
+
+    Args:
+        memory (Memory): Memory object.
+        cmd (str): Command line to be parsed.
+    """
     arg = cmd.split(" ")
     memory.active_page = int(arg[1], 16)
 
 
 def display(cpu: CpuX8086, memory: Memory, cmd: str):
+    """Display the content of a memory range.
+
+    Args:
+        cpu (CpuX8086): CPU Object.
+        memory (Memory): Memory Object.
+        cmd (str): Command line to be parsed.
+    """
     args = cmd.split(" ")
     a = int(args[1], 16)
     b = int(args[2], 16)
@@ -260,6 +358,13 @@ def display(cpu: CpuX8086, memory: Memory, cmd: str):
 
 
 def cat(cpu: CpuX8086, disk: Disk, cmd: str):
+    """Display the content of a disk.
+
+    Args:
+        cpu (CpuX8086): CPU Object.
+        disk (Disk): Disk Object.
+        cmd (str): Command line to be parsed.
+    """
     args = cmd.split(" ")
     a = int(args[1], 16)
     b = int(args[2], 16)
@@ -267,6 +372,12 @@ def cat(cpu: CpuX8086, disk: Disk, cmd: str):
 
 
 def demo(cpu: CpuX8086, memory: Memory):
+    """A Demo text to be loaded into memory.
+
+    Args:
+        cpu (CpuX8086): CPU Object.
+        memory (Memory): Memory Object.
+    """
 
     def fortune_cookie():
         fortunes = [
@@ -292,6 +403,14 @@ def demo(cpu: CpuX8086, memory: Memory):
 
 
 def prompt(mode: str = "-"):
+    """Define the prompt.
+
+    Args:
+        mode (str, optional): Mode.
+
+    Returns:
+        str: Prompt.
+    """
     cmd = input(f"[{mode}]=> ")
     return cmd
 
