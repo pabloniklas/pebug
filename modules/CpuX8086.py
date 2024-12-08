@@ -17,9 +17,11 @@ from rply import (
 if __name__ is not None and "." in __name__:
     from .Memory import Memory
     from .Disk import Disk
+    from .Terminal import Terminal
 else:
     from Memory import Memory
     from Disk import Disk
+    from Terminal import Terminal
 
 # https://joshsharp.com.au/blog/rpython-rply-interpreter-1.html
 
@@ -45,6 +47,7 @@ class RegisterSet:
         # Diccionario para rastrear los valores anteriores de los registros
         self.last_values = self.registers.copy()
         self.registers_supported = list(self.registers.keys())        
+        self.terminal = Terminal()
 
 
     @dispatch(str)
@@ -109,15 +112,15 @@ class RegisterSet:
         Returns:
             None
         """
-        print(f"{'Register':<8} {'Decimal':<10} {'Hexadecimal':<12} {'Binary':<18}")
-        print("-" * 50)
+        self.terminal.info_message(f"{'Register':<8} {'Decimal':<10} {'Hexadecimal':<12} {'Binary':<18}")
+        self.terminal.info_message("-" * 50)
         for reg, value in self.registers.items():
             if value != self.last_values[reg]:  # Comparar con el valor anterior
                 dec_value = value
                 hex_value = f"0x{value:04X}"
                 bin_value = f"{value:016b}"
-                print(f"{reg:<8} {dec_value:<10} {hex_value:<12} {bin_value:<18}")
-        print("-" * 50)
+                self.terminal.info_message(f"{reg:<8} {dec_value:<10} {hex_value:<12} {bin_value:<18}")
+        self.terminal.info_message("-" * 50)
 
     def print_registers(self) -> None:
         """
@@ -126,20 +129,20 @@ class RegisterSet:
         Returns:
             None
         """
-        print(f"{'Register':<8} {'Decimal':<10} {'Hexadecimal':<12} {'Binary':<18}")
-        print("-" * 50)
+        self.terminal.info_message(f"{'Register':<8} {'Decimal':<10} {'Hexadecimal':<12} {'Binary':<18}")
+        self.terminal.info_message("-" * 50)
         for reg, value in self.registers.items():
             dec_value = value
             hex_value = f"0x{value:04X}"
             bin_value = f"{value:016b}"
-            print(f"{reg:<8} {dec_value:<10} {hex_value:<12} {bin_value:<18}")
+            self.terminal.info_message(f"{reg:<8} {dec_value:<10} {hex_value:<12} {bin_value:<18}")
 
         # Print the flags below the registers
-        print("\nStatus Flags:")
-        print(f"Zero Flag (ZF): {self.flags['ZF']}")
-        print(f"Sign Flag (SF): {self.flags['SF']}")
-        print(f"Parity Flag (PF): {self.flags['PF']}")
-        print(f"Carry Flag (CF): {self.flags['CF']}")
+        self.terminal.info_message("\nStatus Flags:")
+        self.terminal.info_message(f"Zero Flag (ZF): {self.flags['ZF']}")
+        self.terminal.info_message(f"Sign Flag (SF): {self.flags['SF']}")
+        self.terminal.info_message(f"Parity Flag (PF): {self.flags['PF']}")
+        self.terminal.info_message(f"Carry Flag (CF): {self.flags['CF']}")
 
 
     def set_register_upper(self, reg: int, value: int) -> int:
@@ -200,6 +203,7 @@ class InstructionParser:
         self.pg.production("operand : NUMBER")(self.operand_number)
         self.pg.error(self.handle_parse_error)
         self.parser = self.pg.build()
+        self.terminal = Terminal()
 
         self.opcode_map = {
             'MOV': {'reg, imm16': 'B8', 'reg, reg': '89', 'mem, reg': '8B', 'reg, mem': '8A'},
@@ -274,9 +278,9 @@ class InstructionParser:
             try:
                 method(operands)
             except Exception as e:
-                print(f"ERROR: Execution error in '{opcode} {operands}': {e}")
+                self.terminal.error_message(f"ERROR: Execution error in '{opcode} {operands}': {e}")
         else:
-            print(f"ERROR: Unsupported instruction '{opcode}'.")
+            self.terminal.error_message(f"ERROR: Unsupported instruction '{opcode}'.")
 
     def operands_multiple(self, p: list) -> list:
         """
@@ -322,7 +326,7 @@ class InstructionParser:
             else:
                 return int(value)  # Decimal
         except ValueError:
-            print(f"ERROR: Invalid number format '{value}'. Expected binary (0b), hex (0x), or decimal.")
+            self.terminal.error_message(f"ERROR: Invalid number format '{value}'. Expected binary (0b), hex (0x), or decimal.")
             return None
 
     def handle_parse_error(self, token) -> None:
@@ -335,8 +339,8 @@ class InstructionParser:
         Returns:
             None
         """
-        print(f"SYNTAX ERROR: Unexpected token '{token.getstr()}' at position {token.getsourcepos().idx}.")
-        print("TIP: Check the instruction format. An instruction should follow 'OPCODE REGISTER, NUMBER' or 'OPCODE REGISTER, REGISTER'.")
+        self.terminal.error_message(f"SYNTAX ERROR: Unexpected token '{token.getstr()}' at position {token.getsourcepos().idx}.")
+        self.terminal.info_message("TIP: Check the instruction format. An instruction should follow 'OPCODE REGISTER, NUMBER' or 'OPCODE REGISTER, REGISTER'.")
 
     def parse(self, instruction: str) -> dict:
         """
@@ -405,8 +409,8 @@ class InstructionParser:
             else:
                 self.register_set.set(dest, self.register_set.get(src))
         except KeyError:
-            print(f"ERROR: Invalid register '{dest}' or '{src}' in MOV operation.")
-            print("TIP: Ensure that both operands are valid registers or an immediate value.")
+            self.terminal.error_message(f"ERROR: Invalid register '{dest}' or '{src}' in MOV operation.")
+            self.terminal.info_message("TIP: Ensure that both operands are valid registers or an immediate value.")
 
     @dispatch(list)
     def asm_add(self, operands: list) -> None:
@@ -425,8 +429,8 @@ class InstructionParser:
             self.register_set.set(dest, result & 0xFFFF)
             self.register_set.update_flags(result, operation='ADD')
         except KeyError:
-            print(f"ERROR: Invalid register '{dest}' or '{src}' in ADD operation.")
-            print("TIP: Both operands must be valid registers or an immediate value.")
+            self.terminal.error_message(f"ERROR: Invalid register '{dest}' or '{src}' in ADD operation.")
+            self.terminal.info_message("TIP: Both operands must be valid registers or an immediate value.")
 
     @dispatch(list)
     def asm_sub(self, operands: list) -> None:
@@ -445,8 +449,8 @@ class InstructionParser:
             self.register_set.set(dest, result & 0xFFFF)
             self.register_set.update_flags(result, operation='SUB')
         except KeyError:
-            print(f"ERROR: Invalid register '{dest}' or '{src}' in SUB operation.")
-            print("TIP: Both operands must be valid registers or an immediate value.")
+            self.terminal.error_message(f"ERROR: Invalid register '{dest}' or '{src}' in SUB operation.")
+            self.terminal.info_message("TIP: Both operands must be valid registers or an immediate value.")
 
     @dispatch(list)
     def asm_and(self, operands: list) -> None:
@@ -465,8 +469,8 @@ class InstructionParser:
             self.register_set.set(dest, result)
             self.register_set.update_flags(result)
         except KeyError:
-            print(f"ERROR: Invalid register '{dest}' or '{src}' in AND operation.")
-            print("TIP: Both operands must be valid registers or an immediate value.")
+            self.terminal.error_message(f"ERROR: Invalid register '{dest}' or '{src}' in AND operation.")
+            self.terminal.info_message("TIP: Both operands must be valid registers or an immediate value.")
 
     @dispatch(list)
     def asm_or(self, operands: list) -> None:
@@ -485,8 +489,8 @@ class InstructionParser:
             self.register_set.set(dest, result)
             self.register_set.update_flags(result)
         except KeyError:
-            print(f"ERROR: Invalid register '{dest}' or '{src}' in OR operation.")
-            print("TIP: Both operands must be valid registers or an immediate value.")
+            self.terminal.error_message(f"ERROR: Invalid register '{dest}' or '{src}' in OR operation.")
+            self.terminal.info_message("TIP: Both operands must be valid registers or an immediate value.")
 
     @dispatch(list)
     def asm_xor(self, operands: list) -> None:
@@ -505,8 +509,8 @@ class InstructionParser:
             self.register_set.set(dest, result)
             self.register_set.update_flags(result)
         except KeyError:
-            print(f"ERROR: Invalid register '{dest}' or '{src}' in XOR operation.")
-            print("TIP: Both operands must be valid registers or an immediate value.")
+            self.terminal.error_message(f"ERROR: Invalid register '{dest}' or '{src}' in XOR operation.")
+            self.terminal.info_message("TIP: Both operands must be valid registers or an immediate value.")
 
     @dispatch(list)
     def asm_not(self, operands: list) -> None:
@@ -525,8 +529,8 @@ class InstructionParser:
             self.register_set.set(dest, result)
             self.register_set.update_flags(result)
         except KeyError:
-            print(f"ERROR: Invalid register '{dest}' in NOT operation.")
-            print("TIP: Ensure the operand is a valid register.")
+            self.terminal.error_message(f"ERROR: Invalid register '{dest}' in NOT operation.")
+            self.terminal.info_message("TIP: Ensure the operand is a valid register.")
 
     @dispatch(list)
     def asm_neg(self, operands: list) -> None:
@@ -545,8 +549,8 @@ class InstructionParser:
             self.register_set.set(dest, result)
             self.register_set.update_flags(result, operation='SUB')
         except KeyError:
-            print(f"ERROR: Invalid register '{dest}' in NEG operation.")
-            print("TIP: Ensure the operand is a valid register.")
+            self.terminal.error_message(f"ERROR: Invalid register '{dest}' in NEG operation.")
+            self.terminal.info_message("TIP: Ensure the operand is a valid register.")
 
     @dispatch(list)
     def asm_inc(self, operands: list) -> None:
@@ -565,8 +569,8 @@ class InstructionParser:
             self.register_set.set(dest, result & 0xFFFF)
             self.register_set.update_flags(result)
         except KeyError:
-            print(f"ERROR: Invalid register '{dest}' in INC operation.")
-            print("TIP: Ensure the operand is a valid register.")
+            self.terminal.error_message(f"ERROR: Invalid register '{dest}' in INC operation.")
+            self.terminal.info_message("TIP: Ensure the operand is a valid register.")
 
     @dispatch(list)
     def asm_dec(self, operands: list) -> None:
@@ -585,8 +589,8 @@ class InstructionParser:
             self.register_set.set(dest, result & 0xFFFF)
             self.register_set.update_flags(result, operation='SUB')
         except KeyError:
-            print(f"ERROR: Invalid register '{dest}' in DEC operation.")
-            print("TIP: Ensure the operand is a valid register.")
+            self.terminal.error_message(f"ERROR: Invalid register '{dest}' in DEC operation.")
+            self.terminal.info_message("TIP: Ensure the operand is a valid register.")
 
     @dispatch(list)
     def asm_shl(self, operands: list) -> None:
@@ -622,8 +626,8 @@ class InstructionParser:
             self.register_set.set(dest, result & 0xFFFF)
             self.register_set.update_flags(result)
         except KeyError:
-            print(f"ERROR: Invalid register '{dest}' in SHL operation.")
-            print("TIP: Ensure the operand is a valid register.")
+            self.terminal.error_message(f"ERROR: Invalid register '{dest}' in SHL operation.")
+            self.terminal.info_message("TIP: Ensure the operand is a valid register.")
 
     @dispatch(list)
     def asm_shr(self, operands: list) -> None:
@@ -642,8 +646,8 @@ class InstructionParser:
             self.register_set.set(dest, result)
             self.register_set.update_flags(result)
         except KeyError:
-            print(f"ERROR: Invalid register '{dest}' in SHR operation.")
-            print("TIP: Ensure the operand is a valid register.")
+            self.terminal.error_message(f"ERROR: Invalid register '{dest}' in SHR operation.")
+            self.terminal.info_message("TIP: Ensure the operand is a valid register.")
 
     @dispatch(list)
     def asm_rol(self, operands: list) -> None:
@@ -663,8 +667,8 @@ class InstructionParser:
             self.register_set.set(dest, result)
             self.register_set.update_flags(result)
         except KeyError:
-            print(f"ERROR: Invalid register '{dest}' in ROL operation.")
-            print("TIP: Ensure the operand is a valid register.")
+            self.terminal.error_message(f"ERROR: Invalid register '{dest}' in ROL operation.")
+            self.terminal.info_message("TIP: Ensure the operand is a valid register.")
 
     @dispatch(list)
     def asm_ror(self, operands: list) -> None:
@@ -684,8 +688,8 @@ class InstructionParser:
             self.register_set.set(dest, result)
             self.register_set.update_flags(result)
         except KeyError:
-            print(f"ERROR: Invalid register '{dest}' in ROR operation.")
-            print("TIP: Ensure the operand is a valid register.")
+            self.terminal.error_message(f"ERROR: Invalid register '{dest}' in ROR operation.")
+            self.terminal.info_message("TIP: Ensure the operand is a valid register.")
 
 
     def assemble(self, asm_code: str) -> List[int]:
@@ -735,7 +739,7 @@ class InstructionParser:
                         raise ValueError(f"Unsupported operand format in line {line_num}: '{line}'")
 
             except (ValueError, KeyError) as e:
-                print(f"ERROR: {e}")
+                self.terminal.error_message(f"ERROR: {e}")
                 continue
 
         return machine_code
@@ -754,7 +758,7 @@ class InstructionParser:
             self.parse(instruction)
             self.register_set.print_changed_registers()
         except Exception as e:
-            print(f"ERROR: Execution failed for instruction '{instruction}'. Details: {e}")
+            self.terminal.error_message(f"ERROR: Execution failed for instruction '{instruction}'. Details: {e}")
 
 class CpuX8086():
     """
@@ -765,6 +769,7 @@ class CpuX8086():
         self.parser = InstructionParser()
         self.instructions_set = self.parser.supported_instructions
         self.register_set = self.parser.supported_registers
+        self.terminal = Terminal()
 
     def parse_instruction(self, cmd) -> None:
         """Parse the assembler instructions affecting the registers if necesary.
@@ -856,7 +861,7 @@ class CpuX8086():
 
         machine_code = self.parser.assemble(code)
         if len(machine_code)>0:
-            print("Machine code:", machine_code)
+            self.terminal.info_message("Machine code:", machine_code)
             memory.offset_cursor+=len(machine_code)
 
         return machine_code
@@ -884,10 +889,10 @@ class CpuX8086():
                     if destination + source == from_begin else destination + source - from_begin
                 memory.poke(memory.active_page, dist_pointer,
                             memory.peek(memory.active_page, source))
-            print(f"{from_end - from_begin} byte/s copied.")
+            self.terminal.success_message(f"{from_end - from_begin} byte/s copied.")
             return True
 
-        print("Invalid value.")
+        self.terminal.error_message("Invalid value.")
         return False
 
     def fill(self, memory: Memory, start: int, end: int, pattern: str) -> bool:
@@ -1007,20 +1012,20 @@ class CpuX8086():
                 byte = disk.read(pointer + addrb)
                 peek = "%02X" % byte
                 ascvisual += chr(byte) if chr(byte).isprintable() else "."
-                print(f"{peek} ", end="", flush=True)
+                self.terminal.success_message(f"{peek} ", end="", flush=True)
 
-            print(" " * ((bytes_per_row - pointer) * 3) + ascvisual)
+            self.terminal.success_message(" " * ((bytes_per_row - pointer) * 3) + ascvisual)
         else:  # two or more rows
             while pointer + addrb < addrn:
                 if pointer % bytes_per_row == 0:
-                    print(" " * ((bytes_per_row - pointer) * 3) + ascvisual)
+                    self.terminal.success_message(" " * ((bytes_per_row - pointer) * 3) + ascvisual)
                     ascvisual = ""
-                    print(f"{'%06X' % (pointer + addrb)} ", end="", flush=True)
+                    self.terminal.success_message(f"{'%06X' % (pointer + addrb)} ", end="", flush=True)
 
                 byte = disk.read(pointer + addrb)
                 peek = "%02X" % byte
                 ascvisual += chr(byte) if chr(byte).isprintable() else "."
-                print(f"{peek} ", end="", flush=True)
+                self.terminal.success_message(f"{peek} ", end="", flush=True)
                 pointer += 1
 
         print("")
@@ -1043,13 +1048,13 @@ class CpuX8086():
         ascvisual = ""
 
         if addrn - addrb < bytes_per_row:  # One single row
-            print(
+            self.terminal.success_message(
                 f"{'%04X' % memory.active_page}:{'%04X' % (pointer + addrb)} ", end="", flush=True)
             for address in range(addrb, addrn):
                 byte = memory.peek(page, pointer + addrb)
                 peek = "%02X" % byte
                 ascvisual += chr(byte) if chr(byte).isprintable() else "."
-                print(f"{peek} ", end="", flush=True)
+                self.terminal.success_message(f"{peek} ", end="", flush=True)
 
             print(" " * ((bytes_per_row - pointer) * 3) + ascvisual)
         else:  # two or more rows
@@ -1057,13 +1062,12 @@ class CpuX8086():
                 if pointer % bytes_per_row == 0:
                     print(" " * ((bytes_per_row - pointer) * 3) + ascvisual)
                     ascvisual = ""
-                    print(
-                        f"{'%04X' % memory.active_page}:{'%04X' % (pointer + addrb)} ", end="", flush=True)
+                    self.terminal.success_message(f"{'%04X' % memory.active_page}:{'%04X' % (pointer + addrb)} ", end="")
 
                 byte = memory.peek(page, pointer + addrb)
                 peek = "%02X" % byte
                 ascvisual += chr(byte) if chr(byte).isprintable() else "."
-                print(f"{peek} ", end="", flush=True)
+                self.terminal.success_message(f"{peek} ", end="", flush=True)
                 pointer += 1
 
         print("")
