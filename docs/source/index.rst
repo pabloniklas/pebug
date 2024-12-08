@@ -33,6 +33,9 @@ API Reference
    :members:
    :show-inheritance:
 
+.. autoclass:: Terminal
+   :members:
+   :show-inheritance:
 
 Index and tables
 ==================
