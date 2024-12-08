@@ -7,3 +7,4 @@ modules
    CpuX8086
    Disk
    Memory
+   Terminal
