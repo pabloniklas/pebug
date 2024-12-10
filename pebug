@@ -11,7 +11,7 @@ from multipledispatch import dispatch
 from modules.Disk import Disk
 from modules.Memory import Memory
 from modules.CpuX8086 import CpuX8086
-from modules.Terminal import Terminal
+from modules.Terminal import Terminal, AnsiColors
 
 def pebug_main(filename="pebug_disk.bin"):
     """Main method
@@ -35,26 +35,26 @@ def pebug_main(filename="pebug_disk.bin"):
 
     # From https://patorjk.com/software/taag/#p=testall&f=Graffiti&t=PEBUG
 
-    terminal.info_message("""
+    print(f"""{AnsiColors.BRIGHT_YELLOW.value}
 ░       ░░░        ░░       ░░░  ░░░░  ░░░      ░░
 ▒  ▒▒▒▒  ▒▒  ▒▒▒▒▒▒▒▒  ▒▒▒▒  ▒▒  ▒▒▒▒  ▒▒  ▒▒▒▒▒▒▒
 ▓       ▓▓▓      ▓▓▓▓       ▓▓▓  ▓▓▓▓  ▓▓  ▓▓▓   ▓
 █  ████████  ████████  ████  ██  ████  ██  ████  █
-█  ████████        ██       ████      ████      ██
-                                                   v1.1
+█  ████████        ██       ████      ████      ██{AnsiColors.RESET.value}
+                                                  {AnsiColors.BRIGHT_GREEN.value}v1.1{AnsiColors.RESET.value}
     """)
 
-    terminal.info_message("> An x86 DOS-debug-inspired program written in Python.")
-    terminal.info_message("> By Pablo Niklas <pablo.niklas@gmail.com>.")
-    terminal.info_message("> Online manual at https://pebug.readthedocs.io")
-    terminal.info_message(f"> History file: {readline.get_history_length()} lines loaded.")
-    terminal.info_message(f"> Main memory size: {memory.pages} pages.")
-    terminal.info_message(f"> Stack size: {stack.pages} page/s.")
-    terminal.info_message(f"> Virtual disk size: {disk.size} bytes.")
-    terminal.info_message(f"> Supported instructions: {len(cpu.instructions_set)} ({', '.join(sorted(cpu.instructions_set) ) })")
-    terminal.info_message(f"> Supported registers: {len(cpu.register_set)} ({', '.join(sorted(cpu.register_set))})")
-    terminal.info_message("")
-    terminal.info_message("> Type 'q' to quit the program.")
+    print(f"{AnsiColors.BRIGHT_CYAN.value}> \033[1;37mAn x86 DOS-debug-inspired program written in Python.{AnsiColors.RESET.value}")
+    print(f"{AnsiColors.BRIGHT_CYAN.value}> \033[1;37m\033[1;37mBy {AnsiColors.BRIGHT_CYAN.value}Pablo Niklas <pablo.niklas@gmail.com>.{AnsiColors.RESET.value}")
+    print(f"{AnsiColors.BRIGHT_CYAN.value}> \033[1;37mOnline manual at {AnsiColors.BRIGHT_BLUE.value}https://pebug.readthedocs.io{AnsiColors.RESET.value}")
+    print(f"{AnsiColors.BRIGHT_CYAN.value}> \033[1;37mHistory file: {AnsiColors.BRIGHT_YELLOW.value}{readline.get_history_length()} lines loaded.{AnsiColors.RESET.value}")
+    print(f"{AnsiColors.BRIGHT_CYAN.value}> \033[1;37mMain memory size: {AnsiColors.BRIGHT_YELLOW.value}{memory.pages} pages.{AnsiColors.RESET.value}")
+    print(f"{AnsiColors.BRIGHT_CYAN.value}> \033[1;37mStack size: {AnsiColors.BRIGHT_YELLOW.value}{stack.pages} page/s.{AnsiColors.RESET.value}")
+    print(f"{AnsiColors.BRIGHT_CYAN.value}> \033[1;37mVirtual disk size: {AnsiColors.BRIGHT_YELLOW.value}{disk.size} bytes.{AnsiColors.RESET.value}")
+    print(f"{AnsiColors.BRIGHT_CYAN.value}> \033[1;37mSupported instructions: {AnsiColors.BRIGHT_MAGENTA.value}{len(cpu.instructions_set)}  {AnsiColors.WHITE.value}({', '.join(sorted(cpu.instructions_set) ) }){AnsiColors.RESET.value}")
+    print(f"{AnsiColors.BRIGHT_CYAN.value}> \033[1;37mSupported registers:  {AnsiColors.BRIGHT_GREEN.value}{len(cpu.register_set)} {AnsiColors.WHITE.value}({', '.join(sorted(cpu.register_set))}){AnsiColors.RESET.value}")
+    print("")
+    print(f"{AnsiColors.BRIGHT_CYAN.value}> \033[1;37mType 'q' to quit the program.\033[0m")
 
     mode = "C"
     cmd = prompt(mode)

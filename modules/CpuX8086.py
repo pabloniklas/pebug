@@ -17,11 +17,11 @@ from rply import (
 if __name__ is not None and "." in __name__:
     from .Memory import Memory
     from .Disk import Disk
-    from .Terminal import Terminal
+    from .Terminal import Terminal, AnsiColors
 else:
     from Memory import Memory
     from Disk import Disk
-    from Terminal import Terminal
+    from Terminal import Terminal, AnsiColors
 
 # https://joshsharp.com.au/blog/rpython-rply-interpreter-1.html
 
@@ -112,15 +112,18 @@ class RegisterSet:
         Returns:
             None
         """
-        self.terminal.info_message(f"{'Register':<8} {'Decimal':<10} {'Hexadecimal':<12} {'Binary':<18}")
-        self.terminal.info_message("-" * 50)
+        
+        c = AnsiColors  # Alias para simplificar
+        
+        print(f"{c.BRIGHT_YELLOW.value}{'Register':<8} {'Decimal':<10} {'Hexadecimal':<12} {'Binary':<18}{c.RESET.value}")
+        print(c.BRIGHT_BLACK.value+"-" * 50+c.RESET.value)
         for reg, value in self.registers.items():
             if value != self.last_values[reg]:  # Comparar con el valor anterior
                 dec_value = value
                 hex_value = f"0x{value:04X}"
                 bin_value = f"{value:016b}"
-                self.terminal.info_message(f"{reg:<8} {dec_value:<10} {hex_value:<12} {bin_value:<18}")
-        self.terminal.info_message("-" * 50)
+                print(f"{c.BRIGHT_GREEN.value}{reg:<8} {c.BRIGHT_WHITE.value}{dec_value:<10} {c.BRIGHT_BLUE.value}{hex_value:<12} {c.BRIGHT_CYAN.value}{bin_value:<18}{c.RESET.value}")
+        print(c.BRIGHT_BLACK.value+"-" * 50+c.RESET.value)
 
     def print_registers(self) -> None:
         """
