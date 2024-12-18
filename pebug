@@ -50,9 +50,9 @@ def pebug_main(filename="pebug_disk.bin"):
     print(f"{AnsiColors.BRIGHT_CYAN.value}> \033[1;37mHistory file: {AnsiColors.BRIGHT_YELLOW.value}{readline.get_history_length()} lines loaded.{AnsiColors.RESET.value}")
     print(f"{AnsiColors.BRIGHT_CYAN.value}> \033[1;37mMain memory size: {AnsiColors.BRIGHT_YELLOW.value}{memory.pages} pages.{AnsiColors.RESET.value}")
     print(f"{AnsiColors.BRIGHT_CYAN.value}> \033[1;37mStack size: {AnsiColors.BRIGHT_YELLOW.value}{stack.pages} page/s.{AnsiColors.RESET.value}")
-    print(f"{AnsiColors.BRIGHT_CYAN.value}> \033[1;37mVirtual disk size: {AnsiColors.BRIGHT_YELLOW.value}{disk.size} bytes.{AnsiColors.RESET.value}")
-    print(f"{AnsiColors.BRIGHT_CYAN.value}> \033[1;37mSupported instructions: {AnsiColors.BRIGHT_MAGENTA.value}{len(cpu.instructions_set)}  {AnsiColors.WHITE.value}({', '.join(sorted(cpu.instructions_set) ) }){AnsiColors.RESET.value}")
-    print(f"{AnsiColors.BRIGHT_CYAN.value}> \033[1;37mSupported registers:  {AnsiColors.BRIGHT_GREEN.value}{len(cpu.register_set)} {AnsiColors.WHITE.value}({', '.join(sorted(cpu.register_set))}){AnsiColors.RESET.value}")
+    print(f"{AnsiColors.BRIGHT_CYAN.value}> \033[1;37mVirtual disk size: {AnsiColors.BRIGHT_YELLOW.value}{disk.get_size()} bytes.{AnsiColors.RESET.value}")
+    print(f"{AnsiColors.BRIGHT_CYAN.value}> \033[1;37mSupported instructions: {AnsiColors.BRIGHT_MAGENTA.value}{len(cpu.instructions_set)} {AnsiColors.WHITE.value}({', '.join(sorted(cpu.instructions_set) ) }){AnsiColors.RESET.value}")
+    print(f"{AnsiColors.BRIGHT_CYAN.value}> \033[1;37mSupported registers: {AnsiColors.BRIGHT_GREEN.value}{len(cpu.register_set)} {AnsiColors.WHITE.value}({', '.join(sorted(cpu.register_set))}){AnsiColors.RESET.value}")
     print("")
     print(f"{AnsiColors.BRIGHT_CYAN.value}> \033[1;37mType 'q' to quit the program.\033[0m")
 
@@ -413,7 +413,7 @@ def prompt(mode: str = "-"):
     Returns:
         str: Prompt.
     """
-    cmd = input(f"[{mode}]=> ")
+    cmd = input(f"[{mode}]> ")
     return cmd
 
 

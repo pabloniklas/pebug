@@ -83,7 +83,7 @@ class Terminal:
         Returns:
             str: Formatted message.
         """
-        color_code = AnsiColors.BRIGHT_WHITE.value if color == self.default_color else color
+        color_code = AnsiColors.BRIGHT_WHITE.value if color == self.default_color else AnsiColors[color.upper()].value
         style_code = AnsiColors.BOLD.value if bold else ''
         
         return f"{color_code}{style_code}{message}{AnsiColors.RESET.value}"

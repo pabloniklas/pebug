@@ -16,6 +16,9 @@ class Disk:
         self._filename = os.path.join(os.path.expanduser("~"), "." + filename)
         self._size = size
         self._disk = [0b00000000] * self._size
+        
+    def get_size(self) -> int:
+        return self._size;
 
 
     def __str__(self) -> str:
