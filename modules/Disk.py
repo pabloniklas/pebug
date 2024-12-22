@@ -1,5 +1,9 @@
 import os
 
+if __name__ is not None and "." in __name__:
+    from .Terminal import Terminal, AnsiColors
+else:
+    from Terminal import Terminal, AnsiColors
 class Disk:
     """
     Class emulating a Disk.
@@ -16,8 +20,14 @@ class Disk:
         self._filename = os.path.join(os.path.expanduser("~"), "." + filename)
         self._size = size
         self._disk = [0b00000000] * self._size
+        self._terminal = Terminal()
         
     def get_size(self) -> int:
+        """Get the size of the virtual disk.
+
+        Returns:
+            int: Size in bytes of the virtual disk.
+        """
         return self._size;
 
 
@@ -59,10 +69,10 @@ class Disk:
         """
 
         if sector < 0 or sector > self._size - 1:
-            print("Invalid sector.")
+            self._terminal.error_message("Invalid sector.")
             return False
         elif value < 0 or value > 255:
-            print("Disk.write(): Invalid value.")
+            self._terminal.error_message("Disk.write(): Invalid value.")
             return False
         else:
             self._disk[int(sector)] = value
@@ -78,7 +88,7 @@ class Disk:
             int: the read byte or -1 if there were any problem.
         """
         if sector < 0 or sector > self._size - 1:
-            print("Disk.read(): Invalid sector.")
+            self._terminal.error_message("Disk.read(): Invalid sector.")
             return -1
         else:
             return self._disk[int(sector)]
@@ -93,7 +103,7 @@ class Disk:
             with open(self._filename, 'rb') as f:
                 content = f.read()
         except IOError:
-            print(f"Disk.load(): Problem accessing {self._filename}")
+            self._terminal.error_message(f"Disk.load(): Problem accessing {self._filename}")
             return False
 
         for i, value in enumerate(content):
@@ -113,13 +123,14 @@ class Disk:
                 bytes_written = f.write(binary_format)
 
             if bytes_written == self._size:
-                print("Active page saved to:", self._filename)
-                print("Size:", len(binary_format))
+                print(f"{AnsiColors.BRIGHT_CYAN.value}> \033[1;37mActive page saved to: {AnsiColors.BRIGHT_YELLOW.value}{self._filename}.{AnsiColors.RESET.value}")
+                print(f"{AnsiColors.BRIGHT_CYAN.value}> \033[1;37mSize: {AnsiColors.BRIGHT_YELLOW.value}{len(binary_format)} bytes.{AnsiColors.RESET.value}")
+
                 return True
             else:
-                print(f"Error: Expected to write {self._size} bytes, but only wrote {bytes_written} bytes.")
+                self._terminal.error_message(f"Error: Expected to write {self._size} bytes, but only wrote {bytes_written} bytes.")
                 return False
 
         except IOError:
-            print(f"Disk.save(): Problem accessing {self._filename}")
+            self._terminal.error_message(f"Disk.save(): Problem accessing {self._filename}")
             return False
