@@ -56,6 +56,13 @@ class AnsiColors(Enum):
     BRIGHT_MAGENTA = "\033[1;35m"
     BRIGHT_CYAN = "\033[1;36m"
     BRIGHT_WHITE = "\033[1;37m"
+    
+    # CRT Terminal Colors, 
+    # based on https://superuser.com/questions/361297/what-colour-is-the-dark-green-on-old-fashioned-green-screen-computer-displays/1206781#1206781
+    P1_AMBAR = "#FFB000"
+    P1_LIGHT_AMBAR = "#FFCC00"
+    P1_GREEN = "#33FF00"
+    P1_WHITE = "#282828"
 
 class Terminal:
     """Class for styled terminal messages."""
