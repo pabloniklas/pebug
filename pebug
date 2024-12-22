@@ -13,7 +13,7 @@ from modules.Memory import Memory
 from modules.CpuX8086 import CpuX8086
 from modules.Terminal import Terminal, AnsiColors
 
-def pebug_main(filename="pebug_disk.bin"):
+def pebug_main(terminal: Terminal, filename="pebug_disk.bin"):
     """Main method
     
     Keyword arguments:
@@ -25,13 +25,12 @@ def pebug_main(filename="pebug_disk.bin"):
     """
 
     memory = Memory(10) # 640 Kb
-    stack = Memory(1)
 
     disk = Disk(65536, filename)  # 64Kb
     disk.load()
 
     cpu = CpuX8086()
-    terminal = Terminal()
+    cpu.instruction_parser.register_collection.set('SP', 0xFFFE)
 
     # From https://patorjk.com/software/taag/#p=testall&f=Graffiti&t=PEBUG
 
@@ -49,15 +48,14 @@ def pebug_main(filename="pebug_disk.bin"):
     print(f"{AnsiColors.BRIGHT_CYAN.value}> \033[1;37mOnline manual at {AnsiColors.BRIGHT_BLUE.value}https://pebug.readthedocs.io{AnsiColors.RESET.value}")
     print(f"{AnsiColors.BRIGHT_CYAN.value}> \033[1;37mHistory file: {AnsiColors.BRIGHT_YELLOW.value}{readline.get_history_length()} lines loaded.{AnsiColors.RESET.value}")
     print(f"{AnsiColors.BRIGHT_CYAN.value}> \033[1;37mMain memory size: {AnsiColors.BRIGHT_YELLOW.value}{memory.pages} pages.{AnsiColors.RESET.value}")
-    print(f"{AnsiColors.BRIGHT_CYAN.value}> \033[1;37mStack size: {AnsiColors.BRIGHT_YELLOW.value}{stack.pages} page/s.{AnsiColors.RESET.value}")
+    print(f"{AnsiColors.BRIGHT_CYAN.value}> \033[1;37mStack @ {AnsiColors.BRIGHT_YELLOW.value}{cpu.get_hex(cpu.instruction_parser.register_collection.get('SP'))}.{AnsiColors.RESET.value}")
     print(f"{AnsiColors.BRIGHT_CYAN.value}> \033[1;37mVirtual disk size: {AnsiColors.BRIGHT_YELLOW.value}{disk.get_size()} bytes.{AnsiColors.RESET.value}")
     print(f"{AnsiColors.BRIGHT_CYAN.value}> \033[1;37mSupported instructions: {AnsiColors.BRIGHT_MAGENTA.value}{len(cpu.instructions_set)} {AnsiColors.WHITE.value}({', '.join(sorted(cpu.instructions_set) ) }){AnsiColors.RESET.value}")
     print(f"{AnsiColors.BRIGHT_CYAN.value}> \033[1;37mSupported registers: {AnsiColors.BRIGHT_GREEN.value}{len(cpu.register_set)} {AnsiColors.WHITE.value}({', '.join(sorted(cpu.register_set))}){AnsiColors.RESET.value}")
     print("")
     print(f"{AnsiColors.BRIGHT_CYAN.value}> \033[1;37mType 'q' to quit the program.\033[0m")
 
-    mode = "C"
-    cmd = prompt(mode)
+    cmd = prompt("⚙️")
     while not re.match(r"^[qQ]", cmd):
 
         if re.match(r"^[sS] [0-9a-f]{,4} .*$", cmd):
@@ -117,7 +115,7 @@ def pebug_main(filename="pebug_disk.bin"):
         #elif re.match(r"^[nN] ['].*[']$", cmd): # To be used in the future
         #    setname(disk, cmd)
         elif re.match(r"^[pP] .*$", cmd):
-            parse(cpu, cmd)
+            parse(cpu, memory, cmd)
 
         # Assemble mode.
         elif re.match(r"^[aA]$", cmd):
@@ -175,7 +173,7 @@ def setname(disk: Disk, cmd: str):
     filename = " ".join(args[1:])
     disk.filename(filename)
 
-def parse(cpu: CpuX8086, cmd: str):
+def parse(cpu: CpuX8086, memory: Memory, cmd: str):
     """Parse the assembler instruction
 
     Args:
@@ -184,7 +182,7 @@ def parse(cpu: CpuX8086, cmd: str):
     """
     args = cmd.split(" ")
     line = args[1:]
-    cpu.parse_instruction(" ".join(line))
+    cpu.parse_instruction(" ".join(line), memory)
 
 def write(disk: Disk, memory: Memory, cpu: CpuX8086, cmd: str):
     """Write to vdisk the Memory object.
@@ -404,7 +402,7 @@ def demo(cpu: CpuX8086, memory: Memory, terminal: Terminal):
     terminal.success_message(f"The demo text was loaded into {memory.active_page}:0000, enter 'd 0 60' to read it.")
 
 
-def prompt(mode: str = "-"):
+def prompt(mode: str = "📟"):
     """Define the prompt.
 
     Args:
@@ -413,12 +411,15 @@ def prompt(mode: str = "-"):
     Returns:
         str: Prompt.
     """
-    cmd = input(f"[{mode}]> ")
+    # cmd = input(f"[{mode}]❯ ")
+    cmd = input(f"{AnsiColors.BRIGHT_GREEN.value}•❯{AnsiColors.RESET.value} ")
     return cmd
 
 
 # Python's entry point
 if __name__ == '__main__':
+    
+    terminal = Terminal()
 
     # readline's history
     histfile = os.path.join(os.path.expanduser("~"), ".pebughist")
@@ -428,10 +429,11 @@ if __name__ == '__main__':
     except IOError:
         pass
 
-    pebug_main()
+    pebug_main(terminal)
 
     readline.write_history_file(histfile)
     print("")
-    print("Bye! =)")
+    terminal.info_message("Bye! =)")
+    terminal.success_message("✔")
 
     sys.exit(0)
