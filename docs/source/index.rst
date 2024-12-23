@@ -16,6 +16,7 @@ and introductory interface to assembler, x86 flavor in particular.
    screenshots.md
    vdisk.md
    modules
+   erd.md
 
 
 API Reference
