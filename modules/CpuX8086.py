@@ -192,10 +192,11 @@ class InstructionParser:
         """
         # Configuración de lexer y parser
         self.lexer = LexerGenerator()
-        self.lexer.add("OPCODE", r"(?i)mov|add|sub|and|or|xor|not|neg|inc|dec|shl|shr|rol|ror")
+        self.lexer.add("OPCODE", r"(?i)mov|add|sub|and|or|xor|not|neg|inc|dec|shl|shr|rol|ror|push|pop|int")
         self.lexer.add("REGISTER", r"(?i)AX|BX|CX|DX|SP|BP|SI|DI|CS|DS|SS|ES|FS|GS")
         self.lexer.add("NUMBER", r"0b[01]+|0x[0-9a-fA-F]+|\d+")
         self.lexer.add("COMMA", r",")
+        self.lexer.add("COMMENT", r";.*")
         self.lexer.ignore(r"\s+")
         self.lexer = self.lexer.build()
 
@@ -223,6 +224,9 @@ class InstructionParser:
             'ROR': {'reg': 'D0C8'},
             'NOT': {'reg': 'F7D0'},
             'NEG': {'reg': 'F7D8'},
+            'PUSH': {'reg': '50'},
+            'POP': {'reg': '58'},
+            'INT' : ['0x21'],
         }
 
         self.mnemonic_map = {
@@ -236,6 +240,7 @@ class InstructionParser:
             'D0E0': 'SHL reg', 'D0E8': 'SHR reg',
             'D0C0': 'ROL reg', 'D0C8': 'ROR reg',
             'F7D0': 'NOT reg', 'F7D8': 'NEG reg',
+            '50': 'PUSH reg', '58': 'POP reg',
         }
 
         self.opcode_methods = {
@@ -253,6 +258,8 @@ class InstructionParser:
             'SHR': self.asm_shr,
             'ROL': self.asm_rol,
             'ROR': self.asm_ror,
+            'PUSH': self.asm_push,
+            'POP': self.asm_pop,
         }
 
         self.supported_instructions = list(self.opcode_methods.keys())  # Lista de instrucciones soportadas
@@ -261,8 +268,8 @@ class InstructionParser:
         self.register_codes = {'AX': '000', 'CX': '001', 'DX': '010', 'BX': '011'}
 
         # Instancia de RegisterSet
-        self.register_set = RegisterSet()
-        self.supported_registers = self.register_set.registers_supported
+        self.register_collection = RegisterSet()
+        self.supported_registers = self.register_collection.registers_supported
 
     def handle_instruction(self, p: list) -> None:
         """
@@ -345,12 +352,13 @@ class InstructionParser:
         self.terminal.error_message(f"SYNTAX ERROR: Unexpected token '{token.getstr()}' at position {token.getsourcepos().idx}.")
         self.terminal.info_message("TIP: Check the instruction format. An instruction should follow 'OPCODE REGISTER, NUMBER' or 'OPCODE REGISTER, REGISTER'.")
 
-    def parse(self, instruction: str) -> dict:
+    def parse(self, instruction: str, memory: Memory) -> dict:
         """
         Parses a single assembly instruction, executes it, and returns its details.
 
         Args:
             instruction (str): Assembly instruction as a text string.
+            memory (Memory): Memory object representing the system's memory.
 
         Returns:
             dict: Parsed tokens including opcode and operands.
@@ -361,29 +369,34 @@ class InstructionParser:
         """
         instruction = instruction.strip().upper()
         tokens = instruction.split()
-        #print(f"DEBUG: Tokens from instruction: {tokens}")  # Debugging line
 
-        if len(tokens) < 2:
+        if len(tokens) < 1:
             raise ValueError(f"Invalid instruction format: '{instruction}'")
 
         try:
+            # Handle INT 0x21
+            if tokens[0] == "INT" and len(tokens) == 2 and tokens[1] == "0X21":
+                ah = self.register_collection.get('AX') >> 8  # Obtener AH (parte alta de AX)
+                self.int_0x21(ah, memory, self.register_collection)
+                return {'opcode': 'INT', 'operands': ['0x21']}
+
             opcode = tokens[0]
             if opcode not in self.opcode_methods:
                 raise KeyError(f"Unsupported opcode '{opcode}' in instruction: '{instruction}'")
 
             # Split operands by comma and strip spaces
             operands = [op.strip() for op in ' '.join(tokens[1:]).split(',')]
-            #print(f"DEBUG: Parsed operands: {operands}")  # Debugging line
 
-            if len(operands) < 1:
-                raise ValueError(f"No operands found in instruction: '{instruction}'")
+            # Manejo especial para PUSH y POP (un solo operando)
+            if opcode in ['PUSH', 'POP'] and len(operands) != 1:
+                raise ValueError(f"Invalid operand format for '{opcode}': '{instruction}'")
 
             # Convert immediate values to integers
             for i, operand in enumerate(operands):
                 if operand.isdigit() or operand.startswith("0X"):
                     operands[i] = int(operand, 16) if operand.startswith("0X") else int(operand)
 
-            # Invoke the method corresponding to the opcode
+            # Invocar el método correspondiente al opcode
             method = self.opcode_methods[opcode]
             method(operands)
 
@@ -391,6 +404,148 @@ class InstructionParser:
 
         except Exception as e:
             raise ValueError(f"Error parsing instruction: '{instruction}' -> {e}")
+
+    def int_0x21(self, ah: int, memory: dict, registers: dict) -> None:
+        """
+        Simula la interrupción 0x21 para servicios básicos de DOS.
+
+        Args:
+            ah (int): El registro AH contiene el número del servicio.
+            memory (dict): Simulación de la memoria del sistema.
+            registers (dict): Registros del procesador (AX, BX, CX, etc.).
+
+        Returns:
+            None
+        """
+        
+        print('''
+            Welcome to INT21:
+            ~~~~~~~~~~~~~~~~~
+            Only a few services are supported:
+
+            - Service 0x09: Print strings terminated in '$'.
+            - Service 0x0A: Read strings with a limit.
+            - Service 0x4C: End program. ''')        
+        
+        if ah == 0x09:  # Mostrar cadena terminada en '$'
+            self.service_09(memory, registers)
+        elif ah == 0x0A:  # Leer cadena con límite
+            self.service_0a(memory, registers)
+        elif ah == 0x4C:  # Terminar programa
+            self.service_4c(registers)
+        else:
+            raise ValueError(f"Unsupported INT 0x21 service: 0x{ah:02X}")
+
+    def service_09(self, memory: dict, registers: dict) -> None:
+        """
+        Servicio 0x09: Mostrar cadena terminada en '$'.
+
+        Args:
+            memory (dict): Simulación de la memoria del sistema.
+            registers (dict): Registros del procesador.
+
+        Returns:
+            None
+        """
+        ds = registers['DS']  # Segmento de datos
+        dx = registers['DX']  # Desplazamiento
+        address = (ds << 4) + dx
+
+        output = ""
+        while memory[address] != ord('$'):  # Leer hasta encontrar '$'
+            output += chr(memory[address])
+            address += 1
+
+        print(output, end="")
+
+    def service_0a(self, memory: dict, registers: dict) -> None:
+        """
+        Servicio 0x0A: Leer cadena con límite.
+
+        Args:
+            memory (dict): Simulación de la memoria del sistema.
+            registers (dict): Registros del procesador.
+
+        Returns:
+            None
+        """
+        ds = registers['DS']  # Segmento de datos
+        dx = registers['DX']  # Desplazamiento
+        address = (ds << 4) + dx
+
+        max_length = memory[address]  # Longitud máxima de la cadena
+        address += 1
+
+        input_str = input("Enter string: ")[:max_length]
+        memory[address] = len(input_str)  # Longitud real de la cadena
+        address += 1
+
+        for i, char in enumerate(input_str):
+            memory[address + i] = ord(char)
+
+        memory[address + len(input_str)] = 0x00  # Fin de cadena
+
+    def service_4c(self, registers: dict) -> None:
+        """
+        Servicio 0x4C: Terminar programa.
+
+        Args:
+            registers (dict): Registros del procesador.
+
+        Returns:
+            None
+        """
+        exit_code = registers['AL']
+        print(f"\nProgram terminated with exit code {exit_code}")
+        exit(exit_code)
+
+    @dispatch(list)
+    def asm_push(self, operands: list, memory: Memory) -> None:
+        """
+        Handles the 'PUSH' instruction.
+
+        Args:
+            operands (list): A list containing the register to push.
+
+        Returns:
+            None
+        """
+        reg = operands[0]
+        if reg not in self.register_codes:
+            raise ValueError(f"Invalid register '{reg}' for PUSH")
+
+        value = self.register_collection.get(reg)
+        sp = self.register_collection.get("SP")
+
+        # Decrement SP and store value at the memory location
+        sp -= 2
+        memory.poke(sp, value & 0xFF)  # Lower byte
+        memory.poke(sp + 1, (value >> 8) & 0xFF)  # Upper byte
+        self.register_collection.set("SP", sp)
+
+    @dispatch(list)
+    def asm_pop(self, operands: list, memory: Memory) -> None:
+        """
+        Handles the 'POP' instruction.
+
+        Args:
+            operands (list): A list containing the register to pop.
+
+        Returns:
+            None
+        """
+        reg = operands[0]
+        if reg not in self.register_codes:
+            raise ValueError(f"Invalid register '{reg}' for POP")
+
+        sp = self.register_collection.get("SP")
+
+        # Retrieve value from memory and increment SP
+        low = memory.peek(sp)
+        high = memory.peek(sp + 1)
+        value = (high << 8) | low
+        self.register_collection.set(reg, value)
+        self.register_collection.set("SP", sp + 2)
 
 
     # Operaciones de ensamblador
@@ -408,9 +563,9 @@ class InstructionParser:
         try:
             dest, src = operands
             if isinstance(src, int):
-                self.register_set.set(dest, src)
+                self.register_collection.set(dest, src)
             else:
-                self.register_set.set(dest, self.register_set.get(src))
+                self.register_collection.set(dest, self.register_collection.get(src))
         except KeyError:
             self.terminal.error_message(f"ERROR: Invalid register '{dest}' or '{src}' in MOV operation.")
             self.terminal.info_message("TIP: Ensure that both operands are valid registers or an immediate value.")
@@ -428,9 +583,9 @@ class InstructionParser:
         """
         try:
             dest, src = operands
-            result = self.register_set.get(dest) + (src if isinstance(src, int) else self.register_set.get(src))
-            self.register_set.set(dest, result & 0xFFFF)
-            self.register_set.update_flags(result, operation='ADD')
+            result = self.register_collection.get(dest) + (src if isinstance(src, int) else self.register_collection.get(src))
+            self.register_collection.set(dest, result & 0xFFFF)
+            self.register_collection.update_flags(result, operation='ADD')
         except KeyError:
             self.terminal.error_message(f"ERROR: Invalid register '{dest}' or '{src}' in ADD operation.")
             self.terminal.info_message("TIP: Both operands must be valid registers or an immediate value.")
@@ -448,9 +603,9 @@ class InstructionParser:
         """
         try:
             dest, src = operands
-            result = self.register_set.get(dest) - (src if isinstance(src, int) else self.register_set.get(src))
-            self.register_set.set(dest, result & 0xFFFF)
-            self.register_set.update_flags(result, operation='SUB')
+            result = self.register_collection.get(dest) - (src if isinstance(src, int) else self.register_collection.get(src))
+            self.register_collection.set(dest, result & 0xFFFF)
+            self.register_collection.update_flags(result, operation='SUB')
         except KeyError:
             self.terminal.error_message(f"ERROR: Invalid register '{dest}' or '{src}' in SUB operation.")
             self.terminal.info_message("TIP: Both operands must be valid registers or an immediate value.")
@@ -468,9 +623,9 @@ class InstructionParser:
         """
         try:
             dest, src = operands
-            result = self.register_set.get(dest) & (src if isinstance(src, int) else self.register_set.get(src))
-            self.register_set.set(dest, result)
-            self.register_set.update_flags(result)
+            result = self.register_collection.get(dest) & (src if isinstance(src, int) else self.register_collection.get(src))
+            self.register_collection.set(dest, result)
+            self.register_collection.update_flags(result)
         except KeyError:
             self.terminal.error_message(f"ERROR: Invalid register '{dest}' or '{src}' in AND operation.")
             self.terminal.info_message("TIP: Both operands must be valid registers or an immediate value.")
@@ -488,9 +643,9 @@ class InstructionParser:
         """
         try:
             dest, src = operands
-            result = self.register_set.get(dest) | (src if isinstance(src, int) else self.register_set.get(src))
-            self.register_set.set(dest, result)
-            self.register_set.update_flags(result)
+            result = self.register_collection.get(dest) | (src if isinstance(src, int) else self.register_collection.get(src))
+            self.register_collection.set(dest, result)
+            self.register_collection.update_flags(result)
         except KeyError:
             self.terminal.error_message(f"ERROR: Invalid register '{dest}' or '{src}' in OR operation.")
             self.terminal.info_message("TIP: Both operands must be valid registers or an immediate value.")
@@ -508,9 +663,9 @@ class InstructionParser:
         """
         try:
             dest, src = operands
-            result = self.register_set.get(dest) ^ (src if isinstance(src, int) else self.register_set.get(src))
-            self.register_set.set(dest, result)
-            self.register_set.update_flags(result)
+            result = self.register_collection.get(dest) ^ (src if isinstance(src, int) else self.register_collection.get(src))
+            self.register_collection.set(dest, result)
+            self.register_collection.update_flags(result)
         except KeyError:
             self.terminal.error_message(f"ERROR: Invalid register '{dest}' or '{src}' in XOR operation.")
             self.terminal.info_message("TIP: Both operands must be valid registers or an immediate value.")
@@ -528,9 +683,9 @@ class InstructionParser:
         """
         try:
             dest = operands[0]
-            result = ~self.register_set.get(dest) & 0xFFFF
-            self.register_set.set(dest, result)
-            self.register_set.update_flags(result)
+            result = ~self.register_collection.get(dest) & 0xFFFF
+            self.register_collection.set(dest, result)
+            self.register_collection.update_flags(result)
         except KeyError:
             self.terminal.error_message(f"ERROR: Invalid register '{dest}' in NOT operation.")
             self.terminal.info_message("TIP: Ensure the operand is a valid register.")
@@ -548,9 +703,9 @@ class InstructionParser:
         """
         try:
             dest = operands[0]
-            result = -self.register_set.get(dest) & 0xFFFF
-            self.register_set.set(dest, result)
-            self.register_set.update_flags(result, operation='SUB')
+            result = -self.register_collection.get(dest) & 0xFFFF
+            self.register_collection.set(dest, result)
+            self.register_collection.update_flags(result, operation='SUB')
         except KeyError:
             self.terminal.error_message(f"ERROR: Invalid register '{dest}' in NEG operation.")
             self.terminal.info_message("TIP: Ensure the operand is a valid register.")
@@ -568,9 +723,9 @@ class InstructionParser:
         """
         try:
             dest = operands[0]
-            result = self.register_set.get(dest) + 1
-            self.register_set.set(dest, result & 0xFFFF)
-            self.register_set.update_flags(result)
+            result = self.register_collection.get(dest) + 1
+            self.register_collection.set(dest, result & 0xFFFF)
+            self.register_collection.update_flags(result)
         except KeyError:
             self.terminal.error_message(f"ERROR: Invalid register '{dest}' in INC operation.")
             self.terminal.info_message("TIP: Ensure the operand is a valid register.")
@@ -588,9 +743,9 @@ class InstructionParser:
         """
         try:
             dest = operands[0]
-            result = self.register_set.get(dest) - 1
-            self.register_set.set(dest, result & 0xFFFF)
-            self.register_set.update_flags(result, operation='SUB')
+            result = self.register_collection.get(dest) - 1
+            self.register_collection.set(dest, result & 0xFFFF)
+            self.register_collection.update_flags(result, operation='SUB')
         except KeyError:
             self.terminal.error_message(f"ERROR: Invalid register '{dest}' in DEC operation.")
             self.terminal.info_message("TIP: Ensure the operand is a valid register.")
@@ -625,9 +780,9 @@ class InstructionParser:
         """
         try:
             dest = operands[0]
-            result = self.register_set.get(dest) << 1
-            self.register_set.set(dest, result & 0xFFFF)
-            self.register_set.update_flags(result)
+            result = self.register_collection.get(dest) << 1
+            self.register_collection.set(dest, result & 0xFFFF)
+            self.register_collection.update_flags(result)
         except KeyError:
             self.terminal.error_message(f"ERROR: Invalid register '{dest}' in SHL operation.")
             self.terminal.info_message("TIP: Ensure the operand is a valid register.")
@@ -645,9 +800,9 @@ class InstructionParser:
         """
         try:
             dest = operands[0]
-            result = self.register_set.get(dest) >> 1
-            self.register_set.set(dest, result)
-            self.register_set.update_flags(result)
+            result = self.register_collection.get(dest) >> 1
+            self.register_collection.set(dest, result)
+            self.register_collection.update_flags(result)
         except KeyError:
             self.terminal.error_message(f"ERROR: Invalid register '{dest}' in SHR operation.")
             self.terminal.info_message("TIP: Ensure the operand is a valid register.")
@@ -665,10 +820,10 @@ class InstructionParser:
         """
         try:
             dest = operands[0]
-            value = self.register_set.get(dest)
+            value = self.register_collection.get(dest)
             result = ((value << 1) | (value >> 15)) & 0xFFFF
-            self.register_set.set(dest, result)
-            self.register_set.update_flags(result)
+            self.register_collection.set(dest, result)
+            self.register_collection.update_flags(result)
         except KeyError:
             self.terminal.error_message(f"ERROR: Invalid register '{dest}' in ROL operation.")
             self.terminal.info_message("TIP: Ensure the operand is a valid register.")
@@ -686,16 +841,16 @@ class InstructionParser:
         """
         try:
             dest = operands[0]
-            value = self.register_set.get(dest)
+            value = self.register_collection.get(dest)
             result = ((value >> 1) | (value << 15)) & 0xFFFF
-            self.register_set.set(dest, result)
-            self.register_set.update_flags(result)
+            self.register_collection.set(dest, result)
+            self.register_collection.update_flags(result)
         except KeyError:
             self.terminal.error_message(f"ERROR: Invalid register '{dest}' in ROR operation.")
             self.terminal.info_message("TIP: Ensure the operand is a valid register.")
 
 
-    def assemble(self, asm_code: str) -> List[int]:
+    def assemble(self, asm_code: str, memory: Memory) -> List[int]:
         """
         Converts assembly code into machine code as a list of byte integers.
 
@@ -714,7 +869,7 @@ class InstructionParser:
 
             try:
                 # Use parse() to validate and extract the instruction details
-                parsed = self.parse(line)
+                parsed = self.parse(line, memory)
                 opcode = parsed['opcode']
                 operands = parsed['operands']
 
@@ -747,7 +902,7 @@ class InstructionParser:
 
         return machine_code
 
-    def execute_and_print(self, instruction: str) -> None:
+    def execute_and_print(self, instruction: str, memory: Memory) -> None:
         """
         Executes an assembly instruction and shows only the registers that changed.
 
@@ -758,8 +913,8 @@ class InstructionParser:
             None
         """        # Ejecuta la instrucción y maneja errores
         try:
-            self.parse(instruction)
-            self.register_set.print_changed_registers()
+            self.parse(instruction, memory)
+            self.register_collection.print_changed_registers()
         except Exception as e:
             self.terminal.error_message(f"ERROR: Execution failed for instruction '{instruction}'. Details: {e}")
 
@@ -769,12 +924,12 @@ class CpuX8086():
     """
 
     def __init__(self) -> None:
-        self.parser = InstructionParser()
-        self.instructions_set = self.parser.supported_instructions
-        self.register_set = self.parser.supported_registers
+        self.instruction_parser = InstructionParser()
+        self.instructions_set = self.instruction_parser.supported_instructions
+        self.register_set = self.instruction_parser.supported_registers
         self.terminal = Terminal()
 
-    def parse_instruction(self, cmd) -> None:
+    def parse_instruction(self, cmd: str, memory: Memory) -> None:
         """Parse the assembler instructions affecting the registers if necesary.
         
 
@@ -786,7 +941,7 @@ class CpuX8086():
             None.
 
         """       
-        self.parser.execute_and_print(cmd)
+        self.instruction_parser.execute_and_print(cmd, memory)
 
     #  https://www.geeksforgeeks.org/python-program-to-add-two-binary-numbers/
     def _find_matches(self, d: Dict[str, str], item: str):
@@ -862,7 +1017,7 @@ class CpuX8086():
             str: Machine code.
         """
 
-        machine_code = self.parser.assemble(code)
+        machine_code = self.instruction_parser.assemble(code, memory)
         if len(machine_code)>0:
             self.terminal.info_message("Machine code:", machine_code)
             memory.offset_cursor+=len(machine_code)
@@ -871,7 +1026,7 @@ class CpuX8086():
 
     def print_registers(self) -> None:
         """ Print the CPU registers and it's value."""
-        self.parser.register_set.print_registers()
+        self.instruction_parser.register_collection.print_registers()
 
     def move(self, memory: Memory, from_begin: int, from_end: int, destination: int) -> bool:
         """Copy a memory region to other memory region.
