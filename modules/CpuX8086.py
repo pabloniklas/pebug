@@ -396,9 +396,12 @@ class InstructionParser:
                 if operand.isdigit() or operand.startswith("0X"):
                     operands[i] = int(operand, 16) if operand.startswith("0X") else int(operand)
 
-            # Invocar el método correspondiente al opcode
+            # Invocar el método correspondiente al opcode, pasando `memory` si es necesario
             method = self.opcode_methods[opcode]
-            method(operands)
+            if opcode in ['PUSH', 'POP']:  # Métodos que requieren `memory`
+                method(operands, memory)
+            else:
+                method(operands)
 
             return {'opcode': opcode, 'operands': operands}
 
@@ -499,13 +502,14 @@ class InstructionParser:
         print(f"\nProgram terminated with exit code {exit_code}")
         exit(exit_code)
 
-    @dispatch(list)
+    @dispatch(list, Memory)
     def asm_push(self, operands: list, memory: Memory) -> None:
         """
         Handles the 'PUSH' instruction.
 
         Args:
             operands (list): A list containing the register to push.
+            memory (Memory): Memory object representing the system's memory.
 
         Returns:
             None
@@ -519,17 +523,21 @@ class InstructionParser:
 
         # Decrement SP and store value at the memory location
         sp -= 2
+        if sp < 0:
+            raise ValueError("Stack overflow: SP is below 0")
+
         memory.poke(sp, value & 0xFF)  # Lower byte
         memory.poke(sp + 1, (value >> 8) & 0xFF)  # Upper byte
         self.register_collection.set("SP", sp)
 
-    @dispatch(list)
+    @dispatch(list, Memory)
     def asm_pop(self, operands: list, memory: Memory) -> None:
         """
         Handles the 'POP' instruction.
 
         Args:
             operands (list): A list containing the register to pop.
+            memory (Memory): Memory object representing the system's memory.
 
         Returns:
             None
@@ -541,12 +549,14 @@ class InstructionParser:
         sp = self.register_collection.get("SP")
 
         # Retrieve value from memory and increment SP
+        if sp + 2 > 0xFFFF:
+            raise ValueError("Stack underflow: SP exceeds memory bounds")
+
         low = memory.peek(sp)
         high = memory.peek(sp + 1)
         value = (high << 8) | low
         self.register_collection.set(reg, value)
         self.register_collection.set("SP", sp + 2)
-
 
     # Operaciones de ensamblador
     @dispatch(list)
