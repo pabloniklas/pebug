@@ -75,7 +75,7 @@ class Memory:
             int: Pointed address value.
         """
         try:
-            return self.peek(int(page, 16), int(address, 16))
+            return self._memory[page][address]
         except ValueError:
             self.terminal.warning_message("Memory.peek(): Invalid hexadecimal address or page.")
             return -1

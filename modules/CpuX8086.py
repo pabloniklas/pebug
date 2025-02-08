@@ -373,40 +373,40 @@ class InstructionParser:
         if len(tokens) < 1:
             raise ValueError(f"Invalid instruction format: '{instruction}'")
 
-        try:
+        #try:
             # Handle INT 0x21
-            if tokens[0] == "INT" and len(tokens) == 2 and tokens[1] == "0X21":
-                ah = self.register_collection.get('AX') >> 8  # Obtener AH (parte alta de AX)
-                self.int_0x21(ah, memory, self.register_collection)
-                return {'opcode': 'INT', 'operands': ['0x21']}
+        if tokens[0] == "INT" and len(tokens) == 2 and tokens[1] == "0X21":
+            ah = self.register_collection.get('AX') >> 8  # Obtener AH (parte alta de AX)
+            self.int_0x21(ah, memory, self.register_collection)
+            return {'opcode': 'INT', 'operands': ['0x21']}
 
-            opcode = tokens[0]
-            if opcode not in self.opcode_methods:
-                raise KeyError(f"Unsupported opcode '{opcode}' in instruction: '{instruction}'")
+        opcode = tokens[0]
+        if opcode not in self.opcode_methods:
+            raise KeyError(f"Unsupported opcode '{opcode}' in instruction: '{instruction}'")
 
-            # Split operands by comma and strip spaces
-            operands = [op.strip() for op in ' '.join(tokens[1:]).split(',')]
+        # Split operands by comma and strip spaces
+        operands = [op.strip() for op in ' '.join(tokens[1:]).split(',')]
 
-            # Manejo especial para PUSH y POP (un solo operando)
-            if opcode in ['PUSH', 'POP'] and len(operands) != 1:
-                raise ValueError(f"Invalid operand format for '{opcode}': '{instruction}'")
+        # Manejo especial para PUSH y POP (un solo operando)
+        if opcode in ['PUSH', 'POP'] and len(operands) != 1:
+            raise ValueError(f"Invalid operand format for '{opcode}': '{instruction}'")
 
-            # Convert immediate values to integers
-            for i, operand in enumerate(operands):
-                if operand.isdigit() or operand.startswith("0X"):
-                    operands[i] = int(operand, 16) if operand.startswith("0X") else int(operand)
+        # Convert immediate values to integers
+        for i, operand in enumerate(operands):
+            if operand.isdigit() or operand.startswith("0X"):
+                operands[i] = int(operand, 16) if operand.startswith("0X") else int(operand)
 
-            # Invocar el método correspondiente al opcode, pasando `memory` si es necesario
-            method = self.opcode_methods[opcode]
-            if opcode in ['PUSH', 'POP']:  # Métodos que requieren `memory`
-                method(operands, memory)
-            else:
-                method(operands)
+        # Invocar el método correspondiente al opcode, pasando `memory` si es necesario
+        method = self.opcode_methods[opcode]
+        if opcode in ['PUSH', 'POP']:  # Métodos que requieren `memory`
+            method(operands, memory)
+        else:
+            method(operands)
 
-            return {'opcode': opcode, 'operands': operands}
+        return {'opcode': opcode, 'operands': operands}
 
-        except Exception as e:
-            raise ValueError(f"Error parsing instruction: '{instruction}' -> {e}")
+        #except Exception as e:
+        #    raise ValueError(f"Error parsing instruction: '{instruction}' -> {e}")
 
     def int_0x21(self, ah: int, memory: dict, registers: dict) -> None:
         """
@@ -544,13 +544,13 @@ class InstructionParser:
         """
         reg = operands[0]
         if reg not in self.register_codes:
-            raise ValueError(f"Invalid register '{reg}' for POP")
+            raise ValueError(f"asm_pop(): Invalid register '{reg}' for POP")
 
         sp = self.register_collection.get("SP")
 
         # Retrieve value from memory and increment SP
         if sp + 2 > 0xFFFF:
-            raise ValueError("Stack underflow: SP exceeds memory bounds")
+            raise ValueError("asm_pop(): Stack underflow: SP exceeds memory bounds")
 
         low = memory.peek(sp)
         high = memory.peek(sp + 1)
@@ -904,10 +904,10 @@ class InstructionParser:
                         machine_code.extend([int(opcode_hex, 16), int(mod_reg_rm, 16)])
 
                     else:
-                        raise ValueError(f"Unsupported operand format in line {line_num}: '{line}'")
+                        raise ValueError(f"assemble(): Unsupported operand format in line {line_num}: '{line}'")
 
             except (ValueError, KeyError) as e:
-                self.terminal.error_message(f"ERROR: {e}")
+                self.terminal.error_message(f"assemble(): ERROR: {e}")
                 continue
 
         return machine_code
@@ -922,11 +922,11 @@ class InstructionParser:
         Returns:
             None
         """        # Ejecuta la instrucción y maneja errores
-        try:
-            self.parse(instruction, memory)
-            self.register_collection.print_changed_registers()
-        except Exception as e:
-            self.terminal.error_message(f"ERROR: Execution failed for instruction '{instruction}'. Details: {e}")
+        #try:
+        self.parse(instruction, memory)
+        self.register_collection.print_changed_registers()
+        #except Exception as e:
+            #self.terminal.error_message(f"execute_and_print(): ERROR: Execution failed for instruction '{instruction}'. Details: {e}")
 
 class CpuX8086():
     """
@@ -1210,7 +1210,7 @@ class CpuX8086():
         Returns:
             None.
         """
-        page = memory.active_page
+        page = f"{'%04X' % memory.active_page}"
         bytes_per_row = int("F", 16)
         pointer = 0
         ascvisual = ""
@@ -1218,24 +1218,23 @@ class CpuX8086():
         if addrn - addrb < bytes_per_row:  # One single row
             self.terminal.success_message(
                 f"{'%04X' % memory.active_page}:{'%04X' % (pointer + addrb)} ", end="", flush=True)
-            for address in range(addrb, addrn):
+            for _ in range(addrb, addrn):
                 byte = memory.peek(page, pointer + addrb)
                 peek = "%02X" % byte
                 ascvisual += chr(byte) if chr(byte).isprintable() else "."
-                self.terminal.success_message(f"{peek} ", end="", flush=True)
+                self.terminal.info_message(f"{peek} ", "", True)
 
-            print(" " * ((bytes_per_row - pointer) * 3) + ascvisual)
+            self.terminal.default_message(" " * ((bytes_per_row - pointer) * 3) + ascvisual)
         else:  # two or more rows
             while pointer + addrb < addrn:
                 if pointer % bytes_per_row == 0:
                     print(" " * ((bytes_per_row - pointer) * 3) + ascvisual)
                     ascvisual = ""
                     self.terminal.success_message(f"{'%04X' % memory.active_page}:{'%04X' % (pointer + addrb)} ", end="")
-
-                byte = memory.peek(page, pointer + addrb)
+                byte = memory.peek(page, f"{'%04X' % (pointer + addrb)}")
                 peek = "%02X" % byte
                 ascvisual += chr(byte) if chr(byte).isprintable() else "."
-                self.terminal.success_message(f"{peek} ", end="", flush=True)
+                self.terminal.info_message(f"{peek} ", "", True)
                 pointer += 1
 
         print("")

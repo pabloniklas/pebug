@@ -94,6 +94,19 @@ class Terminal:
         style_code = AnsiColors.BOLD.value if bold else ''
         
         return f"{color_code}{style_code}{message}{AnsiColors.RESET.value}"
+    
+    def default_message(self, message, end="\n", flush=False):
+        """
+        Generate a default message in white.
+
+        Args:
+            message (str): The default message to display.
+            end (str): String appended after the last value. Defaults to a newline.
+            flush (bool): Whether to forcibly flush the stream.
+
+        """
+        print(self._format_message(message), end=end, flush=flush)
+    
 
     def success_message(self, message, end="\n", flush=False):
         """
