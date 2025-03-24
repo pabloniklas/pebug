@@ -287,7 +287,8 @@ def hex_cmd(cmd: str, terminal: Terminal):
     oper2 = int(args[2], 16)
     res_add = oper1 + oper2
     res_sub = oper1 - oper2
-    terminal.info_message('%04X' % res_add, '%04X' % res_sub)
+    terminal.info_message('%04X' % res_add,end=" ")
+    terminal.warning_message('%04X' % res_sub)
 
 
 def search(cpu: CpuX8086, memory: Memory, cmd: str, terminal: Terminal):

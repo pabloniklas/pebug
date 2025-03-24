@@ -53,7 +53,7 @@ This simulator aims to provide an interactive learning tool for students of 8086
  | Commands     | Done          |
  | Arithmetic   | Done          | 
  | Assembly     | Done          | 
- | Dissassembly | To Do         | 
+ | Dissassembly | In Progress         | 
 
 
 # Docs

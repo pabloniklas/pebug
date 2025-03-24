@@ -48,7 +48,10 @@ Never forget that all numbers inside of PEBUG are always Hexadecimal.
 Enter two Hex values (no more than four digits each) and PEBUG shows first the SUM,
 then the DIFFERENCE of those values. Examples:
 
-```-h aaa 531 -h fff 3 -h dbf ace```
+```
+h 10 1
+0011 000F
+```
 
 ## Dump: D [range]
 
