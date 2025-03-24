@@ -38,6 +38,10 @@ API Reference
    :members:
    :show-inheritance:
 
+.. autoclass:: AnsiColors
+   :members:
+   :show-inheritance:
+
 Index and tables
 ==================
 
