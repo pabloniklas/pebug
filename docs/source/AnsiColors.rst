@@ -1,4 +1,4 @@
-Ansicolors module
+AnsiColors module
 =====================
 
 .. automodule:: AnsiColors
