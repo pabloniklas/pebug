@@ -154,6 +154,14 @@ latex_elements = {
 
 html_theme = "furo"
 
+html_theme_options = {
+    "light_css_variables": {
+        "color-brand-primary": "red",
+        "color-brand-content": "#CC3333",
+        "color-admonition-background": "orange",
+    },
+}
+
 def setup(app):
     app.add_config_value('recommonmark_config', {
         'enable_math': True,
