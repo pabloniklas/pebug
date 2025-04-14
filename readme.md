@@ -1,4 +1,4 @@
-# PEBUG
+<img src=https://raw.githubusercontent.com/pabloniklas/pebug/refs/heads/main/logo/pebug_logo.png>
 
 <img src=https://img.shields.io/github/license/pabloniklas/pebug> <img src=https://img.shields.io/github/v/release/pabloniklas/pebug> <img src=https://img.shields.io/github/languages/top/pabloniklas/pebug> <img src=https://img.shields.io/github/downloads/pabloniklas/pebug/total>
 
