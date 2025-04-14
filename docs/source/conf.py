@@ -152,6 +152,7 @@ latex_elements = {
 #      [author], 1)
 # ]
 
+html_theme = "furo"
 
 def setup(app):
     app.add_config_value('recommonmark_config', {
