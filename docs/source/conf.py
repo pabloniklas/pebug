@@ -153,6 +153,8 @@ latex_elements = {
 # ]
 
 html_theme = "furo"
+html_logo = "pebug_logo_ajustada.png"
+html_favicon = "favicon.ico"
 
 def setup(app):
     app.add_config_value('recommonmark_config', {
