@@ -6,6 +6,7 @@ import readline
 import sys
 import random
 
+from enum import Enum
 from multipledispatch import dispatch
 
 from modules.Disk import Disk
@@ -23,6 +24,11 @@ def pebug_main(terminal: Terminal, filename="pebug_disk.bin"):
        https://montcs.bloomu.edu/Information/LowLevel/DOS-Debug.html
 
     """
+    
+    class Mode(Enum):
+        """Enum for the different modes of the program."""
+        COMMAND = "🅲"
+        ASSEMBLE = "🅐"
 
     memory = Memory(10) # 640 Kb
 
@@ -55,7 +61,7 @@ def pebug_main(terminal: Terminal, filename="pebug_disk.bin"):
     print("")
     print(f"{AnsiColors.BRIGHT_CYAN.value}> \033[1;37mType 'q' to quit the program.\033[0m")
 
-    cmd = prompt("🅲")
+    cmd = prompt(Mode.COMMAND.value)
     while not re.match(r"^[qQ]", cmd):
 
         if re.match(r"^[sS] [0-9a-f]{,4} .*$", cmd):
@@ -121,18 +127,18 @@ def pebug_main(terminal: Terminal, filename="pebug_disk.bin"):
         elif re.match(r"^[aA]$", cmd):
             terminal.info_message("Welcome to the Assemble mode. Enter 'q' to quit this mode.")
             terminal.info_message("Numbers must be in hexadecimal (0x), Decimal, or Binary (0b) format.")
-            cmd = prompt(f"🅐 {'%04X' % memory.active_page}:{'%04X' % memory.offset_cursor}")
+            cmd = prompt(f"{Mode.ASSEMBLE.value} {'%04X' % memory.active_page}:{'%04X' % memory.offset_cursor}")
             while not re.match(r"^[qQ]$", cmd):
                 machine_code = cpu.assemble(memory, cmd)
                 for mc in machine_code:
                     memory.poke(memory.active_page, memory.offset_cursor, mc)
                     memory.offset_cursor += 1
 
-                cmd = prompt(f"🅐 {'%04X' % memory.active_page}:{'%04X' % memory.offset_cursor}")
+                cmd = prompt(f"{Mode.ASSEMBLE.value} {'%04X' % memory.active_page}:{'%04X' % memory.offset_cursor}")
         else:
             _error_msg(terminal)
 
-        mode = "🅲"
+        mode = Mode.COMMAND.value
         cmd = prompt(mode)
 
     # Save the virtual disk to a real disk.
