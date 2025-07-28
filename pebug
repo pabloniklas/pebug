@@ -14,23 +14,24 @@ from modules.Memory import Memory
 from modules.CpuX8086 import CpuX8086
 from modules.Terminal import Terminal, AnsiColors
 
+
 def pebug_main(terminal: Terminal, filename="pebug_disk.bin"):
     """Main method
-    
+
     Keyword arguments:
     filename: the filename of the virtual disk (default is pebug_disk.bin)
-    
+
     References:
        https://montcs.bloomu.edu/Information/LowLevel/DOS-Debug.html
 
     """
-    
+
     class Mode(Enum):
         """Enum for the different modes of the program."""
-        COMMAND = "🅲"
-        ASSEMBLE = "🅐"
+        COMMAND = "🅒 "
+        ASSEMBLE = "🅐 "
 
-    memory = Memory(10) # 640 Kb
+    memory = Memory(10)  # 640 Kb
 
     disk = Disk(65536, filename)  # 64Kb
     disk.load()
@@ -49,17 +50,26 @@ def pebug_main(terminal: Terminal, filename="pebug_disk.bin"):
                                                   {AnsiColors.BRIGHT_GREEN.value}v1.1{AnsiColors.RESET.value}
     """)
 
-    print(f"{AnsiColors.BRIGHT_CYAN.value}> \033[1;37mAn x86 DOS-debug-inspired program written in Python.{AnsiColors.RESET.value}")
-    print(f"{AnsiColors.BRIGHT_CYAN.value}> \033[1;37m\033[1;37mBy {AnsiColors.BRIGHT_CYAN.value}Pablo Niklas <pablo.niklas@gmail.com>.{AnsiColors.RESET.value}")
-    print(f"{AnsiColors.BRIGHT_CYAN.value}> \033[1;37mOnline manual at {AnsiColors.BRIGHT_BLUE.value}https://pebug.readthedocs.io{AnsiColors.RESET.value}")
-    print(f"{AnsiColors.BRIGHT_CYAN.value}> \033[1;37mHistory file: {AnsiColors.BRIGHT_YELLOW.value}{readline.get_history_length()} lines loaded.{AnsiColors.RESET.value}")
-    print(f"{AnsiColors.BRIGHT_CYAN.value}> \033[1;37mMain memory size: {AnsiColors.BRIGHT_YELLOW.value}{memory.pages} pages.{AnsiColors.RESET.value}")
-    print(f"{AnsiColors.BRIGHT_CYAN.value}> \033[1;37mStack @ {AnsiColors.BRIGHT_YELLOW.value}{cpu.get_hex(cpu.instruction_parser.register_collection.get('SP'))}.{AnsiColors.RESET.value}")
-    print(f"{AnsiColors.BRIGHT_CYAN.value}> \033[1;37mVirtual disk size: {AnsiColors.BRIGHT_YELLOW.value}{disk.get_size()} bytes.{AnsiColors.RESET.value}")
-    print(f"{AnsiColors.BRIGHT_CYAN.value}> \033[1;37mSupported instructions: {AnsiColors.BRIGHT_MAGENTA.value}{len(cpu.instructions_set)} {AnsiColors.WHITE.value}({', '.join(sorted(cpu.instructions_set) ) }){AnsiColors.RESET.value}")
-    print(f"{AnsiColors.BRIGHT_CYAN.value}> \033[1;37mSupported registers: {AnsiColors.BRIGHT_GREEN.value}{len(cpu.register_set)} {AnsiColors.WHITE.value}({', '.join(sorted(cpu.register_set))}){AnsiColors.RESET.value}")
+    terminal.info_message(
+        "An x86 DOS-debug-inspired program written in Python.")
+    terminal.info_message(
+        f"By {AnsiColors.BRIGHT_CYAN.value}Pablo Niklas <pablo.niklas@gmail.com>.{AnsiColors.RESET.value}")
+    terminal.info_message(
+        f"Online manual at {AnsiColors.BRIGHT_BLUE.value}https://pebug.readthedocs.io{AnsiColors.RESET.value}")
+    terminal.info_message(
+        f"History file: {AnsiColors.BRIGHT_YELLOW.value}{readline.get_history_length()} lines loaded.{AnsiColors.RESET.value}")
+    terminal.info_message(
+        f"Main memory size: {AnsiColors.BRIGHT_YELLOW.value}{memory.pages} pages.{AnsiColors.RESET.value}")
+    terminal.info_message(
+        f"Stack @ {AnsiColors.BRIGHT_YELLOW.value}{cpu.get_hex(cpu.instruction_parser.register_collection.get('SP'))}.{AnsiColors.RESET.value}")
+    terminal.info_message(
+        f"Virtual disk size: {AnsiColors.BRIGHT_YELLOW.value}{disk.get_size()} bytes.{AnsiColors.RESET.value}")
+    terminal.info_message(f"Supported instructions: {AnsiColors.BRIGHT_MAGENTA.value}{len(cpu.instructions_set)} {AnsiColors.WHITE.value}({', '.join(sorted(cpu.instructions_set))}){AnsiColors.RESET.value}")
+    terminal.info_message(
+        f"Supported registers: {AnsiColors.BRIGHT_GREEN.value}{len(cpu.register_set)} {AnsiColors.WHITE.value}({', '.join(sorted(cpu.register_set))}){AnsiColors.RESET.value}")
     print("")
-    print(f"{AnsiColors.BRIGHT_CYAN.value}> \033[1;37mType 'q' to quit the program.\033[0m")
+    terminal.info_message(
+        "Type 'q' to quit the program.\033[0m")
 
     cmd = prompt(Mode.COMMAND.value)
     while not re.match(r"^[qQ]", cmd):
@@ -118,23 +128,27 @@ def pebug_main(terminal: Terminal, filename="pebug_disk.bin"):
             write(disk, memory, cpu, cmd)
         elif re.match(r"^[lL] [0-9a-f]{,4} [0-9a-f]{,4} [0-9a-f]{,4}$", cmd):
             read(disk, memory, cpu, cmd)
-        #elif re.match(r"^[nN] ['].*[']$", cmd): # To be used in the future
+        # elif re.match(r"^[nN] ['].*[']$", cmd): # To be used in the future
         #    setname(disk, cmd)
         elif re.match(r"^[pP] .*$", cmd):
             parse(cpu, memory, cmd)
 
         # Assemble mode.
         elif re.match(r"^[aA]$", cmd):
-            terminal.info_message("Welcome to the Assemble mode. Enter 'q' to quit this mode.")
-            terminal.info_message("Numbers must be in hexadecimal (0x), Decimal, or Binary (0b) format.")
-            cmd = prompt(f"{Mode.ASSEMBLE.value} {'%04X' % memory.active_page}:{'%04X' % memory.offset_cursor}")
+            terminal.info_message(
+                "Welcome to the Assemble mode. Enter 'q' to quit this mode.")
+            terminal.info_message(
+                "Numbers must be in hexadecimal (0x), Decimal, or Binary (0b) format.")
+            cmd = prompt(
+                f"{Mode.ASSEMBLE.value} {'%04X' % memory.active_page}:{'%04X' % memory.offset_cursor}")
             while not re.match(r"^[qQ]$", cmd):
                 machine_code = cpu.assemble(memory, cmd)
                 for mc in machine_code:
                     memory.poke(memory.active_page, memory.offset_cursor, mc)
                     memory.offset_cursor += 1
 
-                cmd = prompt(f"{Mode.ASSEMBLE.value} {'%04X' % memory.active_page}:{'%04X' % memory.offset_cursor}")
+                cmd = prompt(
+                    f"{Mode.ASSEMBLE.value} {'%04X' % memory.active_page}:{'%04X' % memory.offset_cursor}")
         else:
             _error_msg(terminal)
 
@@ -147,6 +161,7 @@ def pebug_main(terminal: Terminal, filename="pebug_disk.bin"):
 
 def _error_msg(term: Terminal):
     term.error_message("Input not recognized.")
+
 
 @dispatch(object, str, int, int, object)
 def _show_result(cpu: CpuX8086, oper: str, a: int, r: int, term: Terminal):
@@ -163,10 +178,13 @@ def _show_result(cpu: CpuX8086, oper: str, a: int, b: int, r: int, term: Termina
     bin_a = cpu.get_bin(a)
     bin_b = cpu.get_bin(b)
     bin_r = cpu.get_bin(r)
-    term.info_message(f"{oper} {bin_a}({'%02X' % a}) {bin_b}({'%02X' % b}) => {bin_r}({'%02X' % r})")
+    term.info_message(
+        f"{oper} {bin_a}({'%02X' % a}) {bin_b}({'%02X' % b}) => {bin_r}({'%02X' % r})")
     cpu.print_status_flags()
 
-## To be used in the future
+# To be used in the future
+
+
 def setname(disk: Disk, cmd: str):
     """Set the name of the virtual disk
 
@@ -179,6 +197,7 @@ def setname(disk: Disk, cmd: str):
     filename = " ".join(args[1:])
     disk.filename(filename)
 
+
 def parse(cpu: CpuX8086, memory: Memory, cmd: str):
     """Parse the assembler instruction
 
@@ -189,6 +208,7 @@ def parse(cpu: CpuX8086, memory: Memory, cmd: str):
     args = cmd.split(" ")
     line = args[1:]
     cpu.parse_instruction(" ".join(line), memory)
+
 
 def write(disk: Disk, memory: Memory, cpu: CpuX8086, cmd: str):
     """Write to vdisk the Memory object.
@@ -293,7 +313,7 @@ def hex_cmd(cmd: str, term: Terminal):
     oper2 = int(args[2], 16)
     res_add = oper1 + oper2
     res_sub = oper1 - oper2
-    term.info_message('%04X' % res_add,end=" ")
+    term.info_message('%04X' % res_add, end=" ")
     term.warning_message('%04X' % res_sub)
 
 
@@ -404,9 +424,9 @@ def demo(cpu: CpuX8086, memory: Memory, term: Terminal):
         ]
         return random.choice(fortunes)
 
-
     cpu.load_into(memory, 0, fortune_cookie())
-    term.success_message(f"The demo text was loaded into {memory.active_page}:0000, enter 'd 0 60' to read it.")
+    term.success_message(
+        f"The demo text was loaded into {memory.active_page}:0000, enter 'd 0 60' to read it.")
 
 
 def prompt(mode: str = ""):
@@ -418,13 +438,14 @@ def prompt(mode: str = ""):
     Returns:
         str: Prompt.
     """
-    cmd = input(f"{mode} {AnsiColors.BRIGHT_GREEN.value}•❯{AnsiColors.RESET.value} ")
+    cmd = input(
+        f"{mode} {AnsiColors.BRIGHT_GREEN.value}•❯{AnsiColors.RESET.value} ")
     return cmd
 
 
 # Python's entry point
 if __name__ == '__main__':
-    
+
     terminal = Terminal()
 
     # readline's history
