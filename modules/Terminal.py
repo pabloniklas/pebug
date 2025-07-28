@@ -64,6 +64,14 @@ class AnsiColors(Enum):
     P1_GREEN = "#33FF00"
     P1_WHITE = "#282828"
 
+class TerminalIcons(Enum):
+    """Icons used in the terminal interface."""
+    ERROR: str = "‼️ "
+    INFO: str = "ℹ️ "
+    SUCCESS: str = "✅ "
+    WARNING: str = "⚠️ "
+
+
 class Terminal:
     """Class for styled terminal messages."""
 
@@ -118,7 +126,7 @@ class Terminal:
             flush (bool): Whether to forcibly flush the stream.
 
         """
-        print(self._format_message(message, color='green', bold=True), end=end, flush=flush)
+        print(self._format_message(f"{TerminalIcons.SUCCESS.value} {message}", color='green', bold=True), end=end, flush=flush)
 
     def error_message(self, message, end="\n", flush=False):
         """
@@ -130,7 +138,7 @@ class Terminal:
             flush (bool): Whether to forcibly flush the stream.
 
         """
-        print(self._format_message(message, color='red', bold=True), end=end, flush=flush)
+        print(self._format_message(f"{TerminalIcons.ERROR.value} {message}", color='red', bold=True), end=end, flush=flush)
 
     def info_message(self, message, end="\n", flush=False):
         """
@@ -142,7 +150,7 @@ class Terminal:
             flush (bool): Whether to forcibly flush the stream.
 
         """
-        print(self._format_message(message, color='cyan'), end=end, flush=flush)
+        print(self._format_message(f"{TerminalIcons.INFO.value} {message}", color='cyan'), end=end, flush=flush)
 
     def warning_message(self, message, end="\n", flush=False):
         """
@@ -154,7 +162,7 @@ class Terminal:
             flush (bool): Whether to forcibly flush the stream.
 
         """
-        print(self._format_message(message, color='yellow', bold=True), end=end, flush=flush)
+        print(self._format_message(f"{TerminalIcons.WARNING.value} {message}", color='yellow', bold=True), end=end, flush=flush)
 
     def common_message(self, message, color='white', bold=False, end="\n", flush=False):
         """

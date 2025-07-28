@@ -114,3 +114,31 @@ class Memory:
             return False
         self._memory[page][address] = value
         return True
+    
+    @dispatch(int, int, str)
+    def poke(self, page: int, address: int, value: str) -> bool:
+        """
+        poke(self, page: int, address: int, value: str) -> bool
+        Write a string to memory as a sequence of bytes.
+
+        Parameters:
+            page (int): Page memory.
+            address (int): Address where to start writing.
+            value (str): String to write as bytes.
+
+        Returns:
+            bool: Operation result.
+        """
+        if not (0 <= page < len(self._memory)) or not (0 <= address < self._offsets):
+            self.terminal.warning_message(f"Memory.poke(): Invalid page/address. {page}/{len(self._memory)}:{address}/{self._offsets}")
+            return False
+
+        byte_values = value.encode("latin1")  # 1 byte per char; avoids utf-8 multibyte issues
+        if address + len(byte_values) > self._offsets:
+            self.terminal.warning_message(f"Memory.poke(): String too long for address range. {address} + {len(byte_values)} > {self._offsets}")
+            return False
+
+        for i, byte in enumerate(byte_values):
+            self._memory[page][address + i] = byte
+
+        return True

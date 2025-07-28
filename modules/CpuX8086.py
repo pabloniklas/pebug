@@ -14,6 +14,8 @@ from rply import (
     LexerGenerator
 )
 
+from enum import Enum
+
 if __name__ is not None and "." in __name__:
     from .Memory import Memory
     from .Disk import Disk
@@ -25,6 +27,10 @@ else:
 
 # https://joshsharp.com.au/blog/rpython-rply-interpreter-1.html
 
+class Icons(Enum):
+    """Icons used in the terminal interface."""
+    MACHINE_CODE: str = "🖥️  "
+    
 class RegisterSet:
     """
     Represents a set of processor registers and flags.
@@ -288,9 +294,9 @@ class InstructionParser:
             try:
                 method(operands)
             except Exception as e:
-                self.terminal.error_message(f"ERROR: Execution error in '{opcode} {operands}': {e}")
+                self.terminal.error_message(f"Execution error in '{opcode} {operands}': {e}")
         else:
-            self.terminal.error_message(f"ERROR: Unsupported instruction '{opcode}'.")
+            self.terminal.error_message(f"Unsupported instruction '{opcode}'.")
 
     def operands_multiple(self, p: list) -> list:
         """
@@ -336,7 +342,7 @@ class InstructionParser:
             else:
                 return int(value)  # Decimal
         except ValueError:
-            self.terminal.error_message(f"ERROR: Invalid number format '{value}'. Expected binary (0b), hex (0x), or decimal.")
+            self.terminal.error_message(f"Invalid number format '{value}'. Expected binary (0b), hex (0x), or decimal.")
             return None
 
     def handle_parse_error(self, token) -> None:
@@ -349,7 +355,7 @@ class InstructionParser:
         Returns:
             None
         """
-        self.terminal.error_message(f"SYNTAX ERROR: Unexpected token '{token.getstr()}' at position {token.getsourcepos().idx}.")
+        self.terminal.error_message(f"Unexpected token '{token.getstr()}' at position {token.getsourcepos().idx}.")
         self.terminal.info_message("TIP: Check the instruction format. An instruction should follow 'OPCODE REGISTER, NUMBER' or 'OPCODE REGISTER, REGISTER'.")
 
     def parse(self, instruction: str, memory: Memory) -> dict:
@@ -420,7 +426,7 @@ class InstructionParser:
         Returns:
             None
         """
-        
+
         print('''
             Welcome to INT21:
             ~~~~~~~~~~~~~~~~~
@@ -428,8 +434,8 @@ class InstructionParser:
 
             - Service 0x09: Print strings terminated in '$'.
             - Service 0x0A: Read strings with a limit.
-            - Service 0x4C: End program. ''')        
-        
+            - Service 0x4C: End program. ''')
+
         if ah == 0x09:  # Mostrar cadena terminada en '$'
             self.service_09(memory, registers)
         elif ah == 0x0A:  # Leer cadena con límite
@@ -577,7 +583,7 @@ class InstructionParser:
             else:
                 self.register_collection.set(dest, self.register_collection.get(src))
         except KeyError:
-            self.terminal.error_message(f"ERROR: Invalid register '{dest}' or '{src}' in MOV operation.")
+            self.terminal.error_message(f"Invalid register '{dest}' or '{src}' in MOV operation.")
             self.terminal.info_message("TIP: Ensure that both operands are valid registers or an immediate value.")
 
     @dispatch(list)
@@ -597,7 +603,7 @@ class InstructionParser:
             self.register_collection.set(dest, result & 0xFFFF)
             self.register_collection.update_flags(result, operation='ADD')
         except KeyError:
-            self.terminal.error_message(f"ERROR: Invalid register '{dest}' or '{src}' in ADD operation.")
+            self.terminal.error_message(f"Invalid register '{dest}' or '{src}' in ADD operation.")
             self.terminal.info_message("TIP: Both operands must be valid registers or an immediate value.")
 
     @dispatch(list)
@@ -617,7 +623,7 @@ class InstructionParser:
             self.register_collection.set(dest, result & 0xFFFF)
             self.register_collection.update_flags(result, operation='SUB')
         except KeyError:
-            self.terminal.error_message(f"ERROR: Invalid register '{dest}' or '{src}' in SUB operation.")
+            self.terminal.error_message(f"Invalid register '{dest}' or '{src}' in SUB operation.")
             self.terminal.info_message("TIP: Both operands must be valid registers or an immediate value.")
 
     @dispatch(list)
@@ -637,7 +643,7 @@ class InstructionParser:
             self.register_collection.set(dest, result)
             self.register_collection.update_flags(result)
         except KeyError:
-            self.terminal.error_message(f"ERROR: Invalid register '{dest}' or '{src}' in AND operation.")
+            self.terminal.error_message(f"Invalid register '{dest}' or '{src}' in AND operation.")
             self.terminal.info_message("TIP: Both operands must be valid registers or an immediate value.")
 
     @dispatch(list)
@@ -657,7 +663,7 @@ class InstructionParser:
             self.register_collection.set(dest, result)
             self.register_collection.update_flags(result)
         except KeyError:
-            self.terminal.error_message(f"ERROR: Invalid register '{dest}' or '{src}' in OR operation.")
+            self.terminal.error_message(f"Invalid register '{dest}' or '{src}' in OR operation.")
             self.terminal.info_message("TIP: Both operands must be valid registers or an immediate value.")
 
     @dispatch(list)
@@ -677,7 +683,7 @@ class InstructionParser:
             self.register_collection.set(dest, result)
             self.register_collection.update_flags(result)
         except KeyError:
-            self.terminal.error_message(f"ERROR: Invalid register '{dest}' or '{src}' in XOR operation.")
+            self.terminal.error_message(f"Invalid register '{dest}' or '{src}' in XOR operation.")
             self.terminal.info_message("TIP: Both operands must be valid registers or an immediate value.")
 
     @dispatch(list)
@@ -697,7 +703,7 @@ class InstructionParser:
             self.register_collection.set(dest, result)
             self.register_collection.update_flags(result)
         except KeyError:
-            self.terminal.error_message(f"ERROR: Invalid register '{dest}' in NOT operation.")
+            self.terminal.error_message(f"Invalid register '{dest}' in NOT operation.")
             self.terminal.info_message("TIP: Ensure the operand is a valid register.")
 
     @dispatch(list)
@@ -717,7 +723,7 @@ class InstructionParser:
             self.register_collection.set(dest, result)
             self.register_collection.update_flags(result, operation='SUB')
         except KeyError:
-            self.terminal.error_message(f"ERROR: Invalid register '{dest}' in NEG operation.")
+            self.terminal.error_message(f"Invalid register '{dest}' in NEG operation.")
             self.terminal.info_message("TIP: Ensure the operand is a valid register.")
 
     @dispatch(list)
@@ -737,7 +743,7 @@ class InstructionParser:
             self.register_collection.set(dest, result & 0xFFFF)
             self.register_collection.update_flags(result)
         except KeyError:
-            self.terminal.error_message(f"ERROR: Invalid register '{dest}' in INC operation.")
+            self.terminal.error_message(f"Invalid register '{dest}' in INC operation.")
             self.terminal.info_message("TIP: Ensure the operand is a valid register.")
 
     @dispatch(list)
@@ -757,7 +763,7 @@ class InstructionParser:
             self.register_collection.set(dest, result & 0xFFFF)
             self.register_collection.update_flags(result, operation='SUB')
         except KeyError:
-            self.terminal.error_message(f"ERROR: Invalid register '{dest}' in DEC operation.")
+            self.terminal.error_message(f"Invalid register '{dest}' in DEC operation.")
             self.terminal.info_message("TIP: Ensure the operand is a valid register.")
 
     @dispatch(list)
@@ -794,7 +800,7 @@ class InstructionParser:
             self.register_collection.set(dest, result & 0xFFFF)
             self.register_collection.update_flags(result)
         except KeyError:
-            self.terminal.error_message(f"ERROR: Invalid register '{dest}' in SHL operation.")
+            self.terminal.error_message(f"Invalid register '{dest}' in SHL operation.")
             self.terminal.info_message("TIP: Ensure the operand is a valid register.")
 
     @dispatch(list)
@@ -814,7 +820,7 @@ class InstructionParser:
             self.register_collection.set(dest, result)
             self.register_collection.update_flags(result)
         except KeyError:
-            self.terminal.error_message(f"ERROR: Invalid register '{dest}' in SHR operation.")
+            self.terminal.error_message(f"Invalid register '{dest}' in SHR operation.")
             self.terminal.info_message("TIP: Ensure the operand is a valid register.")
 
     @dispatch(list)
@@ -835,7 +841,7 @@ class InstructionParser:
             self.register_collection.set(dest, result)
             self.register_collection.update_flags(result)
         except KeyError:
-            self.terminal.error_message(f"ERROR: Invalid register '{dest}' in ROL operation.")
+            self.terminal.error_message(f"Invalid register '{dest}' in ROL operation.")
             self.terminal.info_message("TIP: Ensure the operand is a valid register.")
 
     @dispatch(list)
@@ -856,7 +862,7 @@ class InstructionParser:
             self.register_collection.set(dest, result)
             self.register_collection.update_flags(result)
         except KeyError:
-            self.terminal.error_message(f"ERROR: Invalid register '{dest}' in ROR operation.")
+            self.terminal.error_message(f"Invalid register '{dest}' in ROR operation.")
             self.terminal.info_message("TIP: Ensure the operand is a valid register.")
 
 
@@ -883,16 +889,28 @@ class InstructionParser:
                 opcode = parsed['opcode']
                 operands = parsed['operands']
 
-                # Generate machine code based on operands
                 if len(operands) == 2:
                     dest, src = operands
 
                     # reg, imm16
-                    if src.isdigit() or src.startswith("0X"):
+                    if (
+                        isinstance(src, int)
+                        or (isinstance(src, str) and (src.isdigit() or src.upper().startswith("0X") or src.lower().endswith("h")))
+                    ):
                         op_key = 'reg, imm16'
                         opcode_hex = self.opcode_map[opcode][op_key]
                         opcode_hex = f"{int(opcode_hex, 16) + int(self.register_codes[dest], 2):02X}"
-                        imm_value = int(src, 16) if src.startswith("0X") else int(src)
+
+                        # Detect type and convert
+                        if isinstance(src, int):
+                            imm_value = src
+                        elif src.upper().startswith("0X"):
+                            imm_value = int(src, 16)
+                        elif src.lower().endswith("h"):
+                            imm_value = int(src[:-1], 16)
+                        else:
+                            imm_value = int(src)
+
                         imm_hex = f"{imm_value:04X}"
                         machine_code.extend([int(opcode_hex, 16)] + [int(imm_hex[i:i+2], 16) for i in range(0, 4, 2)])
 
@@ -906,11 +924,12 @@ class InstructionParser:
                     else:
                         raise ValueError(f"assemble(): Unsupported operand format in line {line_num}: '{line}'")
 
-            except (ValueError, KeyError) as e:
-                self.terminal.error_message(f"assemble(): ERROR: {e}")
+            except (ValueError, KeyError, AttributeError) as e:
+                self.terminal.error_message(f"assemble(): ERROR in line {line_num}: {e}")
                 continue
 
-        return machine_code
+        return ' '.join(format(byte, '02X') for byte in machine_code)
+
 
     def execute_and_print(self, instruction: str, memory: Memory) -> None:
         """
@@ -1029,7 +1048,8 @@ class CpuX8086():
 
         machine_code = self.instruction_parser.assemble(code, memory)
         if len(machine_code)>0:
-            self.terminal.info_message("Machine code:", machine_code)
+            self.terminal.info_message(Icons.MACHINE_CODE.value, machine_code)
+            print("\n")
             memory.offset_cursor+=len(machine_code)
 
         return machine_code

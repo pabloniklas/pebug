@@ -123,12 +123,12 @@ class Disk:
                 bytes_written = f.write(binary_format)
 
             if bytes_written == self._size:
-                print(f"{AnsiColors.BRIGHT_CYAN.value}> \033[1;37mActive page saved to: {AnsiColors.BRIGHT_YELLOW.value}{self._filename}.{AnsiColors.RESET.value}")
-                print(f"{AnsiColors.BRIGHT_CYAN.value}> \033[1;37mSize: {AnsiColors.BRIGHT_YELLOW.value}{len(binary_format)} bytes.{AnsiColors.RESET.value}")
+                self._terminal.info_message(f"Active page saved to: {AnsiColors.BRIGHT_YELLOW.value}{self._filename}.{AnsiColors.RESET.value}")
+                self._terminal.info_message(f"Size: {AnsiColors.BRIGHT_YELLOW.value}{len(binary_format)} bytes.{AnsiColors.RESET.value}")
 
                 return True
             else:
-                self._terminal.error_message(f"Error: Expected to write {self._size} bytes, but only wrote {bytes_written} bytes.")
+                self._terminal.error_message(f"Expected to write {self._size} bytes, but only wrote {bytes_written} bytes.")
                 return False
 
         except IOError:
