@@ -55,7 +55,7 @@ def pebug_main(terminal: Terminal, filename="pebug_disk.bin"):
     print("")
     print(f"{AnsiColors.BRIGHT_CYAN.value}> \033[1;37mType 'q' to quit the program.\033[0m")
 
-    cmd = prompt("⚙️")
+    cmd = prompt("🅲")
     while not re.match(r"^[qQ]", cmd):
 
         if re.match(r"^[sS] [0-9a-f]{,4} .*$", cmd):
@@ -121,43 +121,43 @@ def pebug_main(terminal: Terminal, filename="pebug_disk.bin"):
         elif re.match(r"^[aA]$", cmd):
             terminal.info_message("Welcome to the Assemble mode. Enter 'q' to quit this mode.")
             terminal.info_message("Numbers must be in hexadecimal (0x), Decimal, or Binary (0b) format.")
-            cmd = prompt(f"{'%04X' % memory.active_page}:{'%04X' % memory.offset_cursor}")
+            cmd = prompt(f"🅐 {'%04X' % memory.active_page}:{'%04X' % memory.offset_cursor}")
             while not re.match(r"^[qQ]$", cmd):
                 machine_code = cpu.assemble(memory, cmd)
                 for mc in machine_code:
                     memory.poke(memory.active_page, memory.offset_cursor, mc)
                     memory.offset_cursor += 1
 
-                cmd = prompt(f"{'%04X' % memory.active_page}:{'%04X' % memory.offset_cursor}")
+                cmd = prompt(f"🅐 {'%04X' % memory.active_page}:{'%04X' % memory.offset_cursor}")
         else:
             _error_msg(terminal)
 
-        mode = "C"
+        mode = "🅲"
         cmd = prompt(mode)
 
     # Save the virtual disk to a real disk.
     disk.save()
 
 
-def _error_msg(terminal: Terminal):
-    terminal.error_message("Input not recognized.")
+def _error_msg(term: Terminal):
+    term.error_message("Input not recognized.")
 
 @dispatch(object, str, int, int, object)
-def _show_result(cpu: CpuX8086, oper: str, a: int, r: int, terminal: Terminal):
+def _show_result(cpu: CpuX8086, oper: str, a: int, r: int, term: Terminal):
     oper = oper.upper()
     bin_a = cpu.get_bin(a)
     bin_r = cpu.get_bin(r)
-    terminal.info_message(f"{oper} {bin_a}({'%02X' % a}) => {bin_r}({'%02X' % r})")
+    term.info_message(f"{oper} {bin_a}({'%02X' % a}) => {bin_r}({'%02X' % r})")
     cpu.print_status_flags()
 
 
 @dispatch(object, str, int, int, int, object)
-def _show_result(cpu: CpuX8086, oper: str, a: int, b: int, r: int, terminal: Terminal):
+def _show_result(cpu: CpuX8086, oper: str, a: int, b: int, r: int, term: Terminal):
     oper = oper.upper()
     bin_a = cpu.get_bin(a)
     bin_b = cpu.get_bin(b)
     bin_r = cpu.get_bin(r)
-    terminal.info_message(f"{oper} {bin_a}({'%02X' % a}) {bin_b}({'%02X' % b}) => {bin_r}({'%02X' % r})")
+    term.info_message(f"{oper} {bin_a}({'%02X' % a}) {bin_b}({'%02X' % b}) => {bin_r}({'%02X' % r})")
     cpu.print_status_flags()
 
 ## To be used in the future
@@ -259,7 +259,7 @@ def byte_poke(memory: Memory, cmd: str):
     memory.poke(memory.active_page, value, address)
 
 
-def compare(cpu: CpuX8086, memory: Memory, cmd: str, terminal: Terminal):
+def compare(cpu: CpuX8086, memory: Memory, cmd: str, term: Terminal):
     """Compare two memory locations.
 
     Args:
@@ -273,10 +273,10 @@ def compare(cpu: CpuX8086, memory: Memory, cmd: str, terminal: Terminal):
     oper3 = int(args[3], 16)
     diff_list = cpu.compare(memory, oper1, oper2, oper3)
     for aa in diff_list:
-        terminal.info_message(aa)
+        term.info_message(aa)
 
 
-def hex_cmd(cmd: str, terminal: Terminal):
+def hex_cmd(cmd: str, term: Terminal):
     """Returns the sum and subtraction of two hexadecimal numbers.
 
     Args:
@@ -287,11 +287,11 @@ def hex_cmd(cmd: str, terminal: Terminal):
     oper2 = int(args[2], 16)
     res_add = oper1 + oper2
     res_sub = oper1 - oper2
-    terminal.info_message('%04X' % res_add,end=" ")
-    terminal.warning_message('%04X' % res_sub)
+    term.info_message('%04X' % res_add,end=" ")
+    term.warning_message('%04X' % res_sub)
 
 
-def search(cpu: CpuX8086, memory: Memory, cmd: str, terminal: Terminal):
+def search(cpu: CpuX8086, memory: Memory, cmd: str, term: Terminal):
     """Search for a pattern in memory. And print the results.
 
     Args:
@@ -304,7 +304,7 @@ def search(cpu: CpuX8086, memory: Memory, cmd: str, terminal: Terminal):
     pattern = args[2]
     found_list = cpu.search(memory, start, pattern)
     for aa in found_list:
-        terminal.info_message(aa)
+        term.info_message(aa)
 
 
 def reset_memory_range(cpu: CpuX8086, memory: Memory, cmd: str):
@@ -375,7 +375,7 @@ def cat(cpu: CpuX8086, disk: Disk, cmd: str):
     cpu.cat(disk, a, b)
 
 
-def demo(cpu: CpuX8086, memory: Memory, terminal: Terminal):
+def demo(cpu: CpuX8086, memory: Memory, term: Terminal):
     """A Demo text to be loaded into memory.
 
     Args:
@@ -400,10 +400,10 @@ def demo(cpu: CpuX8086, memory: Memory, terminal: Terminal):
 
 
     cpu.load_into(memory, 0, fortune_cookie())
-    terminal.success_message(f"The demo text was loaded into {memory.active_page}:0000, enter 'd 0 60' to read it.")
+    term.success_message(f"The demo text was loaded into {memory.active_page}:0000, enter 'd 0 60' to read it.")
 
 
-def prompt(mode: str = "📟"):
+def prompt(mode: str = ""):
     """Define the prompt.
 
     Args:
@@ -412,8 +412,7 @@ def prompt(mode: str = "📟"):
     Returns:
         str: Prompt.
     """
-    # cmd = input(f"[{mode}]❯ ")
-    cmd = input(f"{AnsiColors.BRIGHT_GREEN.value}•❯{AnsiColors.RESET.value} ")
+    cmd = input(f"{mode} {AnsiColors.BRIGHT_GREEN.value}•❯{AnsiColors.RESET.value} ")
     return cmd
 
 
