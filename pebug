@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+"""
+# pebug - A Python x86 DOS-debug-inspired program
+# Copyright (C) 2023 Pablo Niklas <"""
 
 import os
 import re
@@ -16,7 +19,36 @@ from modules.Terminal import Terminal, AnsiColors
 
 
 def pebug_main(terminal: Terminal, filename="pebug_disk.bin"):
-    """Main method
+    """Main entry point for the Pebug x86 DOS-debug-inspired program.
+
+    This function initializes the terminal interface, memory, virtual disk, and CPU emulator,
+    then enters a command loop to interactively process user commands for debugging, memory
+    inspection, assembly, and disk operations.
+    
+    Args:
+        terminal (Terminal): The terminal interface for user interaction and output.
+        filename (str, optional): The filename of the virtual disk to use. Defaults to "pebug_disk.bin".
+
+        - https://montcs.bloomu.edu/Information/LowLevel/DOS-Debug.html
+
+    Behavior:
+        - Initializes memory (640 KB), virtual disk (64 KB), and CPU (8086 emulator).
+        - Displays program banner and information.
+        - Loads command history and disk contents.
+        - Enters a command loop, supporting commands for:
+            * Memory search, display, fill, reset, move, poke (byte/string)
+            * Register display and flag manipulation
+            * Disk read/write/cat
+            * Assembly mode for entering instructions
+            * Demo mode and parsing instructions
+            * Exiting and saving disk state
+        - Provides user feedback and error messages for unrecognized commands.
+        - Saves the virtual disk state on exit.
+
+    Note:
+        - Command syntax and supported instructions are inspired by DOS DEBUG.
+        - Online manual available at https://pebug.readthedocs.io
+    Main method
 
     Keyword arguments:
     filename: the filename of the virtual disk (default is pebug_disk.bin)
@@ -165,6 +197,19 @@ def _error_msg(term: Terminal):
 
 @dispatch(object, str, int, int, object)
 def _show_result(cpu: CpuX8086, oper: str, a: int, r: int, term: Terminal):
+    """
+    Displays the result of a CPU operation in both binary and hexadecimal formats, and prints the CPU status flags.
+
+    Args:
+        cpu (CpuX8086): The CPU instance performing the operation.
+        oper (str): The operation name (e.g., 'ADD', 'SUB').
+        a (int): The first operand value.
+        r (int): The result value after the operation.
+        term (Terminal): The terminal interface for displaying messages.
+
+    Side Effects:
+        Prints an informational message to the terminal and outputs the CPU status flags.
+    """
     oper = oper.upper()
     bin_a = cpu.get_bin(a)
     bin_r = cpu.get_bin(r)
@@ -182,15 +227,18 @@ def _show_result(cpu: CpuX8086, oper: str, a: int, b: int, r: int, term: Termina
         f"{oper} {bin_a}({'%02X' % a}) {bin_b}({'%02X' % b}) => {bin_r}({'%02X' % r})")
     cpu.print_status_flags()
 
-# To be used in the future
-
-
 def setname(disk: Disk, cmd: str):
-    """Set the name of the virtual disk
+    """ the name of the virtual disk by parsing the provided command string.
 
-    Args:
-        disk (Disk): Disk object.
-        cmd (str): Command string to be parsed.
+    This function expects the command string to contain the filename as the second argument,
+    potentially prefixed with a single quote ('). It strips the initial quote and sets the
+    disk's filename accordingly.
+
+        disk (Disk): The Disk object whose filename is to be set.
+        cmd (str): The command string containing the new filename.
+
+    Example:
+        setname(disk, "setname 'mydisk.img'")
     """
     args = cmd.split(" ")
     args[1] = args[1][1:]  # To strip the initial '
