@@ -34,6 +34,7 @@ class TestCpuX8086(unittest.TestCase):
     def setUp(self):
         self.cpu = CpuX8086()
         self.memory = Memory()
+        self.memory.active_page = 0
 
     def test_mov_instruction(self):
         """
@@ -133,6 +134,45 @@ class TestCpuX8086(unittest.TestCase):
         self.cpu.parse_instruction("MOV BX, 0x0001", self.memory)
         self.cpu.parse_instruction("ROR BX", self.memory)
         self.assertEqual(self.cpu.instruction_parser.register_collection.get("BX"), 0x8000)
+        
+    def test_push_and_pop_instruction(self):
+        """
+        Tests the correct behavior of the PUSH and POP instructions for the AX register.
+
+        This test performs the following steps:
+        1. Sets the AX register to 0x1234 and the SP register to 0x1000.
+        2. Executes the PUSH AX instruction and verifies:
+            - The stack pointer (SP) is decremented by 2 (to 0x0FFE).
+            - The value 0x1234 is correctly stored in memory at the new SP location in little-endian format.
+        3. Changes the AX register to 0x0000.
+        4. Executes the POP AX instruction and verifies:
+            - The AX register is restored to its previous value (0x1234).
+            - The stack pointer (SP) returns to its original value (0x1000).
+        """
+        # Inicializar AX y SP
+        self.cpu.parse_instruction("MOV AX, 0x1234", self.memory)
+        self.cpu.instruction_parser.register_collection.set("SP", 0x1000)
+
+        # PUSH AX
+        self.cpu.parse_instruction("PUSH AX", self.memory)
+        self.assertEqual(self.cpu.instruction_parser.register_collection.get("SP"), 0x0FFE)
+
+        # Verificar en memoria (little endian)
+        page = self.memory.active_page
+        low = self.memory.peek(page, 0x0FFE)
+        high = self.memory.peek(page, 0x0FFF)
+        self.assertEqual(low, 0x34)
+        self.assertEqual(high, 0x12)
+
+        # Cambiar AX
+        self.cpu.parse_instruction("MOV AX, 0x0000", self.memory)
+
+        # POP AX
+        self.cpu.parse_instruction("POP AX", self.memory)
+        self.assertEqual(self.cpu.instruction_parser.register_collection.get("AX"), 0x1234)
+        self.assertEqual(self.cpu.instruction_parser.register_collection.get("SP"), 0x1000)
+
+
 
 if __name__ == '__main__':
     unittest.main()

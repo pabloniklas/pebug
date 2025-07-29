@@ -549,13 +549,14 @@ class InstructionParser:
         value = self.register_collection.get(reg)
         sp = self.register_collection.get("SP")
 
-        # Decrement SP and store value at the memory location
         sp -= 2
         if sp < 0:
             raise ValueError("Stack overflow: SP is below 0")
 
-        memory.poke(sp, value & 0xFF)  # Lower byte
-        memory.poke(sp + 1, (value >> 8) & 0xFF)  # Upper byte
+        memory.poke(memory.active_page, sp, value &
+                    0xFF)            # Lower byte
+        memory.poke(memory.active_page, sp + 1,
+                    (value >> 8) & 0xFF)  # Upper byte
         self.register_collection.set("SP", sp)
 
     @dispatch(list, Memory)
@@ -576,18 +577,19 @@ class InstructionParser:
 
         sp = self.register_collection.get("SP")
 
-        # Retrieve value from memory and increment SP
         if sp + 2 > 0xFFFF:
             raise ValueError(
                 "asm_pop(): Stack underflow: SP exceeds memory bounds")
 
-        low = memory.peek(sp)
-        high = memory.peek(sp + 1)
+        low = memory.peek(memory.active_page, sp)
+        high = memory.peek(memory.active_page, sp + 1)
         value = (high << 8) | low
+
         self.register_collection.set(reg, value)
         self.register_collection.set("SP", sp + 2)
 
     # Operaciones de ensamblador
+
     @dispatch(list)
     def asm_mov(self, operands: List[str]) -> int:
         """
@@ -618,8 +620,8 @@ class InstructionParser:
             self.register_collection.set(dst, val_src)
             return val_src
 
-        raise ValueError(f"Instrucción MOV no soportada para operandos: {dst}, {src}")
-
+        raise ValueError(
+            f"Instrucción MOV no soportada para operandos: {dst}, {src}")
 
     @dispatch(list)
     def asm_add(self, operands: List[str]) -> int:
@@ -648,7 +650,7 @@ class InstructionParser:
             elif isinstance(src, str) and src.isdigit():
                 val_src = int(src)
             elif isinstance(src, int):
-                val_src = src                
+                val_src = src
             else:
                 raise ValueError(f"ADD: fuente inválida {src}")
 
@@ -657,8 +659,8 @@ class InstructionParser:
             self.register_collection.update_flags(result, operation="add")
             return result
 
-        raise ValueError(f"Instrucción ADD no soportada para operandos: {dst}, {src}")
-
+        raise ValueError(
+            f"Instrucción ADD no soportada para operandos: {dst}, {src}")
 
     @dispatch(list)
     def asm_sub(self, operands: List[str]) -> int:
@@ -694,8 +696,8 @@ class InstructionParser:
             self.register_collection.update_flags(result, operation="sub")
             return result
 
-        raise ValueError(f"Instrucción SUB no soportada para operandos: {dst}, {src}")
-
+        raise ValueError(
+            f"Instrucción SUB no soportada para operandos: {dst}, {src}")
 
     @dispatch(list)
     def asm_and(self, operands: list) -> None:
@@ -803,7 +805,7 @@ class InstructionParser:
             dest = operands[0]
             if dest not in self.register_collection.registers_supported:
                 raise KeyError(f"Invalid register '{dest}' for INC operation.")
-           
+
             result = -self.register_collection.get(dest) & 0xFFFF
             self.register_collection.set(dest, result)
             self.register_collection.update_flags(result, operation='SUB')
@@ -824,7 +826,7 @@ class InstructionParser:
         Returns:
             result: The incremented value of the register.
         """
-        
+
         try:
             dest = operands[0]
             if dest not in self.register_collection.registers_supported:
@@ -914,7 +916,6 @@ class InstructionParser:
         self.register_collection.update_flags(result, operation="shl")
 
         return result
-
 
     @dispatch(list)
     def asm_shr(self, operands: list) -> None:
@@ -1170,7 +1171,8 @@ class CpuX8086():
 
         machine_code = self.instruction_parser.assemble(code, memory)
         if len(machine_code) > 0:
-            self.terminal.info_message(Icons.MACHINE_CODE.value, ','.join(format(byte, '02X') for byte in machine_code))
+            self.terminal.info_message(Icons.MACHINE_CODE.value, ','.join(
+                format(byte, '02X') for byte in machine_code))
             print("\n")
             memory.offset_cursor += len(machine_code)
 
