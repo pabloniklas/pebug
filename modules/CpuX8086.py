@@ -589,7 +589,7 @@ class InstructionParser:
 
     # Operaciones de ensamblador
     @dispatch(list)
-    def asm_mov(self, operands: List[str]) -> List[int]:
+    def asm_mov(self, operands: List[str]) -> int:
         """
         Executes the MOV instruction, moving a value to a register.
 
@@ -597,103 +597,71 @@ class InstructionParser:
             operands (list): List of operands (destination and source).
 
         Returns:
-            None
+            None:q
         """
-
         dst, src = operands
-        machine_code = []
-        reg_codes = self.register_codes
+        dst = dst.upper()
+        src = src.upper() if isinstance(src, str) else src
 
-        def parse_imm(val):
-            return int(val, 16) if isinstance(val, str) and val.startswith("0x") else int(val)
+        if dst in self.register_codes:
+            if isinstance(src, str) and src in self.register_codes:
+                val_src = self.register_collection.get(src)
+            elif isinstance(src, str) and src.startswith('0x'):
+                val_src = int(src, 16)
+            elif isinstance(src, str) and src.isdigit():
+                val_src = int(src)
+            elif isinstance(src, int):  # <--- NUEVA CONDICIÓN
+                val_src = src
+            else:
+                raise ValueError(f"MOV: fuente inválida {src}")
 
-        # Caso 1: MOV reg, imm16
-        if dst.upper() in reg_codes:
-            try:
-                imm = parse_imm(src)
-                base_opcode = 0xB8  # B8 + reg
-                reg_code = int(reg_codes[dst.upper()], 2)
-                machine_code.append(base_opcode + reg_code)
-                machine_code.extend(imm.to_bytes(2, byteorder='little'))
-                return machine_code
-            except ValueError:
-                pass
-
-        # Caso 2: MOV reg, reg
-        if dst.upper() in reg_codes and isinstance(src, str) and src.upper() in reg_codes:
-            opcode = 0x89
-            reg_dst = int(reg_codes[dst.upper()], 2)
-            reg_src = int(reg_codes[src.upper()], 2)
-            modrm = 0b11000000 | (reg_src << 3) | reg_dst
-            machine_code.append(opcode)
-            machine_code.append(modrm)
-            return machine_code
+            self.register_collection.set(dst, val_src)
+            return val_src
 
         raise ValueError(f"Instrucción MOV no soportada para operandos: {dst}, {src}")
 
 
     @dispatch(list)
-    def asm_add(self, operands: List[str]) -> List[int]:
-        """Generates machine code for the ADD instruction.
+    def asm_add(self, operands: List[str]) -> int:
+        """Executes the ADD instruction, adding a value to a register.
 
         Args:
-            operands (List[str]): The operands for the ADD instruction.
+            operands (List[str]): List of operands (destination and source).
 
         Raises:
-            ValueError: If the operands are invalid or unsupported.
+            ValueError: If the operands are invalid.
 
         Returns:
-            List[int]: The generated machine code.
+            int: Result of the addition operation.
         """
-
         dst, src = operands
-        machine_code = []
-        reg_codes = self.register_codes
+        dst = dst.upper()
+        src = src.upper() if isinstance(src, str) else src
 
-        src_str = str(src)
+        if dst in self.register_codes:
+            val_dst = self.register_collection.get(dst)
 
-        # Verificar que dst sea un registro válido
-        if dst.upper() not in reg_codes:
-            raise ValueError(f"Registro inválido: {dst}")
+            if isinstance(src, str) and src in self.register_codes:
+                val_src = self.register_collection.get(src)
+            elif isinstance(src, str) and src.startswith('0x'):
+                val_src = int(src, 16)
+            elif isinstance(src, str) and src.isdigit():
+                val_src = int(src)
+            elif isinstance(src, int):
+                val_src = src                
+            else:
+                raise ValueError(f"ADD: fuente inválida {src}")
 
-        # Caso 1: ADD AX, imm16
-        if dst.upper() == 'AX' and (src_str.startswith('0x') or src_str.isdigit()):
-            opcode = 0x05
-            imm = int(src_str, 0)
-            machine_code.append(opcode)
-            machine_code.extend(imm.to_bytes(2, byteorder='little', signed=True))
+            result = (val_dst + val_src) & 0xFFFF
+            self.register_collection.set(dst, result)
+            self.register_collection.update_flags(result, operation="add")
+            return result
 
-        # Caso 2: ADD reg, imm16 (reg distinto a AX)
-        elif dst.upper() != 'AX' and (src_str.startswith('0x') or src_str.isdigit()):
-            opcode = 0x81
-            ext = 0  # ADD ext
-            reg_code = int(reg_codes[dst.upper()], 2)
-            modrm = 0b11000000 | (ext << 3) | reg_code
-
-            imm = int(src_str, 0)
-            machine_code.append(opcode)
-            machine_code.append(modrm)
-            machine_code.extend(imm.to_bytes(2, byteorder='little', signed=True))
-
-        # Caso 3: ADD reg, reg
-        elif dst.upper() in reg_codes and src.upper() in reg_codes:
-            opcode = 0x01
-            reg_dst = int(reg_codes[dst.upper()], 2)
-            reg_src = int(reg_codes[src.upper()], 2)
-            modrm = 0b11000000 | (reg_src << 3) | reg_dst
-
-            machine_code.append(opcode)
-            machine_code.append(modrm)
-
-        else:
-            raise ValueError(f"Instrucción ADD no soportada para operandos: {dst}, {src}")
-
-        return machine_code
-
+        raise ValueError(f"Instrucción ADD no soportada para operandos: {dst}, {src}")
 
 
     @dispatch(list)
-    def asm_sub(self, operands: List[str]) -> List[int]:
+    def asm_sub(self, operands: List[str]) -> int:
         """
         Executes the SUB instruction, subtracting a value from a register.
 
@@ -701,53 +669,33 @@ class InstructionParser:
             operands (list): List of operands (destination and source).
 
         Returns:
-            None
+            int: Result of the subtraction operation.
         """
-
         dst, src = operands
-        machine_code = []
-        reg_codes = self.register_codes
+        dst = dst.upper()
+        src = src.upper() if isinstance(src, str) else src
 
-        def parse_imm(val):
-            return int(val, 16) if isinstance(val, str) and val.startswith("0x") else int(val)
+        if dst in self.register_codes:
+            val_dst = self.register_collection.get(dst)
 
-        # Caso 1: SUB AX, imm16
-        if dst.upper() == 'AX':
-            try:
-                imm = parse_imm(src)
-                opcode = 0x2D
-                machine_code.append(opcode)
-                machine_code.extend(imm.to_bytes(2, byteorder='little'))
-                return machine_code
-            except ValueError:
-                pass
+            if isinstance(src, str) and src in self.register_codes:
+                val_src = self.register_collection.get(src)
+            elif isinstance(src, str) and src.startswith('0x'):
+                val_src = int(src, 16)
+            elif isinstance(src, str) and src.isdigit():
+                val_src = int(src)
+            elif isinstance(src, int):
+                val_src = src
+            else:
+                raise ValueError(f"SUB: fuente inválida {src}")
 
-        # Caso 2: SUB reg, imm16 (no AX)
-        if dst.upper() in reg_codes:
-            try:
-                imm = parse_imm(src)
-                opcode = 0x81
-                ext = 5  # /5 = SUB
-                reg_code = int(reg_codes[dst.upper()], 2)
-                modrm = 0b11000000 | (ext << 3) | reg_code
-                machine_code.append(opcode)
-                machine_code.append(modrm)
-                machine_code.extend(imm.to_bytes(2, byteorder='little'))
-                return machine_code
-            except ValueError:
-                pass
-
-        # Caso 3: SUB reg, reg
-        if dst.upper() in reg_codes and src.upper() in reg_codes:
-            opcode = 0x29
-            reg_dst = int(reg_codes[dst.upper()], 2)
-            reg_src = int(reg_codes[src.upper()], 2)
-            modrm = 0b11000000 | (reg_src << 3) | reg_dst
-            machine_code.append(opcode)
-            machine_code.append(modrm)
-            return machine_code
+            result = (val_dst - val_src) & 0xFFFF
+            self.register_collection.set(dst, result)
+            self.register_collection.update_flags(result, operation="sub")
+            return result
 
         raise ValueError(f"Instrucción SUB no soportada para operandos: {dst}, {src}")
+
 
     @dispatch(list)
     def asm_and(self, operands: list) -> None:
@@ -853,6 +801,9 @@ class InstructionParser:
         """
         try:
             dest = operands[0]
+            if dest not in self.register_collection.registers_supported:
+                raise KeyError(f"Invalid register '{dest}' for INC operation.")
+           
             result = -self.register_collection.get(dest) & 0xFFFF
             self.register_collection.set(dest, result)
             self.register_collection.update_flags(result, operation='SUB')
@@ -863,7 +814,7 @@ class InstructionParser:
                 "TIP: Ensure the operand is a valid register.")
 
     @dispatch(list)
-    def asm_inc(self, operands: list) -> None:
+    def asm_inc(self, operands: list) -> int:
         """
         Executes the INC instruction, incrementing the value of a register by one.
 
@@ -871,13 +822,17 @@ class InstructionParser:
             operands (list): List of operands (destination).
 
         Returns:
-            None
+            result: The incremented value of the register.
         """
+        
         try:
             dest = operands[0]
+            if dest not in self.register_collection.registers_supported:
+                raise KeyError(f"Invalid register '{dest}' for INC operation.")
             result = self.register_collection.get(dest) + 1
             self.register_collection.set(dest, result & 0xFFFF)
             self.register_collection.update_flags(result)
+            return result
         except KeyError:
             self.terminal.error_message(
                 f"Invalid register '{dest}' in INC operation.")
@@ -885,7 +840,7 @@ class InstructionParser:
                 "TIP: Ensure the operand is a valid register.")
 
     @dispatch(list)
-    def asm_dec(self, operands: list) -> None:
+    def asm_dec(self, operands: list) -> int:
         """
         Executes the DEC instruction, decrementing the value of a register by one.
 
@@ -893,13 +848,16 @@ class InstructionParser:
             operands (list): List of operands (destination).
 
         Returns:
-            None
+            result : The decremented value of the register.
         """
         try:
             dest = operands[0]
+            if dest not in self.register_collection.registers_supported:
+                raise KeyError(f"Invalid register '{dest}' for INC operation.")
             result = self.register_collection.get(dest) - 1
             self.register_collection.set(dest, result & 0xFFFF)
             self.register_collection.update_flags(result, operation='SUB')
+            return result
         except KeyError:
             self.terminal.error_message(
                 f"Invalid register '{dest}' in DEC operation.")
@@ -907,7 +865,7 @@ class InstructionParser:
                 "TIP: Ensure the operand is a valid register.")
 
     @dispatch(list)
-    def asm_shl(self, operands: List[str]) -> List[int]:
+    def asm_shl(self, operands: list) -> int:
         """
         Executes the SHL instruction, performing a bitwise shift left on a register.
 
@@ -935,22 +893,28 @@ class InstructionParser:
             --------------------------------------------------            
         """
 
-        reg = operands[0]
-        machine_code = []
-        reg_codes = self.register_codes
+        if len(operands) != 1:
+            raise ValueError("SHL requires exactly one operand")
 
-        if reg.upper() in reg_codes:
-            opcode = 0xD1  # SHL r/m16, 1
-            ext = 4  # /4 = SHL
-            reg_code = int(reg_codes[reg.upper()], 2)
-            modrm = 0b11000000 | (ext << 3) | reg_code
+        reg = operands[0].upper()
+        if reg not in self.register_codes:
+            raise ValueError(f"Unsupported register: {reg}")
 
-            machine_code.append(opcode)
-            machine_code.append(modrm)
-        else:
-            raise ValueError(f"Instrucción SHL no soportada para operando: {reg}")
+        val = self.register_collection.get(reg)
+        if val is None:
+            raise ValueError(f"Register value {reg} not defined")
 
-        return machine_code
+        # Shift 1 bit to the left
+        result = (val << 1) & 0xFFFF
+
+        # Store in the register
+        self.register_collection.set(reg, result)
+
+        # Update flags
+        self.register_collection.update_flags(result, operation="shl")
+
+        return result
+
 
     @dispatch(list)
     def asm_shr(self, operands: list) -> None:
