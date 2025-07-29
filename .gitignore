@@ -173,7 +173,6 @@ cython_debug/
 docs/output/
 modules/AppRes.py
 resources/
-tests/
 themeBrowser.py
 
 # PyCharm
