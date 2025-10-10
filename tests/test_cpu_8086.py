@@ -172,6 +172,44 @@ class TestCpuX8086(unittest.TestCase):
         self.assertEqual(self.cpu.instruction_parser.register_collection.get("AX"), 0x1234)
         self.assertEqual(self.cpu.instruction_parser.register_collection.get("SP"), 0x1000)
 
+    def test_inc_instruction(self):
+        """
+        Tests the INC instruction by first setting the AX register to 0x0001 using the MOV instruction,
+        then incrementing AX with the INC instruction, and finally asserting that AX contains 0x0002.
+        """
+        self.cpu.parse_instruction("MOV AX, 0x0001", self.memory)
+        self.cpu.parse_instruction("INC AX", self.memory)
+        self.assertEqual(self.cpu.instruction_parser.register_collection.get("AX"), 0x0002)
+
+    def test_dec_instruction(self):
+        """
+        Tests the DEC instruction by first setting the BX register to 0x0002 and then decrementing it.
+        Asserts that the BX register contains 0x0001 after execution.
+        """
+        self.cpu.parse_instruction("MOV BX, 0x0002", self.memory)
+        self.cpu.parse_instruction("DEC BX", self.memory)
+        self.assertEqual(self.cpu.instruction_parser.register_collection.get("BX"), 0x0001)
+
+    def test_neg_instruction(self):
+        """
+        Tests the NEG instruction on the CX register.
+
+        This test verifies that after moving the value 0x0001 into the CX register and executing the NEG instruction,
+        the CX register contains 0xFFFF, which is the two's complement negation of 0x0001 in 16-bit arithmetic.
+        """
+        self.cpu.parse_instruction("MOV CX, 0x0001", self.memory)
+        self.cpu.parse_instruction("NEG CX", self.memory)
+        self.assertEqual(self.cpu.instruction_parser.register_collection.get("CX"), 0xFFFF)
+
+    def test_not_instruction(self):
+        """
+        Tests the NOT instruction by first moving the value 0xAAAA into the DX register,
+        then applying the NOT operation to DX, and finally asserting that the result is 0x5555.
+        """
+        self.cpu.parse_instruction("MOV DX, 0xAAAA", self.memory)
+        self.cpu.parse_instruction("NOT DX", self.memory)
+        self.assertEqual(self.cpu.instruction_parser.register_collection.get("DX"), 0x5555)
+
 
 
 if __name__ == '__main__':

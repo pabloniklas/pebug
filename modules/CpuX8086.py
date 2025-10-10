@@ -478,8 +478,8 @@ class InstructionParser:
         Returns:
             None
         """
-        ds = registers['DS']  # Segmento de datos
-        dx = registers['DX']  # Desplazamiento
+        ds = registers.get('DS')  # Segmento de datos
+        dx = registers.get('DX')  # Desplazamiento
         address = (ds << 4) + dx
 
         output = ""
@@ -500,8 +500,8 @@ class InstructionParser:
         Returns:
             None
         """
-        ds = registers['DS']  # Segmento de datos
-        dx = registers['DX']  # Desplazamiento
+        ds = registers.get('DS')  # Segmento de datos
+        dx = registers.get('DX')  # Desplazamiento
         address = (ds << 4) + dx
 
         max_length = memory[address]  # Longitud máxima de la cadena
@@ -526,7 +526,7 @@ class InstructionParser:
         Returns:
             None
         """
-        exit_code = registers['AL']
+        exit_code = registers.get('AL')
         print(f"\nProgram terminated with exit code {exit_code}")
         exit(exit_code)
 
