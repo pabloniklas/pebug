@@ -18,7 +18,7 @@ class Memory:
     def __init__(self, pages: int = 1):
         self.pages = pages
         self.offset_cursor = 0
-        self.active_page = 1  # Like the old C000
+        self.active_page = 0
         self._offsets = 65536  # 64K per page
         self._memory = [[0b00000000] * self._offsets for _ in range(self.pages)]
         self.terminal = Terminal()
@@ -76,7 +76,7 @@ class Memory:
         """
         try:
             return self._memory[page][address]
-        except ValueError:
+        except (ValueError, IndexError):
             self.terminal.warning_message("Memory.peek(): Invalid hexadecimal address or page.")
             return -1
     

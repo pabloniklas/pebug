@@ -5,6 +5,10 @@ from typing import (
     Optional
 )
 
+from dataclasses import dataclass, field
+from typing import Dict, List, Tuple, Optional, Callable, Any
+
+
 import re
 
 from multipledispatch import dispatch
@@ -26,6 +30,42 @@ else:
     from Terminal import Terminal, AnsiColors
 
 # https://joshsharp.com.au/blog/rpython-rply-interpreter-1.html
+
+
+@dataclass
+class TraceRecord:
+    opcode: str
+    operands: List[str]
+    pseudo_bytes: Optional[List[int]] = None
+    regs_before: Dict[str, int] = field(default_factory=dict)
+    regs_after: Dict[str, int] = field(default_factory=dict)
+    flags_before: Dict[str, int] = field(default_factory=dict)
+    flags_after: Dict[str, int] = field(default_factory=dict)
+    mem_accesses: List[Tuple[str, int, int, int]] = field(
+        default_factory=list)  # ('R'|'W', page, addr, val)
+
+
+class TracedMemory:
+    """
+    Envueltura de Memory que registra accesos R/W para la traza.
+    """
+
+    def __init__(self, base_memory):
+        self._m = base_memory
+        self.accesses: List[Tuple[str, int, int, int]] = []
+
+    # Passthrough a atributos (active_page, etc.)
+    def __getattr__(self, name):
+        return getattr(self._m, name)
+
+    def peek(self, page: int, addr: int) -> int:
+        v = self._m.peek(page, addr)
+        self.accesses.append(('R', page, addr, v))
+        return v
+
+    def poke(self, page: int, addr: int, val: int) -> None:
+        self._m.poke(page, addr, val)
+        self.accesses.append(('W', page, addr, val))
 
 
 class Icons(Enum):
@@ -90,28 +130,20 @@ class RegisterSet:
             self.registers[reg] = value & 0xFFFF
 
     def update_flags(self, result: int, operation: Optional[str] = None, carry: Optional[bool] = None) -> None:
-        """
-        Updates flags (ZF, SF, PF, CF) based on the result of an operation.
+        """Updates ZF, SF, PF and (optionally) CF on a 16-bit result.
 
-        Args:
-            result (int): Result of the performed operation.
-            operation (str, optional): Type of operation ('ADD' or 'SUB') to update CF.
-            carry (bool, optional): Indicates if there was a carry for CF in ADD operations.
-
-        Returns:
-            None
+        - ZF/SF: computed over 16 bits
+        - PF: even parity of the low 8 bits (8086 semantics)
+        - CF: updated only when the operation defines it and `carry` is provided
         """
-        # Zero Flag: Set if the result is zero
-        self.flags['ZF'] = 1 if result == 0 else 0
-        # Sign Flag: Set if the most significant bit is set (negative in signed interpretation)
-        self.flags['SF'] = 1 if (result & 0x8000) != 0 else 0
-        # Parity Flag: Set if the number of bits set in result is even
-        self.flags['PF'] = 1 if bin(result).count("1") % 2 == 0 else 0
-        # Carry Flag: Used in ADD and SUB operations
-        if operation == 'ADD':
+        r16 = result & 0xFFFF
+        self.flags['ZF'] = 1 if r16 == 0 else 0
+        self.flags['SF'] = 1 if (r16 & 0x8000) != 0 else 0
+        self.flags['PF'] = 1 if (bin(r16 & 0xFF).count('1') % 2 == 0) else 0
+
+        op = (operation or '').upper()
+        if op in ('ADD', 'SUB', 'SHL', 'SHR', 'ROL', 'ROR') and carry is not None:
             self.flags['CF'] = 1 if carry else 0
-        elif operation == 'SUB':
-            self.flags['CF'] = 1 if result < 0 else 0
 
     def print_changed_registers(self) -> None:
         """
@@ -287,9 +319,189 @@ class InstructionParser:
             'SP': '100', 'BP': '101', 'SI': '110', 'DI': '111'
         }
 
+        # --- dispatch table ---
+        self.functions_map = {
+            'MOV':  self.asm_mov,
+            'ADD':  self.asm_add,
+            'SUB':  self.asm_sub,
+            'AND':  self.asm_and,
+            'OR':   self.asm_or,
+            'XOR':  self.asm_xor,
+            'INC':  self.asm_inc,
+            'DEC':  self.asm_dec,
+            'SHL':  self.asm_shl,
+            'SHR':  self.asm_shr,
+            'ROL':  self.asm_rol,
+            'ROR':  self.asm_ror,
+            # opcionales (si los agregaste)
+            'NEG':  getattr(self, 'asm_neg',  None) or (lambda *_: (_ for _ in ()).throw(NotImplementedError("NEG no implementado"))),
+            'NOT':  getattr(self, 'asm_not',  None) or (lambda *_: (_ for _ in ()).throw(NotImplementedError("NOT no implementado"))),
+            'PUSH': self.asm_push,
+            'POP':  self.asm_pop,
+            'INT':  self.asm_int,   # recuerda: parse() le pasa (operands, memory)
+        }
+        # Filtrar los Nones por si NEG/NOT no están
+        self.functions_map = {k: v for k, v in self.functions_map.items() if v}
+
+        self.supported_instructions = sorted(self.functions_map.keys())
+
         # Instancia de RegisterSet
         self.register_collection = RegisterSet()
         self.supported_registers = self.register_collection.registers_supported
+
+        # --- tracing / stepping ---
+        self.trace_enabled: bool = False
+        # por defecto usa Terminal.default_message o print
+        self._trace_out: Optional[Callable[[str], None]] = None
+
+        # Programa para step/breakpoints (opcional)
+        self.step_mode: bool = False
+        self.program: List[str] = []     # líneas ASM
+        self.labels: Dict[str, int] = {}  # label -> índice (pc)
+        self.pc: int = 0
+        self.base_addr: int = 0x0000
+        self.breakpoints: set[int] = set()
+
+        # Watches
+        self.watches: List[str] = []
+        self._watch_last: Dict[str, Optional[int]] = {}
+
+    def load_program(self, lines: List[str], base_addr: int = 0x0000) -> None:
+        """
+        Carga un listado de instrucciones (cada línea) y extrae labels 'mi_label:' al inicio de línea.
+        """
+        self.program = []
+        self.labels.clear()
+        self.pc = 0
+        self.base_addr = base_addr
+        for idx, line in enumerate(lines):
+            raw = line.strip()
+            if not raw:
+                continue
+            if raw.endswith(":") and " " not in raw:
+                label = raw[:-1].strip()
+                self.labels[label.upper()] = len(self.program)
+            else:
+                self.program.append(raw)
+        self.step_mode = True
+
+    def add_breakpoint(self, target: str | int) -> None:
+        addr = self._resolve_bp(target)
+        self.breakpoints.add(addr)
+
+    def remove_breakpoint(self, target: str | int) -> None:
+        addr = self._resolve_bp(target)
+        self.breakpoints.discard(addr)
+
+    def clear_breakpoints(self) -> None:
+        self.breakpoints.clear()
+
+    def _resolve_bp(self, target: str | int) -> int:
+        if isinstance(target, int):
+            return target
+        t = target.strip()
+        if t.upper() in self.labels:
+            return self.base_addr + self.labels[t.upper()]
+        # número (0x.. o decimal)
+        return int(t, 16) if t.upper().startswith("0X") else int(t)
+
+    def step(self, memory) -> Optional[str]:
+        """
+        Ejecuta 1 instrucción del programa cargado (step_mode) respetando breakpoints.
+        Devuelve la línea ejecutada o None si terminó.
+        """
+        if not self.step_mode or self.pc >= len(self.program):
+            return None
+        cur_addr = self.base_addr + self.pc
+        if cur_addr in self.breakpoints:
+            self._out(f"[break] en {cur_addr:04X}")
+            return self.program[self.pc]
+        line = self.program[self.pc]
+        self.parse(line, memory)  # esto avanzará pc +1 al final
+        return line
+
+    def cont(self, memory, max_steps: int = 10_000) -> None:
+        steps = 0
+        while self.step_mode and self.pc < len(self.program):
+            cur_addr = self.base_addr + self.pc
+            if cur_addr in self.breakpoints and steps > 0:
+                self._out(f"[break] en {cur_addr:04X}")
+                return
+            self.step(memory)
+            steps += 1
+            if steps >= max_steps:
+                self._out("[cont] límite de pasos alcanzado")
+                return
+
+    def disassemble_line(self, line: str, addr: Optional[int] = None) -> str:
+        line = line.strip()
+        if not line or line.endswith(":"):
+            return line
+        parts = line.split(None, 1)
+        op = parts[0].upper()
+        ops = [p.strip() for p in parts[1].split(',')
+               ] if len(parts) > 1 else []
+        b = self._encode_pseudo_bytes(op, ops)
+        bhex = "-" if not b else " ".join(f"{x:02X}" for x in b)
+        prefix = f"{addr:04X}: " if addr is not None else ""
+        return f"{prefix}{op} " + (", ".join(ops) if ops else "") + f"    ; bytes(pseudo): {bhex}"
+
+    def disassemble_program(self, base_addr: Optional[int] = None) -> List[str]:
+        if not self.program:
+            return []
+        ba = self.base_addr if base_addr is None else base_addr
+        out = []
+        pc = 0
+        for i, line in enumerate(self.program):
+            out.append(self.disassemble_line(line, ba + pc))
+            pc += 1  # 1 línea = 1 "longitud" educativa (no real)
+        return out
+
+    def monitor(self, cmd: str, memory) -> None:
+        """
+        Comandos:
+        - trace on|off
+        - bp <label|addr>
+        - delbp <label|addr>
+        - watch <expr>
+        - unwatch <expr>
+        - step
+        - cont
+        - disas
+        """
+        t = cmd.strip().split(None, 1)
+        if not t:
+            return
+        c = t[0].lower()
+        arg = t[1] if len(t) > 1 else ""
+
+        if c == "trace":
+            on = arg.strip().lower() == "on"
+            self.enable_trace(on)
+            self._out(f"[trace] {'on' if on else 'off'}")
+        elif c == "bp":
+            self.add_breakpoint(arg)
+            self._out(f"[bp] agregado {arg}")
+        elif c == "delbp":
+            self.remove_breakpoint(arg)
+            self._out(f"[bp] eliminado {arg}")
+        elif c == "watch":
+            self.add_watch(arg)
+            self._out(f"[watch] {arg}")
+        elif c == "unwatch":
+            self.remove_watch(arg)
+            self._out(f"[unwatch] {arg}")
+        elif c == "step":
+            line = self.step(memory)
+            if line is None:
+                self._out("[step] fin de programa")
+        elif c == "cont":
+            self.cont(memory)
+        elif c == "disas":
+            for l in self.disassemble_program():
+                self._out(l)
+        else:
+            self._out(f"[?] comando desconocido: {c}")
 
     def handle_instruction(self, p: list) -> None:
         """
@@ -391,50 +603,169 @@ class InstructionParser:
             ValueError: If the instruction format is invalid.
             KeyError: If the opcode is not supported.
         """
-        instruction = instruction.strip().upper()
-        tokens = instruction.split()
+        """
+        Parses a single assembly instruction, executes it, and (opcionalmente) retorna tokens.
+        """
 
-        if len(tokens) < 1:
-            raise ValueError(f"Invalid instruction format: '{instruction}'")
+        # <-- para que PUSH/POP (y otros) puedan acceder a Memory
+        self._mem = memory
 
-        # try:
-            # Handle INT 0x21
-        if tokens[0] == "INT" and len(tokens) == 2 and tokens[1] == "0X21":
-            # Obtener AH (parte alta de AX)
-            ah = self.register_collection.get('AX') >> 8
-            self.int_0x21(ah, memory, self.register_collection)
-            return {'opcode': 'INT', 'operands': ['0x21']}
+        # ⚠️ FIX: usar el parámetro 'instruction' en lugar de 'cmd'
+        cmd = instruction.strip()
+        if not cmd:
+            return None
 
-        opcode = tokens[0]
-        if opcode not in self.opcode_methods:
-            raise KeyError(
-                f"Unsupported opcode '{opcode}' in instruction: '{instruction}'")
+        # Normalización y separación
+        parts = cmd.split(None, 1)
+        opcode = parts[0].upper()
+        operands = [p.strip() for p in parts[1].split(',')
+                    ] if len(parts) > 1 else []
 
-        # Split operands by comma and strip spaces
-        operands = [op.strip() for op in ' '.join(tokens[1:]).split(',')]
+        # Breakpoints solo si estamos en modo programa (step_mode)
+        if self.step_mode:
+            cur_addr = self.base_addr + self.pc
+            if cur_addr in self.breakpoints:
+                self._out(f"[break] en {cur_addr:04X}")
+                return  # no ejecutar; quedamos parados aquí
 
-        # Manejo especial para PUSH y POP (un solo operando)
-        if opcode in ['PUSH', 'POP'] and len(operands) != 1:
-            raise ValueError(
-                f"Invalid operand format for '{opcode}': '{instruction}'")
+        # Envolver memoria si hay traza
+        traced_mem = TracedMemory(memory) if self.trace_enabled else memory
 
-        # Convert immediate values to integers
-        for i, operand in enumerate(operands):
-            if operand.isdigit() or operand.startswith("0X"):
-                operands[i] = int(operand, 16) if operand.startswith(
-                    "0X") else int(operand)
+        # Normalizar opcode/operands
+        parts = cmd.split(None, 1)
+        opcode = parts[0].upper()
+        operands = [p.strip() for p in parts[1].split(',')
+                    ] if len(parts) > 1 else []
 
-        # Invocar el método correspondiente al opcode, pasando `memory` si es necesario
-        method = self.opcode_methods[opcode]
-        if opcode in ['PUSH', 'POP']:  # Métodos que requieren `memory`
-            method(operands, memory)
+        if opcode not in self.functions_map:
+            raise ValueError(f"Unsupported instruction: {opcode}")
+
+        before_regs, before_flags = self._snapshot()
+
+        # Ejecutar
+        fn = self.functions_map[opcode]
+        if opcode == 'INT':
+            fn(operands, traced_mem)  # tus INT handlers ya reciben memoria
         else:
-            method(operands)
+            fn(operands)
 
-        return {'opcode': opcode, 'operands': operands}
+        after_regs, after_flags = self._snapshot()
 
-        # except Exception as e:
-        #    raise ValueError(f"Error parsing instruction: '{instruction}' -> {e}")
+        # Emitir traza (si corresponde)
+        if self.trace_enabled:
+            rec = TraceRecord(
+                opcode=opcode,
+                operands=operands,
+                pseudo_bytes=self._encode_pseudo_bytes(opcode, operands),
+                regs_before=before_regs, regs_after=after_regs,
+                flags_before=before_flags, flags_after=after_flags,
+                mem_accesses=(traced_mem.accesses if isinstance(
+                    traced_mem, TracedMemory) else [])
+            )
+            self._out(self._format_trace(rec))
+
+        # Evaluar watches
+        self._eval_watches(traced_mem)
+
+        # Avanzar PC si step_mode
+        if self.step_mode:
+            self.pc = min(self.pc + 1, max(0, len(self.program)-1))
+
+    def add_watch(self, expr: str) -> None:
+        if expr not in self.watches:
+            self.watches.append(expr)
+            self._watch_last[expr] = None
+
+    def remove_watch(self, expr: str) -> None:
+        if expr in self.watches:
+            self.watches.remove(expr)
+            self._watch_last.pop(expr, None)
+
+    def asm_int(self, operands: List[str], memory) -> None:
+        """
+        INT <vector>
+        Soporta INT 0x21 con servicios: AH=09h, 0Ah, 4Ch.
+        - 09h: imprime cadena en DS:DX hasta '$'
+        - 0Ah: lee buffer en DS:DX (long máx en [DS:DX], long real en [DS:DX+1], datos a partir de [DS:DX+2], termina con 0x00)
+        - 4Ch: termina con código en AL
+        """
+        if not operands:
+            raise ValueError("INT: falta vector")
+
+        tok = operands[0].strip().upper()
+        try:
+            vec = int(tok, 16) if tok.startswith('0X') else int(tok)
+        except ValueError:
+            raise ValueError(f"INT: vector inválido '{operands[0]}'")
+
+        if vec != 0x21:
+            raise ValueError(f"INT 0x{vec:02X} no soportada (sólo 0x21)")
+
+        ax = self.register_collection.get('AX')
+        ah = (ax >> 8) & 0xFF
+        # alias dict (por compatibilidad)
+        registers = self.register_collection.registers
+
+        if ah == 0x09:
+            self.service_09(memory, registers)
+        elif ah == 0x0A:
+            self.service_0a(memory, registers)
+        elif ah == 0x4C:
+            self.service_4c(registers)
+        else:
+            raise ValueError(f"INT 0x21: función AH=0x{ah:02X} no soportada")
+
+    def clear_watches(self) -> None:
+        self.watches.clear()
+        self._watch_last.clear()
+
+    def _eval_watches(self, memory) -> None:
+        for expr in list(self.watches):
+            try:
+                val = self._eval_expr(expr, memory)
+            except Exception as e:
+                self._out(f"[watch err] {expr}: {e}")
+                continue
+            last = self._watch_last.get(expr)
+            if last is None:
+                self._watch_last[expr] = val
+            elif last != val:
+                self._out(f"[watch] {expr}: {last:04X}->{val:04X}")
+                self._watch_last[expr] = val
+
+    def _eval_expr(self, expr: str, memory) -> int:
+        e = expr.strip().upper()
+        if e.startswith("FLAGS."):
+            f = e.split(".", 1)[1]
+            return int(self.register_collection.flags.get(f, 0))
+        if e in self.register_collection.registers:
+            return int(self.register_collection.get(e))
+        if e.startswith("[") and e.endswith("]"):
+            inside = e[1:-1]
+            # [DS:DX]
+            if ":" in inside:
+                left, right = inside.split(":", 1)
+                if left == "DS" and right == "DX":
+                    ds = self.register_collection.get('DS')
+                    dx = self.register_collection.get('DX')
+                    addr = (ds << 4) + dx
+                    page = getattr(memory, 'active_page', 0)
+                    return int(memory.peek(page, addr))
+                else:
+                    # [page:addr]
+                    page_s, addr_s = left, right
+                    page = int(page_s, 16) if page_s.startswith(
+                        "0X") else int(page_s)
+                    addr = int(addr_s, 16) if addr_s.startswith(
+                        "0X") else int(addr_s)
+                    return int(memory.peek(page, addr))
+            # [addr] (usa active_page)
+            addr_s = inside
+            addr = int(addr_s, 16) if addr_s.startswith("0X") else int(addr_s)
+            page = getattr(memory, 'active_page', 0)
+            return int(memory.peek(page, addr))
+        # número inmediato
+        return int(e, 16) if e.startswith("0X") else int(e)
 
     def int_0x21(self, ah: int, memory: dict, registers: dict) -> None:
         """
@@ -467,306 +798,388 @@ class InstructionParser:
         else:
             raise ValueError(f"Unsupported INT 0x21 service: 0x{ah:02X}")
 
-    def service_09(self, memory: dict, registers: dict) -> None:
-        """
-        Servicio 0x09: Mostrar cadena terminada en '$'.
+    def enable_trace(self, enabled: bool = True, out: Optional[Callable[[str], None]] = None) -> None:
+        self.trace_enabled = enabled
+        if out is not None:
+            self._trace_out = out
 
-        Args:
-            memory (dict): Simulación de la memoria del sistema.
-            registers (dict): Registros del procesador.
+    def _out(self, msg: str) -> None:
+        if self._trace_out:
+            self._trace_out(msg)
+        else:
+            try:
+                self.terminal.default_message(msg)
+            except Exception:
+                print(msg)
 
-        Returns:
-            None
+    def _snapshot(self) -> Tuple[Dict[str, int], Dict[str, int]]:
+        return (dict(self.register_collection.registers),
+                dict(self.register_collection.flags))
+
+    def _diff_dict(self, before: Dict[str, int], after: Dict[str, int], only_changes=True) -> List[str]:
+        items = []
+        for k in sorted(after.keys()):
+            b, a = before.get(k), after.get(k)
+            if only_changes and b == a:
+                continue
+            if k in ('AX', 'BX', 'CX', 'DX', 'SP', 'BP', 'SI', 'DI', 'DS', 'ES'):
+                items.append(f"{k}:{b:04X}->{a:04X}")
+            else:
+                items.append(f"{k}:{b}->{a}")
+        return items
+
+    def _fmt_mem(self, mem_accesses: List[Tuple[str, int, int, int]], max_items: int = 4) -> str:
+        if not mem_accesses:
+            return "-"
+        parts = []
+        for i, (rw, page, addr, val) in enumerate(mem_accesses):
+            if i >= max_items:
+                parts.append(f"...(+{len(mem_accesses)-max_items})")
+                break
+            parts.append(f"{rw}[p{page}:{addr:04X}]={val:02X}")
+        return " ".join(parts)
+
+    def _encode_pseudo_bytes(self, opcode: str, operands: List[str]) -> Optional[List[int]]:
         """
-        ds = registers.get('DS')  # Segmento de datos
-        dx = registers.get('DX')  # Desplazamiento
+        Mini codificador educativo (NO 8086 real). Solo para mostrar 'bytes (pseudo)' en la traza.
+        Reg mapa: AX=0,BX=3,CX=1,DX=2,SP=4,BP=5,SI=6,DI=7
+        """
+        reg_ix = {'AX': 0, 'CX': 1, 'DX': 2, 'BX': 3,
+                  'SP': 4, 'BP': 5, 'SI': 6, 'DI': 7}
+        op = opcode.upper()
+        try:
+            if op == 'MOV' and len(operands) == 2:
+                d, s = operands[0].upper(), operands[1].upper()
+                if d in reg_ix:
+                    if s.startswith('0X') or s.isdigit():
+                        imm = int(s, 16) if s.startswith('0X') else int(s)
+                        # MOV reg, imm (pseudo)
+                        return [0xB8 + reg_ix[d], imm & 0xFF, (imm >> 8) & 0xFF]
+                    elif s in reg_ix:
+                        # MOV reg, reg (pseudo)
+                        return [0x8B, 0xC0 | (reg_ix[d] << 3) | reg_ix[s]]
+            if op in ('ADD', 'SUB') and len(operands) == 2:
+                d, s = operands[0].upper(), operands[1].upper()
+                if d in reg_ix:
+                    if s.startswith('0X') or s.isdigit():
+                        imm = int(s, 16) if s.startswith('0X') else int(s)
+                        base = 0x70 if op == 'ADD' else 0x71
+                        # pseudo
+                        return [base, reg_ix[d], imm & 0xFF, (imm >> 8) & 0xFF]
+                    elif s in reg_ix:
+                        base = 0x10 if op == 'ADD' else 0x11
+                        return [base, 0xC0 | (reg_ix[d] << 3) | reg_ix[s]]
+            if op in ('AND', 'OR', 'XOR', 'INC', 'DEC', 'SHL', 'SHR', 'ROL', 'ROR', 'NEG', 'NOT', 'PUSH', 'POP'):
+                return [hash(op) & 0xFF]  # marcador simbólico
+            if op == 'INT':
+                v = operands[0]
+                imm = int(v, 16) if v.upper().startswith('0X') else int(v)
+                return [0xCD, imm & 0xFF]
+        except Exception:
+            return None
+        return None
+
+    def _format_trace(self, rec: TraceRecord) -> str:
+        mnem = f"{rec.opcode} " + \
+            ", ".join(rec.operands) if rec.operands else rec.opcode
+        b = "-" if not rec.pseudo_bytes else " ".join(
+            f"{x:02X}" for x in rec.pseudo_bytes)
+        regs = self._diff_dict(rec.regs_before, rec.regs_after)
+        flags = self._diff_dict(rec.flags_before, rec.flags_after)
+        mems = self._fmt_mem(rec.mem_accesses)
+        regs_s = "[" + ", ".join(regs) + "]" if regs else "[]"
+        flags_s = "[" + ", ".join(flags) + "]" if flags else "[]"
+        return f"{mnem}  | bytes(pseudo): {b}  | regsΔ: {regs_s}  | flagsΔ: {flags_s}  | mem: {mems}"
+
+    def service_09(self, memory: Memory, registers: dict) -> None:
+        # Print string at DS:DX until '$' (like DOS)
+        ds = registers.get('DS')
+        dx = registers.get('DX')
         address = (ds << 4) + dx
 
+        page = memory.active_page
         output = ""
-        while memory[address] != ord('$'):  # Leer hasta encontrar '$'
-            output += chr(memory[address])
+        while memory.peek(page, address) != ord('$'):
+            output += chr(memory.peek(page, address))
             address += 1
 
-        print(output, end="")
+        try:
+            self.terminal.default_message(output, end="")
+        except Exception:
+            print(output, end="")
 
-    def service_0a(self, memory: dict, registers: dict) -> None:
-        """
-        Servicio 0x0A: Leer cadena con límite.
-
-        Args:
-            memory (dict): Simulación de la memoria del sistema.
-            registers (dict): Registros del procesador.
-
-        Returns:
-            None
-        """
-        ds = registers.get('DS')  # Segmento de datos
-        dx = registers.get('DX')  # Desplazamiento
+    def service_0a(self, memory: Memory, registers: dict) -> None:
+        # Buffered input at DS:DX
+        ds = registers.get('DS')
+        dx = registers.get('DX')
         address = (ds << 4) + dx
 
-        max_length = memory[address]  # Longitud máxima de la cadena
+        page = memory.active_page
+        max_length = memory.peek(page, address)
         address += 1
 
         input_str = input("Enter string: ")[:max_length]
-        memory[address] = len(input_str)  # Longitud real de la cadena
+        memory.poke(page, address, len(input_str))  # Actual length
         address += 1
 
         for i, char in enumerate(input_str):
-            memory[address + i] = ord(char)
+            memory.poke(page, address + i, ord(char))
 
-        memory[address + len(input_str)] = 0x00  # Fin de cadena
+        memory.poke(page, address + len(input_str), 0x00)  # End with 0x00
 
     def service_4c(self, registers: dict) -> None:
+        # Exit with code in AL (AX low byte)
+        ax = registers.get('AX')
+        exit_code = ax & 0x00FF
+        import sys
+        raise SystemExit(exit_code)
+
+    @dispatch(list)
+    def asm_push(self, operands: List[str]) -> int:
         """
-        Servicio 0x4C: Terminar programa.
-
-        Args:
-            registers (dict): Registros del procesador.
-
-        Returns:
-            None
+        PUSH <reg>
+        Empuja 16 bits a la pila en little-endian usando Memory y actualiza SP.
         """
-        exit_code = registers.get('AL')
-        print(f"\nProgram terminated with exit code {exit_code}")
-        exit(exit_code)
+        if not hasattr(self, "_mem") or self._mem is None:
+            raise RuntimeError(
+                "asm_push: Memory no inicializada (llamar via parse/parse_instruction)")
 
-    @dispatch(list, Memory)
-    def asm_push(self, operands: list, memory: Memory) -> None:
+        (src,) = operands
+        reg = src.strip().upper()
+        value = self.register_collection.get(reg)  # 16 bits
+
+        # SP = SP - 2, escribir low en [SP], high en [SP+1]
+        sp = (self.register_collection.get('SP') - 2) & 0xFFFF
+        page = getattr(self._mem, 'active_page', 0)
+
+        low = value & 0xFF
+        high = (value >> 8) & 0xFF
+        self._mem.poke(page, sp, low)
+        self._mem.poke(page, sp + 1, high)
+
+        self.register_collection.set('SP', sp)
+        return value & 0xFFFF
+
+    @dispatch(list)
+    def asm_pop(self, operands: List[str]) -> int:
         """
-        Handles the 'PUSH' instruction.
-
-        Args:
-            operands (list): A list containing the register to push.
-            memory (Memory): Memory object representing the system's memory.
-
-        Returns:
-            None
+        POP <reg>
+        Saca 16 bits de la pila en little-endian usando Memory y actualiza SP.
         """
-        reg = operands[0]
-        if reg not in self.register_codes:
-            raise ValueError(f"Invalid register '{reg}' for PUSH")
+        if not hasattr(self, "_mem") or self._mem is None:
+            raise RuntimeError(
+                "asm_pop: Memory no inicializada (llamar via parse/parse_instruction)")
 
-        value = self.register_collection.get(reg)
-        sp = self.register_collection.get("SP")
+        (dst,) = operands
+        reg = dst.strip().upper()
 
-        sp -= 2
-        if sp < 0:
-            raise ValueError("Stack overflow: SP is below 0")
+        sp = self.register_collection.get('SP')
+        page = getattr(self._mem, 'active_page', 0)
 
-        memory.poke(memory.active_page, sp, value &
-                    0xFF)            # Lower byte
-        memory.poke(memory.active_page, sp + 1,
-                    (value >> 8) & 0xFF)  # Upper byte
-        self.register_collection.set("SP", sp)
-
-    @dispatch(list, Memory)
-    def asm_pop(self, operands: list, memory: Memory) -> None:
-        """
-        Handles the 'POP' instruction.
-
-        Args:
-            operands (list): A list containing the register to pop.
-            memory (Memory): Memory object representing the system's memory.
-
-        Returns:
-            None
-        """
-        reg = operands[0]
-        if reg not in self.register_codes:
-            raise ValueError(f"asm_pop(): Invalid register '{reg}' for POP")
-
-        sp = self.register_collection.get("SP")
-
-        if sp + 2 > 0xFFFF:
-            raise ValueError(
-                "asm_pop(): Stack underflow: SP exceeds memory bounds")
-
-        low = memory.peek(memory.active_page, sp)
-        high = memory.peek(memory.active_page, sp + 1)
-        value = (high << 8) | low
+        low = self._mem.peek(page, sp)
+        high = self._mem.peek(page, sp + 1)
+        value = ((high << 8) | low) & 0xFFFF
 
         self.register_collection.set(reg, value)
-        self.register_collection.set("SP", sp + 2)
+        self.register_collection.set('SP', (sp + 2) & 0xFFFF)
+        return value
 
     # Operaciones de ensamblador
 
     @dispatch(list)
     def asm_mov(self, operands: List[str]) -> int:
         """
-        Executes the MOV instruction, moving a value to a register.
-
-        Args:
-            operands (list): List of operands (destination and source).
-
-        Returns:
-            None:q
+        MOV <reg>, <reg|imm>
+        Inmediatos: acepta 0x.... o decimal; no upper-casea el string antes de parsear.
         """
         dst, src = operands
         dst = dst.upper()
-        src = src.upper() if isinstance(src, str) else src
 
-        if dst in self.register_codes:
-            if isinstance(src, str) and src in self.register_codes:
-                val_src = self.register_collection.get(src)
-            elif isinstance(src, str) and src.startswith('0x'):
-                val_src = int(src, 16)
-            elif isinstance(src, str) and src.isdigit():
-                val_src = int(src)
-            elif isinstance(src, int):  # <--- NUEVA CONDICIÓN
-                val_src = src
+        # Normalizamos para evaluar
+        if isinstance(src, str):
+            src_str = src.strip()
+            src_up = src_str.upper()
+            # Fuente = registro
+            if src_up in self.register_collection.registers:
+                val_src = self.register_collection.get(src_up)
+            # Fuente = inmediato hex (acepta 0x o 0X)
+            elif src_str.lower().startswith('0x'):
+                val_src = int(src_str, 16)
+            # Fuente = inmediato decimal
+            elif src_str.isdigit():
+                val_src = int(src_str)
             else:
                 raise ValueError(f"MOV: fuente inválida {src}")
+        elif isinstance(src, int):
+            val_src = src
+        else:
+            raise ValueError(f"MOV: fuente inválida {src}")
 
-            self.register_collection.set(dst, val_src)
-            return val_src
+        # Destino debe ser registro
+        if dst not in self.register_collection.registers:
+            raise ValueError(f"MOV: destino inválido {dst}")
 
-        raise ValueError(
-            f"Instrucción MOV no soportada para operandos: {dst}, {src}")
+        self.register_collection.set(dst, val_src & 0xFFFF)
+        # Flags no se tocan en MOV
+        return val_src & 0xFFFF
 
     @dispatch(list)
     def asm_add(self, operands: List[str]) -> int:
-        """Executes the ADD instruction, adding a value to a register.
-
-        Args:
-            operands (List[str]): List of operands (destination and source).
-
-        Raises:
-            ValueError: If the operands are invalid.
-
-        Returns:
-            int: Result of the addition operation.
-        """
         dst, src = operands
         dst = dst.upper()
-        src = src.upper() if isinstance(src, str) else src
+        a = self.register_collection.get(dst)
 
-        if dst in self.register_codes:
-            val_dst = self.register_collection.get(dst)
-
-            if isinstance(src, str) and src in self.register_codes:
-                val_src = self.register_collection.get(src)
-            elif isinstance(src, str) and src.startswith('0x'):
-                val_src = int(src, 16)
-            elif isinstance(src, str) and src.isdigit():
-                val_src = int(src)
-            elif isinstance(src, int):
-                val_src = src
+        if isinstance(src, str):
+            src_str = src.strip()
+            src_up = src_str.upper()
+            if src_up in self.register_collection.registers:
+                b = self.register_collection.get(src_up)
+            elif src_str.lower().startswith('0x'):
+                b = int(src_str, 16)
+            elif src_str.isdigit():
+                b = int(src_str)
             else:
                 raise ValueError(f"ADD: fuente inválida {src}")
+        elif isinstance(src, int):
+            b = src
+        else:
+            raise ValueError(f"ADD: fuente inválida {src}")
 
-            result = (val_dst + val_src) & 0xFFFF
-            self.register_collection.set(dst, result)
-            self.register_collection.update_flags(result, operation="add")
-            return result
-
-        raise ValueError(
-            f"Instrucción ADD no soportada para operandos: {dst}, {src}")
+        tmp = a + b
+        carry = tmp > 0xFFFF
+        res = tmp & 0xFFFF
+        self.register_collection.set(dst, res)
+        self.register_collection.update_flags(
+            res, operation='ADD', carry=carry)
+        return res
 
     @dispatch(list)
     def asm_sub(self, operands: List[str]) -> int:
-        """
-        Executes the SUB instruction, subtracting a value from a register.
-
-        Args:
-            operands (list): List of operands (destination and source).
-
-        Returns:
-            int: Result of the subtraction operation.
-        """
         dst, src = operands
         dst = dst.upper()
-        src = src.upper() if isinstance(src, str) else src
+        a = self.register_collection.get(dst)
 
-        if dst in self.register_codes:
-            val_dst = self.register_collection.get(dst)
-
-            if isinstance(src, str) and src in self.register_codes:
-                val_src = self.register_collection.get(src)
-            elif isinstance(src, str) and src.startswith('0x'):
-                val_src = int(src, 16)
-            elif isinstance(src, str) and src.isdigit():
-                val_src = int(src)
-            elif isinstance(src, int):
-                val_src = src
+        if isinstance(src, str):
+            src_str = src.strip()
+            src_up = src_str.upper()
+            if src_up in self.register_collection.registers:
+                b = self.register_collection.get(src_up)
+            elif src_str.lower().startswith('0x'):
+                b = int(src_str, 16)
+            elif src_str.isdigit():
+                b = int(src_str)
             else:
                 raise ValueError(f"SUB: fuente inválida {src}")
+        elif isinstance(src, int):
+            b = src
+        else:
+            raise ValueError(f"SUB: fuente inválida {src}")
 
-            result = (val_dst - val_src) & 0xFFFF
-            self.register_collection.set(dst, result)
-            self.register_collection.update_flags(result, operation="sub")
-            return result
-
-        raise ValueError(
-            f"Instrucción SUB no soportada para operandos: {dst}, {src}")
-
-    @dispatch(list)
-    def asm_and(self, operands: list) -> None:
-        """
-        Executes the AND instruction, performing a bitwise AND on a register.
-
-        Args:
-            operands (list): List of operands (destination and source).
-
-        Returns:
-            None
-        """
-        try:
-            dest, src = operands
-            result = self.register_collection.get(dest) & (
-                src if isinstance(src, int) else self.register_collection.get(src))
-            self.register_collection.set(dest, result)
-            self.register_collection.update_flags(result)
-        except KeyError:
-            self.terminal.error_message(
-                f"Invalid register '{dest}' or '{src}' in AND operation.")
-            self.terminal.info_message(
-                "TIP: Both operands must be valid registers or an immediate value.")
+        tmp = a - b
+        borrow = tmp < 0
+        res = tmp & 0xFFFF
+        self.register_collection.set(dst, res)
+        self.register_collection.update_flags(
+            res, operation='SUB', carry=borrow)
+        return res
 
     @dispatch(list)
-    def asm_or(self, operands: list) -> None:
-        """
-        Executes the OR instruction, performing a bitwise OR on a register.
+    def asm_and(self, operands: List[str]) -> int:
+        dst, src = operands
+        dst = dst.upper()
+        a = self.register_collection.get(dst)
 
-        Args:
-            operands (list): List of operands (destination and source).
+        if isinstance(src, str):
+            src_str = src.strip()
+            src_up = src_str.upper()
+            if src_up in self.register_collection.registers:
+                b = self.register_collection.get(src_up)
+            elif src_str.lower().startswith('0x'):
+                b = int(src_str, 16)
+            elif src_str.isdigit():
+                b = int(src_str)
+            else:
+                raise ValueError(f"AND: fuente inválida {src}")
+        elif isinstance(src, int):
+            b = src
+        else:
+            raise ValueError(f"AND: fuente inválida {src}")
 
-        Returns:
-            None
-        """
-        try:
-            dest, src = operands
-            result = self.register_collection.get(dest) | (
-                src if isinstance(src, int) else self.register_collection.get(src))
-            self.register_collection.set(dest, result)
-            self.register_collection.update_flags(result)
-        except KeyError:
-            self.terminal.error_message(
-                f"Invalid register '{dest}' or '{src}' in OR operation.")
-            self.terminal.info_message(
-                "TIP: Both operands must be valid registers or an immediate value.")
+        res = (a & b) & 0xFFFF
+        self.register_collection.set(dst, res)
+        self.register_collection.flags['CF'] = 0
+        self.register_collection.update_flags(res)
+        return res
 
     @dispatch(list)
-    def asm_xor(self, operands: list) -> None:
-        """
-        Executes the XOR instruction, performing a bitwise XOR on a register.
+    def asm_or(self, operands: List[str]) -> int:
+        dst, src = operands
+        dst = dst.upper()
+        a = self.register_collection.get(dst)
 
-        Args:
-            operands (list): List of operands (destination and source).
+        if isinstance(src, str):
+            src_str = src.strip()
+            src_up = src_str.upper()
+            if src_up in self.register_collection.registers:
+                b = self.register_collection.get(src_up)
+            elif src_str.lower().startswith('0x'):
+                b = int(src_str, 16)
+            elif src_str.isdigit():
+                b = int(src_str)
+            else:
+                raise ValueError(f"OR: fuente inválida {src}")
+        elif isinstance(src, int):
+            b = src
+        else:
+            raise ValueError(f"OR: fuente inválida {src}")
 
-        Returns:
-            None
-        """
-        try:
-            dest, src = operands
-            result = self.register_collection.get(dest) ^ (
-                src if isinstance(src, int) else self.register_collection.get(src))
-            self.register_collection.set(dest, result)
-            self.register_collection.update_flags(result)
-        except KeyError:
-            self.terminal.error_message(
-                f"Invalid register '{dest}' or '{src}' in XOR operation.")
-            self.terminal.info_message(
-                "TIP: Both operands must be valid registers or an immediate value.")
+        res = (a | b) & 0xFFFF
+        self.register_collection.set(dst, res)
+        self.register_collection.flags['CF'] = 0
+        self.register_collection.update_flags(res)
+        return res
+
+    @dispatch(list)
+    def asm_xor(self, operands: List[str]) -> int:
+        dst, src = operands
+        dst = dst.upper()
+        a = self.register_collection.get(dst)
+
+        if isinstance(src, str):
+            src_str = src.strip()
+            src_up = src_str.upper()
+            if src_up in self.register_collection.registers:
+                b = self.register_collection.get(src_up)
+            elif src_str.lower().startswith('0x'):
+                b = int(src_str, 16)
+            elif src_str.isdigit():
+                b = int(src_str)
+            else:
+                raise ValueError(f"XOR: fuente inválida {src}")
+        elif isinstance(src, int):
+            b = src
+        else:
+            raise ValueError(f"XOR: fuente inválida {src}")
+
+        res = (a ^ b) & 0xFFFF
+        self.register_collection.set(dst, res)
+        self.register_collection.flags['CF'] = 0
+        self.register_collection.update_flags(res)
+        return res
+
+    def _parse_src(self, src) -> int:
+        if isinstance(src, int):
+            return src
+        if isinstance(src, str):
+            s = src.strip()
+            su = s.upper()
+            if su in self.register_codes:
+                return self.register_collection.get(su)
+            if s.lower().startswith('0x'):
+                return int(s, 16)
+            if s.isdigit():
+                return int(s)
+        raise ValueError(f"Fuente inválida {src!r}")
 
     @dispatch(list)
     def asm_not(self, operands: list) -> None:
@@ -895,27 +1308,17 @@ class InstructionParser:
             --------------------------------------------------            
         """
 
-        if len(operands) != 1:
-            raise ValueError("SHL requires exactly one operand")
+        (dst,) = operands
+        dst = dst.strip().upper()
 
-        reg = operands[0].upper()
-        if reg not in self.register_codes:
-            raise ValueError(f"Unsupported register: {reg}")
+        val = self.register_collection.get(dst)
+        carry = bool((val >> 15) & 0x1)           # bit que sale
+        res = (val << 1) & 0xFFFF
 
-        val = self.register_collection.get(reg)
-        if val is None:
-            raise ValueError(f"Register value {reg} not defined")
-
-        # Shift 1 bit to the left
-        result = (val << 1) & 0xFFFF
-
-        # Store in the register
-        self.register_collection.set(reg, result)
-
-        # Update flags
-        self.register_collection.update_flags(result, operation="shl")
-
-        return result
+        self.register_collection.set(dst, res)
+        self.register_collection.update_flags(
+            res, operation='SHL', carry=carry)
+        return res
 
     @dispatch(list)
     def asm_shr(self, operands: list) -> None:
@@ -928,16 +1331,17 @@ class InstructionParser:
         Returns:
             None
         """
-        try:
-            dest = operands[0]
-            result = self.register_collection.get(dest) >> 1
-            self.register_collection.set(dest, result)
-            self.register_collection.update_flags(result)
-        except KeyError:
-            self.terminal.error_message(
-                f"Invalid register '{dest}' in SHR operation.")
-            self.terminal.info_message(
-                "TIP: Ensure the operand is a valid register.")
+        (dst,) = operands
+        dst = dst.strip().upper()
+
+        val = self.register_collection.get(dst)
+        carry = bool(val & 0x1)                   # bit que sale
+        res = (val >> 1) & 0x7FFF                 # relleno con 0
+
+        self.register_collection.set(dst, res)
+        self.register_collection.update_flags(
+            res, operation='SHR', carry=carry)
+        return res
 
     @dispatch(list)
     def asm_rol(self, operands: list) -> None:
@@ -950,17 +1354,17 @@ class InstructionParser:
         Returns:
             None
         """
-        try:
-            dest = operands[0]
-            value = self.register_collection.get(dest)
-            result = ((value << 1) | (value >> 15)) & 0xFFFF
-            self.register_collection.set(dest, result)
-            self.register_collection.update_flags(result)
-        except KeyError:
-            self.terminal.error_message(
-                f"Invalid register '{dest}' in ROL operation.")
-            self.terminal.info_message(
-                "TIP: Ensure the operand is a valid register.")
+        (dst,) = operands
+        dst = dst.strip().upper()
+
+        val = self.register_collection.get(dst)
+        carry = bool((val >> 15) & 0x1)
+        res = ((val << 1) & 0xFFFF) | (1 if carry else 0)
+
+        self.register_collection.set(dst, res)
+        self.register_collection.update_flags(
+            res, operation='ROL', carry=carry)
+        return res
 
     @dispatch(list)
     def asm_ror(self, operands: list) -> None:
@@ -973,17 +1377,17 @@ class InstructionParser:
         Returns:
             None
         """
-        try:
-            dest = operands[0]
-            value = self.register_collection.get(dest)
-            result = ((value >> 1) | (value << 15)) & 0xFFFF
-            self.register_collection.set(dest, result)
-            self.register_collection.update_flags(result)
-        except KeyError:
-            self.terminal.error_message(
-                f"Invalid register '{dest}' in ROR operation.")
-            self.terminal.info_message(
-                "TIP: Ensure the operand is a valid register.")
+        (dst,) = operands
+        dst = dst.strip().upper()
+
+        val = self.register_collection.get(dst)
+        carry = bool(val & 0x1)
+        res = ((val >> 1) | ((val & 0x1) << 15)) & 0xFFFF
+
+        self.register_collection.set(dst, res)
+        self.register_collection.update_flags(
+            res, operation='ROR', carry=carry)
+        return res
 
     def assemble(self, asm_code: str, memory: Memory) -> List[int]:
         """
@@ -1114,18 +1518,9 @@ class CpuX8086():
         return None
 
     def _16to8(self, hl: int) -> Tuple[int]:
-        """Decode a 16-bit number in 2 8-bit numbers
-
-        Parameters:
-            hl (int): 16-bit numbers
-
-        Returns:
-            int, int: 8-bit higher part and 8-bit lower part, respectively.
-
-        """
-        h = int(hl / 256)
-        l = h % 256
-
+        """Decode a 16-bit number in 2 8-bit numbers (high, low)."""
+        h = (hl >> 8) & 0xFF
+        l = hl & 0xFF
         return h, l
 
     @staticmethod
