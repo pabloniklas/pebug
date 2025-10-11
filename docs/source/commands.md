@@ -5,13 +5,10 @@
 
 ## Assemble: A
 
-:::{note}
-This is Work in Progress
-:::
 
 ```A```
 
-Interactive assemble. 
+Interactive assemble. (assembler educativo, “pseudo-encoding”).
 
 ### Example
 
@@ -243,14 +240,23 @@ The following operators are available (more are coming):
 | ```mov```    | ```mov a, b``` | Move (assign) operation between _a_ and _b_ |
 | ```add```    | ```add a, b``` | Add operation between _a_ and _b_ |
 | ```sub```    | ```sub a, b``` | Substract operation between _a_ and _b_ |
-| ```xor```    | ```xor a b``` | "Exclusive OR" between _a_ and _b_ |
-| ```or```     | ```or a b```  | OR between _a_ and _b_             |
-| ```and```    | ```and a b``` | AND between _a_ and _b_            |
-| ```not```    | ```not a```   | NOT of _a_                         |
-| ```shl```    | ```shl a```   | Shift to the left of _a_           |
-| ```shr```    | ```shr a```   | Shift to the right of _a_          |
+| ```xor``` | ```xor a, b``` | XOR operation between _a_ and _b_ |
+| ```and``` | ```and a, b``` | AND operation between _a_ and _b_ |
+| ```or``` | ```or a, b``` | OR operation between _a_ and _b_ |
+| ```not``` | ```not a``` | NOT operation on _a_ |
+| ```neg``` | ```neg a``` | NEG operation on _a_ |
+| ```inc``` | ```inc a``` | INC operation on _a_ |
+| ```dec``` | ```dec a``` | DEC operation on _a_ |
+| ```shl``` | ```shl a``` | SHL operation on _a_ |
+| ```shr``` | ```shr a``` | SHR operation on _a_ |
+| ```rol``` | ```rol a``` | ROL operation on _a_ |
+| ```ror``` | ```ror a``` | ROR operation on _a_ |
+| ```push```| ```push a``` | PUSH operation on _a_ |
+| ```pop``` | ```pop a``` | POP operation on _a_ |
+| ```int``` | ```int 0x21``` | Call the 0x21 DOS interrupt |
 
-# Work In Progress
+# Advanced (from code)
+Step-by-step execution, trace on/off (compact trace: mnem → pseudo-bytes → regs/flags Δ → mem access), simple breakpoints (addr|label) and watches (AX, FLAGS.CF, [DS:DX]) are available via InstructionParser. See API docs.
 
 ## Assemble: A [address]
 
@@ -263,4 +269,3 @@ Go is used to run a program and set breakpoints in the program's code.
 :::{note}
 Input / Output commands (regarding ports), are not available.
 :::
-

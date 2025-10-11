@@ -8,4 +8,3 @@ modules
    Disk
    Memory
    Terminal
-   AnsiColors

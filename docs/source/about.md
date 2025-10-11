@@ -1,31 +1,31 @@
 # About
 
-[PEBUG](https://github.com/pabloniklas/pebug) is a x86 old-debug-like program.
+[PEBUG](https://github.com/pabloniklas/pebug) is a x86 old-debug-like program focused on didactic use.
 
 An x86 old-debug-like program.
 
 The main goal of this project is to build an educational simulator for the 8086 assembly language that enables students to learn and practice assembly instructions interactively. This simulator should provide detailed feedback, real-time error detection, and a clear, visual display of register and flag changes after each instruction to help students understand both syntax and low-level register manipulation.
 
-The memory model es similar to the DOS (pages of 64Kb)
+The memory model es similar to DOS (pages of 64Kb)
 
 ## Simulator Description
 
 ### Assembler Functionality
 
-- Implement support for arithmetic, logical, and bitwise operations on registers, including MOV, ADD, SUB, AND, OR, XOR, NOT, NEG, INC, DEC, SHL, SHR, ROL, ROR.
-- Include an assemble() function that converts assembly code into hexadecimal machine code.
-- Provide methods for step-by-step execution of assembly instructions.
+- **Assembler**: `assemble_line` / `assemble_program` convert assembly to pseudo machine code (educational encoding).
+- **Step-by-step execution**: `load_program`, `step`, `cont`, basic breakpoints and watches, and **compact trace** (*mnem → bytes → regs/flags Δ → mem access*).
+- **INT 21h**: supported services AH=09h (print `$` string), AH=0Ah (buffered input), AH=4Ch (terminate).
 
 ### Disassembler Functionality
 
-- Implement a disassemble() function that converts hexadecimal machine code back into assembly code.
-- The disassembler should recognize opcodes and immediate values, converting them into readable assembly instructions using AX as the default register.
+- **Mini-disassembler**: `disassemble_line` / `disassemble_program` over the same pseudo-encoding.
+- Recognizes mnemonics and immediates and shows **pseudo bytes** alongside the source line.
 - Show meaningful errors if any unsupported or unknown opcodes are encountered.
 
 ### Educational Error Messages
 
-- Design clear, detailed error messages to help students identify specific syntax and logic errors in their instructions.
-- Include actionable tips to correct errors, such as "TIP: Ensure both operands are valid registers or an immediate value."
+- Include a function to show only the registers that changed after each instruction, helping students focus on the operations performed.
+- Visualize flags (Zero, Sign, Parity, Carry) and show their updates after each executed instruction.
 
 ### Visualization of Registers and Flags
 
@@ -35,7 +35,7 @@ The memory model es similar to the DOS (pages of 64Kb)
 
 ### Support for Multiple Numeric Formats
 
-- Allow numbers to be inputted in binary (0b...), hexadecimal (0x...), and decimal formats, with automatic conversion to simplify understanding of different numerical systems.
+- Allow numbers to be inputted in binary (0b...), hexadecimal (0x... **or 0X...**), and decimal formats, with automatic conversion.
 
 ### Real-Time Feedback and Step-by-Step Execution
 
@@ -50,10 +50,11 @@ This simulator aims to provide an interactive learning tool for students of 8086
 
 | Stage        | Kanban Status |
 |--------------|---------------|
- | Commands     | Done          |
- | Arithmetic   | Done          |
- | Assembly     | Done          |
- | Dissassembly | To Do         |
+| Commands     | Done          |
+| Arithmetic   | Done          |
+| Assembler    | Done          |
+| Disassembly  | **Basic Done** |
+| Tracing/Debug | **Done**      |
 
 :::{note}
 The memory model is similar to DOS's (pages of 64Kb).

@@ -13,13 +13,7 @@
 
 import os
 import sys
-
-from recommonmark.parser import CommonMarkParser
-from recommonmark.transform import AutoStructify
-
-source_parsers = {
-    '.md': CommonMarkParser
-}
+from datetime import date
 
 sys.path.insert(0, os.path.abspath('../../modules'))
 # sys.path.insert(0, os.path.join(os.path.abspath(os.path.dirname(os.path.dirname(__file__))), 'modules'))
@@ -27,8 +21,8 @@ sys.path.insert(0, os.path.abspath('../../modules'))
 # -- Project information -----------------------------------------------------
 
 project = 'PEBUG'
-copyright = '2022,3,4 Pablo Niklas'
 author = 'Pablo Niklas'
+copyright = f"{date.today().year}, {author}"
 
 source_suffix = ['.rst', '.md']
 
@@ -53,9 +47,9 @@ extensions = [
 ]
 
 myst_enable_extensions = [
-    "colon_fence",
+    "colon_fence",      # ::: admonitions / fences con ::
+    "linkify",          # autolink
 ]
-
 napoleon_google_docstring = True
 napoleon_numpy_docstring = True
 napoleon_include_init_with_doc = True
@@ -162,4 +156,4 @@ def setup(app):
         'enable_eval_rst': True,
         'auto_code_block': True,
     }, True)
-    app.add_transform(AutoStructify)
+    # app.add_transform(AutoStructify)
