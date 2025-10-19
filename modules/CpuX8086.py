@@ -258,7 +258,7 @@ class InstructionParser:
         self.terminal = Terminal()
 
         self.opcode_map = {
-            'MOV': {'reg, imm16': 'B8', 'reg, reg': '89', 'mem, reg': '8B', 'reg, mem': '8A'},
+            'MOV': {'reg, imm16': 'B8', 'reg, reg': '8B', 'mem, reg': '8B', 'reg, mem': '8A'},
             'ADD': {'reg, imm16': '05', 'reg, reg': '01'},
             'SUB': {'reg, imm16': '2D', 'reg, reg': '29'},
             'AND': {'reg, imm16': '25', 'reg, reg': '21'},
@@ -457,6 +457,105 @@ class InstructionParser:
             pc += 1  # 1 línea = 1 "longitud" educativa (no real)
         return out
 
+    # --- helpers para ensamblado ---
+    def _imm_from(self, tok: str) -> int:
+        s = tok.strip()
+        if s.lower().endswith('h'):
+            return int(s[:-1], 16)
+        if s.lower().startswith('0x'):
+            return int(s, 16)
+        if s.lower().startswith('0b'):
+            return int(s, 2)
+        return int(s)
+
+    def assemble_line(self, line: str) -> List[int]:
+        """
+        Ensambla UNA línea ASM → lista de bytes (educativo, subset).
+        No ejecuta la instrucción ni toca registros.
+        """
+        # quitar comentarios
+        line = line.split(';', 1)[0].strip()
+        if not line:
+            return []
+
+        # labels como "L1:" no generan bytes
+        if re.match(r"^[A-Za-z_]\w*:$", line):
+            return []
+
+        parts = re.split(r"\s+", line, maxsplit=1)
+        opcode = parts[0].upper()
+        ops = [o.strip() for o in parts[1].split(',')] if len(parts) > 1 else []
+
+        # helpers
+        regcodes = self.register_codes  # e.g. 'AX' -> '000'
+        def reg_index(r: str) -> int:
+            r = r.upper()
+            if r not in regcodes:
+                raise ValueError(f"Registro no soportado: {r}")
+            return int(regcodes[r], 2)
+
+        def imm_from(s: str) -> int:
+            return self._imm_from(s)
+
+        # INT inmediato (p.ej. INT 0x21)
+        if opcode == 'INT':
+            if len(ops) != 1:
+                raise ValueError("INT: se esperaba un operando (vector)")
+            vec = imm_from(ops[0])
+            return [0xCD, vec & 0xFF]
+
+        # MOV reg,reg (0x8B + modrm) y MOV reg,imm16 (B8+reg lo/hi)
+        if opcode == 'MOV' and len(ops) == 2:
+            dst, src = ops[0].upper(), ops[1].upper()
+            if src in self.register_collection.registers and dst in self.register_collection.registers:
+                op_hex = '8B'
+                modrm = (0xC0 | (reg_index(dst) << 3) | reg_index(src)) & 0xFF
+                return [int(op_hex, 16), modrm]
+            if dst in self.register_collection.registers:
+                imm = imm_from(src)
+                base = int('B8', 16)
+                opbyte = (base + reg_index(dst)) & 0xFF
+                return [opbyte, imm & 0xFF, (imm >> 8) & 0xFF]
+
+        # PSEUDO-ENCODING educativo para ADD/SUB/AND/OR/XOR
+        if opcode in ('ADD', 'SUB', 'AND', 'OR', 'XOR') and len(ops) == 2:
+            dst, src = ops[0].upper(), ops[1]
+            if dst not in self.register_collection.registers:
+                raise ValueError(f"{opcode}: destino no es registro: {dst}")
+
+            # bases por instrucción
+            bases = {
+                'ADD': {'imm': 0x70, 'rr': 0x10},
+                'SUB': {'imm': 0x71, 'rr': 0x11},
+                'AND': {'imm': 0x72, 'rr': 0x12},
+                'OR' : {'imm': 0x73, 'rr': 0x13},
+                'XOR': {'imm': 0x74, 'rr': 0x14},
+            }
+            base_imm = bases[opcode]['imm']
+            base_rr  = bases[opcode]['rr']
+
+            # reg, reg → [base_rr, modrm]
+            if isinstance(src, str) and src.upper() in self.register_collection.registers:
+                modrm = (0xC0 | (reg_index(dst) << 3) | reg_index(src.upper())) & 0xFF
+                return [base_rr & 0xFF, modrm]
+
+            # reg, imm16 → [base_imm, REG[dst], lo, hi]
+            imm = imm_from(src)
+            return [base_imm & 0xFF, reg_index(dst) & 0xFF, imm & 0xFF, (imm >> 8) & 0xFF]
+
+        # INC/DEC reg (0x40/0x48 + reg)
+        if opcode in ('INC', 'DEC') and len(ops) == 1:
+            base = int(self.opcode_map[opcode]['reg'], 16)  # "40" o "48"
+            return [(base + reg_index(ops[0])) & 0xFF]
+
+        # PUSH/POP reg (0x50/0x58 + reg)
+        if opcode in ('PUSH', 'POP') and len(ops) == 1:
+            base = int(self.opcode_map[opcode]['reg'], 16)  # "50" o "58"
+            return [(base + reg_index(ops[0])) & 0xFF]
+
+        # (Opcional) otros monádicos (SHL/SHR/ROL/ROR/NOT/NEG) → sin ensamblado real aún
+        raise ValueError(f"assemble_line: instrucción no soportada: '{line}'")
+
     def monitor(self, cmd: str, memory) -> None:
         """
         Comandos:
@@ -588,7 +687,7 @@ class InstructionParser:
         self.terminal.info_message(
             "TIP: Check the instruction format. An instruction should follow 'OPCODE REGISTER, NUMBER' or 'OPCODE REGISTER, REGISTER'.")
 
-    def parse(self, instruction: str, memory: Memory) -> dict:
+    def parse(self, instruction: str, memory: Memory, dry_run: bool = False) -> Optional[dict]:
         """
         Parses a single assembly instruction, executes it, and returns its details.
 
@@ -607,51 +706,53 @@ class InstructionParser:
         Parses a single assembly instruction, executes it, and (opcionalmente) retorna tokens.
         """
 
-        # <-- para que PUSH/POP (y otros) puedan acceder a Memory
+        """
+        Parsea una instrucción. Si dry_run=True, NO ejecuta; devuelve tokens {'opcode','operands'}.
+        Caso contrario, ejecuta como antes (traza, watches, etc.).
+        """
+        # referencia a memoria (para PUSH/POP/INT cuando se ejecute)
         self._mem = memory
 
-        # ⚠️ FIX: usar el parámetro 'instruction' en lugar de 'cmd'
         cmd = instruction.strip()
         if not cmd:
             return None
 
-        # Normalización y separación
+        # Normalización básica
         parts = cmd.split(None, 1)
         opcode = parts[0].upper()
         operands = [p.strip() for p in parts[1].split(',')
                     ] if len(parts) > 1 else []
 
+        # --- Modo "solo parseo" (para assemble) ---
+        if dry_run:
+            return {'opcode': opcode, 'operands': operands}
+
+        # --- A partir de acá es el camino de ejecución "normal" ---
         # Breakpoints solo si estamos en modo programa (step_mode)
         if self.step_mode:
             cur_addr = self.base_addr + self.pc
             if cur_addr in self.breakpoints:
                 self._out(f"[break] en {cur_addr:04X}")
-                return  # no ejecutar; quedamos parados aquí
+                return  # nos detenemos sin ejecutar
 
-        # Envolver memoria si hay traza
+        # Envolver memoria si hay traza (para registrar accesos)
         traced_mem = TracedMemory(memory) if self.trace_enabled else memory
-
-        # Normalizar opcode/operands
-        parts = cmd.split(None, 1)
-        opcode = parts[0].upper()
-        operands = [p.strip() for p in parts[1].split(',')
-                    ] if len(parts) > 1 else []
 
         if opcode not in self.functions_map:
             raise ValueError(f"Unsupported instruction: {opcode}")
 
         before_regs, before_flags = self._snapshot()
 
-        # Ejecutar
+        # Ejecutar (INT recibe memoria)
         fn = self.functions_map[opcode]
         if opcode == 'INT':
-            fn(operands, traced_mem)  # tus INT handlers ya reciben memoria
+            fn(operands, traced_mem)
         else:
             fn(operands)
 
         after_regs, after_flags = self._snapshot()
 
-        # Emitir traza (si corresponde)
+        # Traza
         if self.trace_enabled:
             rec = TraceRecord(
                 opcode=opcode,
@@ -664,12 +765,14 @@ class InstructionParser:
             )
             self._out(self._format_trace(rec))
 
-        # Evaluar watches
+        # Watches
         self._eval_watches(traced_mem)
 
-        # Avanzar PC si step_mode
+        # Avanzar PC en modo step
         if self.step_mode:
-            self.pc = min(self.pc + 1, max(0, len(self.program)-1))
+            self.pc = min(self.pc + 1, max(0, len(self.program) - 1))
+
+        return None
 
     def add_watch(self, expr: str) -> None:
         if expr not in self.watches:
@@ -1391,68 +1494,34 @@ class InstructionParser:
 
     def assemble(self, asm_code: str, memory: Memory) -> List[int]:
         """
-        Converts assembly code into machine code as a list of byte integers.
-
-        Args:
-            asm_code (str): Multiline string of assembly code instructions.
-
-        Returns:
-            List[int]: Machine code as an array of integer bytes.
+        Ensambla un bloque multilínea usando parse(..., dry_run=True) para tokenizar
+        y luego codifica a bytes (subset educativo).
         """
-        machine_code = []
+        machine_code: List[int] = []
         lines = asm_code.strip().splitlines()
 
-        for line_num, line in enumerate(lines, 1):
-            if not line.strip():
+        for line_num, raw in enumerate(lines, 1):
+            # quitar comentarios y espacios
+            line = raw.split(';', 1)[0].strip()
+            if not line:
                 continue
-
             try:
-                # Use parse() to validate and extract the instruction details
-                parsed = self.parse(line, memory)
+                parsed = self.parse(line, memory, dry_run=True)
+                if not parsed:
+                    continue
                 opcode = parsed['opcode']
                 operands = parsed['operands']
 
-                if len(operands) == 2:
-                    dest, src = operands
+                # Reutilizamos el codificador educativo por línea
+                mnemonic = opcode + \
+                    ((" " + ", ".join(operands)) if operands else "")
+                bytes_line = self.assemble_line(mnemonic)
+                machine_code.extend(bytes_line)
 
-                    # reg, imm16
-                    if (
-                        isinstance(src, int)
-                        or (isinstance(src, str) and (src.isdigit() or src.upper().startswith("0X") or src.lower().endswith("h")))
-                    ):
-                        op_key = 'reg, imm16'
-                        opcode_hex = self.opcode_map[opcode][op_key]
-                        opcode_hex = f"{int(opcode_hex, 16) + int(self.register_codes[dest], 2):02X}"
-
-                        # Detect type and convert
-                        if isinstance(src, int):
-                            imm_value = src
-                        elif src.upper().startswith("0X"):
-                            imm_value = int(src, 16)
-                        elif src.lower().endswith("h"):
-                            imm_value = int(src[:-1], 16)
-                        else:
-                            imm_value = int(src)
-
-                        imm_hex = f"{imm_value:04X}"
-                        machine_code.extend(
-                            [int(opcode_hex, 16)] + [int(imm_hex[i:i+2], 16) for i in range(0, 4, 2)])
-
-                    # reg, reg
-                    elif dest in self.register_codes and src in self.register_codes:
-                        op_key = 'reg, reg'
-                        opcode_hex = self.opcode_map[opcode][op_key]
-                        mod_reg_rm = f"{int(self.register_codes[src] + self.register_codes[dest], 2):02X}"
-                        machine_code.extend(
-                            [int(opcode_hex, 16), int(mod_reg_rm, 16)])
-
-                    else:
-                        raise ValueError(
-                            f"assemble(): Unsupported operand format in line {line_num}: '{line}'")
-
-            except (ValueError, KeyError, AttributeError) as e:
+            except Exception as e:
                 self.terminal.error_message(
-                    f"assemble(): ERROR in line {line_num}: {e}")
+                    f"assemble(): ERROR en línea {line_num}: {e}")
+                # seguimos con el resto
                 continue
 
         return machine_code
@@ -1753,14 +1822,15 @@ class CpuX8086():
         Returns:
             None.
         """
-        page = f"{'%04X' % memory.active_page}"
+        # Usar entero para Memory.peek(...)
+        page = memory.active_page
         bytes_per_row = int("F", 16)
         pointer = 0
         ascvisual = ""
 
         if addrn - addrb < bytes_per_row:  # One single row
             self.terminal.success_message(
-                f"{'%04X' % memory.active_page}:{'%04X' % (pointer + addrb)} ", end="", flush=True)
+                f"{memory.active_page:04X}:{(pointer + addrb):04X} ", end="", flush=True)
             for _ in range(addrb, addrn):
                 byte = memory.peek(page, pointer + addrb)
                 peek = "%02X" % byte
@@ -1775,8 +1845,8 @@ class CpuX8086():
                     print(" " * ((bytes_per_row - pointer) * 3) + ascvisual)
                     ascvisual = ""
                     self.terminal.success_message(
-                        f"{'%04X' % memory.active_page}:{'%04X' % (pointer + addrb)} ", end="")
-                byte = memory.peek(page, f"{'%04X' % (pointer + addrb)}")
+                        f"{memory.active_page:04X}:{(pointer + addrb):04X} ", end="")
+                byte = memory.peek(page, pointer + addrb)
                 peek = "%02X" % byte
                 ascvisual += chr(byte) if chr(byte).isprintable() else "."
                 self.terminal.info_message(f"{peek} ", "", True)

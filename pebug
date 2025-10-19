@@ -141,7 +141,7 @@ def pebug_main(terminal: Terminal, filename="pebug_disk.bin"):
         elif re.match(r"^[cC][yY]$", cmd):
             cpu.CY = 0b1
         elif re.match(r"^[nN][cC]$", cmd):
-            cpu.vy = 0b0
+            cpu.CY = 0b0
         elif re.match(r"^[fF] [0-9a-f]{,4} [0-9a-f]{,4}$", cmd):
             reset_memory_range(cpu, memory, cmd)
         elif re.match(r"^[fF] [0-9a-f]{,4} [0-9a-f]{,4} .*$", cmd):
@@ -173,14 +173,47 @@ def pebug_main(terminal: Terminal, filename="pebug_disk.bin"):
                 "Numbers must be in hexadecimal (0x), Decimal, or Binary (0b) format.")
             cmd = prompt(
                 f"{Mode.ASSEMBLE.value} {'%04X' % memory.active_page}:{'%04X' % memory.offset_cursor}")
+            
             while not re.match(r"^[qQ]$", cmd):
-                machine_code = cpu.assemble(memory, cmd)
-                for mc in machine_code:
-                    memory.poke(memory.active_page, memory.offset_cursor, mc)
-                    memory.offset_cursor += 1
+                try:
+                    ip = cpu.instruction_parser
+                    if not hasattr(ip, "assemble_line"):
+                        raise RuntimeError("assemble_line API not available")
+                    bytes_seq = ip.assemble_line(cmd) or []
+                    for mc in bytes_seq:
+                        memory.poke(memory.active_page, memory.offset_cursor, mc)
+                        memory.offset_cursor += 1
+                except Exception as ex:
+                    terminal.error_message(f"ASSEMBLE ERROR: {ex}")
 
                 cmd = prompt(
                     f"{Mode.ASSEMBLE.value} {'%04X' % memory.active_page}:{'%04X' % memory.offset_cursor}")
+
+        # Trace ON/OFF/CLEAR: t [on|off|clear]
+        elif re.match(r"^[tT](?:\s+(on|off|clear))?$", cmd):
+            trace_cmd(cpu, terminal, cmd)
+
+        # Breakpoints: b [label|addr]  /  b - [label|addr]  /  b (list)
+        elif re.match(r"^[bB](?:\s+.*)?$", cmd):
+            breakpoint_cmd(cpu, terminal, cmd)
+
+        # Watches: v [what]  /  v - [what]  /  v clear  /  v (list)
+        elif re.match(r"^[vV](?:\s+.*)?$", cmd):
+            watch_cmd(cpu, terminal, cmd)
+
+        # Step (next): n
+        elif re.match(r"^[nN]$", cmd):
+            step_cmd(cpu, memory, terminal)
+
+        # Continue: g
+        elif re.match(r"^[gG]$", cmd):
+            cont_cmd(cpu, memory, terminal)
+
+        # Disassemble: u [addr] [count?]
+        elif re.match(r"^[uU](?:\s+[0-9a-fA-F]{1,4}(?:\s+\d+)?)?$", cmd):
+            disas_cmd(cpu, memory, terminal, cmd)
+
+
         else:
             _error_msg(terminal)
 
@@ -489,6 +522,179 @@ def prompt(mode: str = ""):
     cmd = input(
         f"{mode} {AnsiColors.BRIGHT_GREEN.value}•❯{AnsiColors.RESET.value} ")
     return cmd
+
+def trace_cmd(cpu: CpuX8086, term: Terminal, cmd: str):
+    """
+    t on|off|clear
+    """
+    arg = None
+    parts = cmd.strip().split()
+    if len(parts) > 1:
+        arg = parts[1].lower()
+    ip = cpu.instruction_parser
+    if not hasattr(ip, "enable_trace"):
+        term.error_message("Trace API not available.")
+        return
+    if arg == "on":
+        ip.enable_trace(True, out=lambda s: term.info_message(s))
+        term.success_message("Trace ON")
+    elif arg == "off":
+        ip.enable_trace(False)
+        term.success_message("Trace OFF")
+    elif arg == "clear":
+        clear_fn = getattr(ip, "clear_trace_buffer", None)
+        if callable(clear_fn):
+            clear_fn()
+            term.success_message("Trace buffer cleared")
+        else:
+            ip.enable_trace(False)
+            ip.enable_trace(True, out=lambda s: term.info_message(s))
+            term.warning_message("Trace buffer: reset via OFF/ON (no clear API)")
+    else:
+        state = getattr(ip, "trace_enabled", False)
+        term.info_message(f"Trace is {'ON' if state else 'OFF'}")
+
+
+def breakpoint_cmd(cpu: CpuX8086, term: Terminal, cmd: str):
+    """
+    b                -> listar
+    b <label|addr>   -> agregar
+    b - <label|addr> -> quitar
+    """
+    ip = cpu.instruction_parser
+    parts = cmd.strip().split(maxsplit=2)
+    if len(parts) == 1:
+        lst = getattr(ip, "list_breakpoints", None)
+        if callable(lst):
+            bps = lst()
+            if not bps:
+                term.info_message("(no breakpoints)")
+            else:
+                for b in bps:
+                    term.info_message(f"bp: {b}")
+        else:
+            term.warning_message("No list_breakpoints API.")
+        return
+    if len(parts) >= 2 and parts[1] == "-":
+        if len(parts) == 3:
+            rem = getattr(ip, "remove_breakpoint", None)
+            if callable(rem):
+                rem(parts[2])
+                term.success_message(f"Breakpoint removed: {parts[2]}")
+                return
+            term.error_message("remove_breakpoint API not available.")
+            return
+        term.error_message("Usage: b - <label|addr>")
+        return
+    add = getattr(ip, "add_breakpoint", None)
+    if callable(add):
+        add(parts[1])
+        term.success_message(f"Breakpoint added: {parts[1]}")
+    else:
+        term.error_message("add_breakpoint API not available.")
+
+
+def watch_cmd(cpu: CpuX8086, term: Terminal, cmd: str):
+    """
+    v                -> listar
+    v <what>         -> agregar (AX | FLAGS.CF | [DS:DX])
+    v - <what>       -> quitar
+    v clear          -> limpiar todos
+    """
+    ip = cpu.instruction_parser
+    parts = cmd.strip().split(maxsplit=2)
+    if len(parts) == 1:
+        getw = getattr(ip, "list_watches", None)
+        if callable(getw):
+            ws = getw()
+            if not ws:
+                term.info_message("(no watches)")
+            else:
+                for w in ws:
+                    term.info_message(f"watch: {w}")
+        else:
+            term.warning_message("No list_watches API.")
+        return
+    if parts[1].lower() == "clear":
+        clr = getattr(ip, "clear_watches", None)
+        if callable(clr):
+            clr()
+            term.success_message("Watches cleared")
+        else:
+            term.error_message("clear_watches API not available.")
+        return
+    if parts[1] == "-":
+        if len(parts) == 3:
+            rm = getattr(ip, "remove_watch", None)
+            if callable(rm):
+                rm(parts[2])
+                term.success_message(f"Watch removed: {parts[2]}")
+                return
+            term.error_message("remove_watch API not available.")
+            return
+        term.error_message("Usage: v - <what>")
+        return
+    addw = getattr(ip, "add_watch", None)
+    if callable(addw):
+        addw(" ".join(parts[1:]))
+        term.success_message(f"Watch added: {' '.join(parts[1:])}")
+    else:
+        term.error_message("add_watch API not available.")
+
+
+def step_cmd(cpu: CpuX8086, memory: Memory, term: Terminal):
+    ip = cpu.instruction_parser
+    fn = getattr(ip, "step", None)
+    if not callable(fn):
+        term.error_message("step API not available.")
+        return
+    try:
+        fn(memory)
+        term.info_message("STEP")
+    except Exception as ex:
+        term.error_message(f"STEP error: {ex}")
+
+
+def cont_cmd(cpu: CpuX8086, memory: Memory, term: Terminal):
+    ip = cpu.instruction_parser
+    fn = getattr(ip, "cont", None)
+    if not callable(fn):
+        term.error_message("cont API not available.")
+        return
+    try:
+        fn(memory)
+        term.info_message("CONT finished")
+    except Exception as ex:
+        term.error_message(f"CONT error: {ex}")
+
+
+def disas_cmd(cpu: CpuX8086, memory: Memory, term: Terminal, cmd: str):
+    """
+    u [addr] [count]
+    """
+    ip = cpu.instruction_parser
+    parts = cmd.strip().split()
+    start = memory.offset_cursor  # default
+    count = 8
+    if len(parts) >= 2:
+        start = int(parts[1], 16)
+    if len(parts) >= 3:
+        count = int(parts[2])
+
+    fn1 = getattr(ip, "disassemble_from_memory", None)
+    fn2 = getattr(ip, "disassemble_program", None)
+    try:
+        if callable(fn1):
+            lines = fn1(memory, start, count)
+        elif callable(fn2):
+            lines = fn2(memory, start, count)
+        else:
+            term.error_message("Disassembler API not available.")
+            return
+        for ln in lines:
+            term.info_message(ln)
+    except Exception as ex:
+        term.error_message(f"DISAS error: {ex}")
 
 
 # Python's entry point
