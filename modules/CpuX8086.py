@@ -8,7 +8,6 @@ from typing import (
 from dataclasses import dataclass, field
 from typing import Dict, List, Tuple, Optional, Callable, Any
 
-
 import re
 
 from multipledispatch import dispatch
@@ -145,26 +144,58 @@ class RegisterSet:
         if op in ('ADD', 'SUB', 'SHL', 'SHR', 'ROL', 'ROR') and carry is not None:
             self.flags['CF'] = 1 if carry else 0
 
-    def print_changed_registers(self) -> None:
+# en la clase donde está print_changed_registers (p.ej. CpuX8086)
+
+    def print_changed_registers(
+        self,
+        out: Optional[Callable[[str], None]] = None,
+        use_colors: bool = True,
+    ) -> None:
         """
-        Prints only the registers whose value has changed in the last executed operation.
-
-        Returns:
-            None
+        Emite solo los registros cuyo valor cambió desde la última ejecución.
+        - out: función para emitir líneas (por defecto: print)
+        - use_colors: si False, quita códigos ANSI (útil para web que no los renderiza)
         """
+        if out is None:
+            out = print
 
-        c = AnsiColors  # Alias para simplificar
+        # Aseguramos snapshot previo para comparar
+        last = getattr(self, "last_values", None)
+        if last is None:
+            last = {}
+        # Si no hay snapshot previo, usamos el estado actual para evitar KeyError
+        if not last:
+            self.last_values = dict(self.registers)
 
-        print(f"{c.BRIGHT_YELLOW.value}{'Register':<8} {'Decimal':<10} {'Hexadecimal':<12} {'Binary':<18}{c.RESET.value}")
-        print(c.BRIGHT_BLACK.value+"-" * 50+c.RESET.value)
+        c = AnsiColors
+
+        def emit(line: str):
+            if not use_colors:
+                # strip ANSI
+                line = re.sub(r"\x1b\[[0-9;]*m", "", line)
+            out(line)
+
+        emit(f"{c.BRIGHT_YELLOW.value}{'Register':<8} {'Decimal':<10} {'Hexadecimal':<12} {'Binary':<18}{c.RESET.value}")
+        emit(c.BRIGHT_BLACK.value + "-" * 50 + c.RESET.value)
+
         for reg, value in self.registers.items():
-            # Comparar con el valor anterior
-            if value != self.last_values[reg]:
+            prev = self.last_values.get(reg, None)
+            if prev is None or value != prev:
                 dec_value = value
                 hex_value = f"0x{value:04X}"
                 bin_value = f"{value:016b}"
-                print(f"{c.BRIGHT_GREEN.value}{reg:<8} {c.BRIGHT_WHITE.value}{dec_value:<10} {c.BRIGHT_BLUE.value}{hex_value:<12} {c.BRIGHT_CYAN.value}{bin_value:<18}{c.RESET.value}")
-        print(c.BRIGHT_BLACK.value+"-" * 50+c.RESET.value)
+                emit(
+                    f"{c.BRIGHT_GREEN.value}{reg:<8} "
+                    f"{c.BRIGHT_WHITE.value}{dec_value:<10} "
+                    f"{c.BRIGHT_BLUE.value}{hex_value:<12} "
+                    f"{c.BRIGHT_CYAN.value}{bin_value:<18}{c.RESET.value}"
+                )
+
+        emit(c.BRIGHT_BLACK.value + "-" * 50 + c.RESET.value)
+
+        # Actualizamos snapshot para la próxima comparación
+        self.last_values = dict(self.registers)
+
 
     def print_registers(self) -> None:
         """
@@ -334,8 +365,8 @@ class InstructionParser:
             'ROL':  self.asm_rol,
             'ROR':  self.asm_ror,
             # opcionales (si los agregaste)
-            'NEG':  getattr(self, 'asm_neg',  None) or (lambda *_: (_ for _ in ()).throw(NotImplementedError("NEG no implementado"))),
-            'NOT':  getattr(self, 'asm_not',  None) or (lambda *_: (_ for _ in ()).throw(NotImplementedError("NOT no implementado"))),
+            'NEG':  getattr(self, 'asm_neg',  None) or (lambda *_: ().throw(NotImplementedError("NEG no implementado"))),
+            'NOT':  getattr(self, 'asm_not',  None) or (lambda *_: ().throw(NotImplementedError("NOT no implementado"))),
             'PUSH': self.asm_push,
             'POP':  self.asm_pop,
             'INT':  self.asm_int,   # recuerda: parse() le pasa (operands, memory)
@@ -365,6 +396,7 @@ class InstructionParser:
         # Watches
         self.watches: List[str] = []
         self._watch_last: Dict[str, Optional[int]] = {}
+        self.trace_color: bool = True
 
     def load_program(self, lines: List[str], base_addr: int = 0x0000) -> None:
         """
@@ -484,10 +516,12 @@ class InstructionParser:
 
         parts = re.split(r"\s+", line, maxsplit=1)
         opcode = parts[0].upper()
-        ops = [o.strip() for o in parts[1].split(',')] if len(parts) > 1 else []
+        ops = [o.strip() for o in parts[1].split(',')
+               ] if len(parts) > 1 else []
 
         # helpers
         regcodes = self.register_codes  # e.g. 'AX' -> '000'
+
         def reg_index(r: str) -> int:
             r = r.upper()
             if r not in regcodes:
@@ -528,15 +562,16 @@ class InstructionParser:
                 'ADD': {'imm': 0x70, 'rr': 0x10},
                 'SUB': {'imm': 0x71, 'rr': 0x11},
                 'AND': {'imm': 0x72, 'rr': 0x12},
-                'OR' : {'imm': 0x73, 'rr': 0x13},
+                'OR': {'imm': 0x73, 'rr': 0x13},
                 'XOR': {'imm': 0x74, 'rr': 0x14},
             }
             base_imm = bases[opcode]['imm']
-            base_rr  = bases[opcode]['rr']
+            base_rr = bases[opcode]['rr']
 
             # reg, reg → [base_rr, modrm]
             if isinstance(src, str) and src.upper() in self.register_collection.registers:
-                modrm = (0xC0 | (reg_index(dst) << 3) | reg_index(src.upper())) & 0xFF
+                modrm = (0xC0 | (reg_index(dst) << 3) |
+                         reg_index(src.upper())) & 0xFF
                 return [base_rr & 0xFF, modrm]
 
             # reg, imm16 → [base_imm, REG[dst], lo, hi]
@@ -901,19 +936,37 @@ class InstructionParser:
         else:
             raise ValueError(f"Unsupported INT 0x21 service: 0x{ah:02X}")
 
-    def enable_trace(self, enabled: bool = True, out: Optional[Callable[[str], None]] = None) -> None:
+    def enable_trace(self, enabled: bool = True, out: Optional[Callable[[str], None]] = None, color: Optional[bool] = None) -> None:
+        """
+        Activa/desactiva la traza. Si 'out' es None, se imprime con Terminal.
+        En ese caso, si 'colored' es True (o self.trace_color ya es True),
+        se agregan colores ANSI. Si se pasa 'out', no se colorea para no
+        contaminar salidas de tests/logging.
+        """
         self.trace_enabled = enabled
-        if out is not None:
-            self._trace_out = out
+        self.trace_enabled = enabled
+        self._trace_out = out
+        if color is not None:
+            self.trace_color = color
 
     def _out(self, msg: str) -> None:
+
+        # Si hay callback externo (tests/logging), respetamos el callback (sin color).
         if self._trace_out:
             self._trace_out(msg)
-        else:
-            try:
-                self.terminal.default_message(msg)
-            except Exception:
-                print(msg)
+            return
+
+         # Interactivo: si el mensaje contiene ANSI y trace_color está activo,
+         # imprimir "raw" para no perder los colores.
+        if self.trace_color and "\x1b[" in msg:
+            print(msg)
+            return
+
+        # Caso general: usar el terminal.
+        try:
+            self.terminal.default_message(msg)
+        except Exception:
+            print(msg)
 
     def _snapshot(self) -> Tuple[Dict[str, int], Dict[str, int]]:
         return (dict(self.register_collection.registers),
@@ -984,15 +1037,29 @@ class InstructionParser:
 
     def _format_trace(self, rec: TraceRecord) -> str:
         mnem = f"{rec.opcode} " + \
-            ", ".join(rec.operands) if rec.operands else rec.opcode
+            (", ".join(rec.operands) if rec.operands else "")
         b = "-" if not rec.pseudo_bytes else " ".join(
             f"{x:02X}" for x in rec.pseudo_bytes)
         regs = self._diff_dict(rec.regs_before, rec.regs_after)
         flags = self._diff_dict(rec.flags_before, rec.flags_after)
         mems = self._fmt_mem(rec.mem_accesses)
+
+        # ¿Coloreamos? Solo si no hay callback externo (CLI interactivo)
+        use_color = (self._trace_out is None) and self.trace_color
+        if not use_color:
+            regs_s = "[" + ", ".join(regs) + "]" if regs else "[]"
+            flags_s = "[" + ", ".join(flags) + "]" if flags else "[]"
+            return f"{mnem}  | bytes(pseudo): {b}  | regsΔ: {regs_s}  | flagsΔ: {flags_s}  | mem: {mems}"
+
+        C = AnsiColors
+        mnem_c = f"{C.BRIGHT_YELLOW.value}{mnem}{C.RESET.value}"
+        bytes_c = f"{C.BRIGHT_BLACK.value}bytes(pseudo):{C.RESET.value} {C.BRIGHT_BLUE.value}{b}{C.RESET.value}"
         regs_s = "[" + ", ".join(regs) + "]" if regs else "[]"
         flags_s = "[" + ", ".join(flags) + "]" if flags else "[]"
-        return f"{mnem}  | bytes(pseudo): {b}  | regsΔ: {regs_s}  | flagsΔ: {flags_s}  | mem: {mems}"
+        regs_c = f"{C.BRIGHT_BLACK.value}regsΔ:{C.RESET.value} {C.BRIGHT_GREEN.value}{regs_s}{C.RESET.value}"
+        flags_c = f"{C.BRIGHT_BLACK.value}flagsΔ:{C.RESET.value} {C.BRIGHT_MAGENTA.value}{flags_s}{C.RESET.value}"
+        mem_c = f"{C.BRIGHT_BLACK.value}mem:{C.RESET.value} {C.BRIGHT_CYAN.value}{mems}{C.RESET.value}"
+        return f"{mnem_c}  | {bytes_c}  | {regs_c}  | {flags_c}  | {mem_c}"
 
     def service_09(self, memory: Memory, registers: dict) -> None:
         # Print string at DS:DX until '$' (like DOS)
